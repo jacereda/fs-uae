@@ -6,7 +6,7 @@
 #include "options.h"
 #include "threaddep/thread.h"
 #include "traps.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "audio.h"
 #include "a2091.h"
 #include "a2065.h"
@@ -63,6 +63,8 @@
 #include "arcadia.h"
 #include "rommgr.h"
 #include "newcpu.h"
+#include "uae/debuginfo.h"
+#include "uae/segtracker.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -135,7 +137,9 @@ void devices_vsync_pre(void)
 	inputdevice_vsync ();
 	filesys_vsync ();
 	sampler_vsync ();
+#ifdef WITH_CLIPBOARD
 	clipboard_vsync ();
+#endif
 	uaenet_vsync();
 #ifdef RETROPLATFORM
 	rp_vsync ();
@@ -261,9 +265,13 @@ void devices_rethink(void)
 void devices_update_sound(double clk, double syncadjust)
 {
 	update_sound (clk);
+#ifdef WITH_TOCCATA
 	update_sndboard_sound (clk / syncadjust);
+#endif
 	update_cda_sound(clk / syncadjust);
+#ifdef WITH_X86
 	x86_update_sound(clk / syncadjust);
+#endif
 }
 
 void devices_update_sync(double svpos, double syncadjust)
@@ -340,6 +348,9 @@ void do_leave_program (void)
 	DISK_free ();
 	close_sound ();
 	dump_counts ();
+#ifdef PARALLEL_PORT
+	parallel_exit();
+#endif
 #ifdef SERIAL_PORT
 	serial_exit ();
 #endif
@@ -398,12 +409,16 @@ void do_leave_program (void)
 	uaesndboard_free();
 #endif
 	gfxboard_free();
+#ifdef SAVESTATE
 	savestate_free ();
+#endif
 	memory_cleanup ();
 	free_shm ();
 	cfgfile_addcfgparam (0);
 	machdep_free ();
+#ifdef DRIVESOUND
 	driveclick_free();
+#endif
 	ethernet_enumerate_free();
 	rtarea_free();
 }
@@ -415,6 +430,9 @@ void virtualdevice_init (void)
 #endif
 #ifdef FILESYS
 	rtarea_init ();
+#ifdef WITH_SEGTRACKER
+	segtracker_install ();
+#endif /* WITH_SEGTRACKER */
 	uaeres_install ();
 	hardfile_install ();
 #endif
@@ -456,6 +474,8 @@ void virtualdevice_init (void)
 #endif
 }
 
+#ifdef SAVESTATE
+
 void devices_restore_start(void)
 {
 	restore_cia_start();
@@ -470,9 +490,13 @@ void devices_restore_start(void)
 	changed_prefs.mbresmem_high_size = 0;
 }
 
+#endif
+
 void devices_syncchange(void)
 {
+#ifdef WITH_X86
 	x86_bridge_sync_change();
+#endif
 }
 
 void devices_pause(void)
@@ -503,5 +527,7 @@ void devices_unpause(void)
 
 void devices_unsafeperiod(void)
 {
+#ifdef WITH_CLIPBOARD
 	clipboard_unsafeperiod();
+#endif
 }

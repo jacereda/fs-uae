@@ -10,7 +10,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 
 #include "traps.h"
 #include "blkdev.h"
@@ -29,7 +29,11 @@
 
 int log_scsiemu = 0;
 
+#ifdef FSUAE
+#define PRE_INSERT_DELAY (10 * (currprefs.ntscmode ? 60 : 50))
+#else
 #define PRE_INSERT_DELAY (3 * (currprefs.ntscmode ? 60 : 50))
+#endif
 
 struct blkdevstate
 {
@@ -149,6 +153,9 @@ static int driver_installed[NUM_DEVICE_TABLE_ENTRIES];
 
 static void install_driver (int flags)
 {
+#ifdef FSUAE
+    write_log("install_driver flags=%d\n", flags);
+#endif
 	for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 		struct blkdevstate *st = &state[i];
 		st->scsiemu = false;
@@ -158,6 +165,9 @@ static void install_driver (int flags)
 	if (flags > 0) {
 		state[0].device_func = devicetable[flags];
 		state[0].scsiemu = true;
+#ifdef FSUAE
+		write_log("CD: setting device_func[0] = devicetable[%d]\n", flags);
+#endif
 	} else {
 		for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 			struct blkdevstate *st = &state[i];
@@ -650,6 +660,7 @@ static void check_changes (int unitnum)
 		if (st->wasopen) {
 			st->device_func->closedev (unitnum);
 			st->wasopen = -1;
+#ifdef SCSIEMU
 			if (currprefs.scsi)  {
 				scsi_do_disk_change (unitnum, 0, &pollmode);
 				if (pollmode)
@@ -659,6 +670,7 @@ static void check_changes (int unitnum)
 					pollmode = 0;
 				}
 			}
+#endif
 		}
 		write_log (_T("CD: eject (%s) open=%d\n"), pollmode ? _T("slow") : _T("fast"), st->wasopen ? 1 : 0);
 		if (wasimage)
@@ -694,6 +706,7 @@ static void check_changes (int unitnum)
 			write_log (_T("-> device reopened\n"));
 		}
 	}
+#ifdef SCSIEMU
 	if (currprefs.scsi && st->wasopen) {
 		struct device_info di;
 		st->device_func->info (unitnum, &di, 0, -1);
@@ -705,6 +718,7 @@ static void check_changes (int unitnum)
 		scsi_do_disk_change (unitnum, 1, &pollmode);
 		filesys_do_disk_change (unitnum, 1);
 	}
+#endif
 	st->mediawaschanged = true;
 	st->showstatusline = true;
 	if (gotsem) {

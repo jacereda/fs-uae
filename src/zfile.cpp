@@ -29,6 +29,13 @@
 #include "archivers/dms/pfile.h"
 #include "archivers/wrp/warp.h"
 
+#ifdef FSUAE // NL
+#include "uae/fs.h"
+#include "uae/glib.h"
+#include <fs/data.h>
+#undef _WIN32
+#endif
+
 static struct zfile *zlist = 0;
 
 const TCHAR *uae_archive_extensions[] = { _T("zip"), _T("rar"), _T("7z"), _T("lha"), _T("lzh"), _T("lzx"), _T("tar"), NULL };
@@ -528,6 +535,9 @@ static struct zfile *vhd (struct zfile *z)
 	z->dataseek = 1;
 	z->userdata = zvhd;
 	z->zfileread = vhd_fread;
+#ifdef FSUAE
+	// FIXME: should really be %llu below?
+#endif
 	write_log (_T("%s is VHD %s image, virtual size=%lldK\n"),
 		zfile_getname (z),
 		zvhd->vhd_type == 2 ? _T("fixed") : _T("dynamic"),
@@ -887,7 +897,11 @@ end:
 }
 
 #ifdef CAPS
+#ifdef FSUAE
+#include "uae/caps.h"
+#else
 #include "caps/caps_win32.h"
+#endif
 static struct zfile *ipf (struct zfile *z, int index, int *retcode)
 {
 	int i, j, r;
@@ -1758,7 +1772,7 @@ static struct zfile *zfile_fopen_x (const TCHAR *name, const TCHAR *mode, int ma
 
 	if (_tcslen (name) == 0)
 		return NULL;
-	manglefilename(name, path, sizeof(path) / sizeof TCHAR);
+	manglefilename(name, path, sizeof(path) / sizeof(TCHAR));
 	l = zfile_fopen_2 (path, mode, mask);
 	if (!l)
 		return 0;
@@ -1893,6 +1907,24 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 #ifdef _WIN32
 	if (isinternetfile (name))
 		return zfile_fopen_internet (name, mode, mask);
+#endif
+#ifdef FSUAE
+	if (g_str_has_prefix(name, "dat://")) {
+		write_log("zfile_fopenx2 %s\n", name);
+		char *data;
+		int data_size;
+		if (fs_data_file_content(name + 6, &data, &data_size) != 0) {
+			return NULL;
+		}
+		struct zfile *zf = zfile_create(NULL, name);
+		if (zf) {
+			/* The data will be freed by zfile_close (zfile_free). */
+			zf->data = (uae_u8 *) data;
+			zf->size = data_size;
+			zf->datasize = data_size;
+		}
+		return zf;
+	}
 #endif
 	f = zfile_fopen_x (name, mode, mask, index);
 	if (f)
@@ -2626,6 +2658,9 @@ static struct zvolume *zvolume_alloc_2 (const TCHAR *name, struct zfile *z, unsi
 	root->volume = zv;
 	root->type = ZNODE_DIR;
 	i = 0;
+#ifdef FSUAE
+
+#else
 	if (name[0] != '/' && name[0] != '\\' && _tcsncmp(name, _T(".\\"), 2) != 0 && _tcsncmp(name, _T("..\\"), 3) != 0) {
 		if (_tcschr (name, ':') == 0) {
 			for (i = _tcslen (name) - 1; i > 0; i--) {
@@ -2636,6 +2671,7 @@ static struct zvolume *zvolume_alloc_2 (const TCHAR *name, struct zfile *z, unsi
 			}
 		}
 	}
+#endif
 	root->name = my_strdup (name + i);
 	root->fullname = my_strdup (name);
 #ifdef ZFILE_DEBUG

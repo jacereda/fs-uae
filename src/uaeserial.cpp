@@ -10,9 +10,11 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef UAESERIAL
+
 #include "threaddep/thread.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "traps.h"
@@ -25,7 +27,11 @@
 
 #define MAX_TOTAL_DEVICES 8
 
+#ifdef FSUAE
+int log_uaeserial = 1;
+#else
 int log_uaeserial = 0;
+#endif
 
 #define SDCMD_QUERY	9
 #define SDCMD_BREAK	10
@@ -106,6 +112,10 @@ int log_uaeserial = 0;
 *		13-15		reserved
 */
 
+#ifdef FSUAE // NL
+#define asyncreq uaeserial_asyncreq
+#define devstruct uaeserial_devstruct
+#endif
 
 struct asyncreq {
 	struct asyncreq *next;
@@ -142,7 +152,7 @@ static const TCHAR *getdevname (void)
 static void io_log (const TCHAR *msg, uae_u8 *request, uaecptr arequest)
 {
 	if (log_uaeserial)
-		write_log (_T("%s: %08X %d %08X %d %d io_actual=%d io_error=%d\n"),
+		write_log (_T("%s: %p %d %08X %d %d io_actual=%d io_error=%d\n"),
 		msg, request, get_word_host(request + 28), get_long_host(request + 40),
 			get_long_host(request + 36), get_long_host(request + 44),
 			get_long_host(request + 32), get_byte_host(request + 31));
@@ -470,13 +480,13 @@ void uaeser_signal (void *vdev, int sigmask)
 				}
 				break;
 			default:
-				write_log (_T("%s:%d incorrect async request %x (cmd=%d) signaled?!"), getdevname(), dev->unit, request, command);
+				write_log (_T("%s:%d incorrect async request %p (cmd=%d) signaled?!"), getdevname(), dev->unit, request, command);
 				break;
 			}
 
 			if (io_done) {
 				if (log_uaeserial)
-					write_log (_T("%s:%d async request %x completed\n"), getdevname(), dev->unit, request);
+					write_log (_T("%s:%d async request %p completed\n"), getdevname(), dev->unit, request);
 				put_long_host(request + 32, io_actual);
 				put_byte_host(request + 31, io_error);
 				ar->ready = 1;
@@ -824,3 +834,5 @@ void uaeserialdev_reset (void)
 		return;
 	dev_reset ();
 }
+
+#endif /* UAESERIAL */

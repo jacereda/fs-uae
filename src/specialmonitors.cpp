@@ -2295,7 +2295,12 @@ struct png_cb
 	int size;
 };
 
+#ifdef FSUAE
+// FIXME
+static void readcallback(png_structp png_ptr, png_bytep out, png_size_t count)
+#else
 static void __cdecl readcallback(png_structp png_ptr, png_bytep out, png_size_t count)
+#endif
 {
 	png_voidp io_ptr = png_get_io_ptr(png_ptr);
 

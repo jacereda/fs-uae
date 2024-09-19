@@ -206,7 +206,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -2008,6 +2008,8 @@ void action_replay_memory_reset (void)
 		action_replay_flag = ACTION_REPLAY_ACTIVE;
 }
 
+#ifdef SAVESTATE
+
 uae_u8 *save_hrtmon (int *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
@@ -2188,6 +2190,8 @@ void restore_ar_finish(void)
 		hide_cart((ar_state2 & 2) ? 1 : 0);
 	}
 }
+
+#endif /* SAVESTATE */
 
 #define NPSIZE 65536
 

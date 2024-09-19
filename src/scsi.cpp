@@ -23,6 +23,7 @@
 #include "custom.h"
 #include "gayle.h"
 #include "cia.h"
+#include "x86.h"
 #include "devices.h"
 #include "flashrom.h"
 #include "gui.h"
@@ -1590,7 +1591,7 @@ static uae_u8 aic_bget_reg(struct soft_scsi *scsi)
 	return scsi->aic_reg & 15;
 }
 
-static uae_u8 aic_bget_dma(struct soft_scsi *scsi, bool *phaseerr)
+uae_u8 aic_bget_dma(struct soft_scsi *scsi, bool *phaseerr)
 {
 	struct raw_scsi *r = &scsi->rscsi;
 	if (!scsi->dma_direction)
@@ -1700,7 +1701,7 @@ static void aic_bput_reg(struct soft_scsi *scsi, uae_u8 v)
 	scsi->aic_reg = v & 15;
 }
 
-static void aic_bput_dma(struct soft_scsi *scsi, uae_u8 v, bool *phaseerr)
+void aic_bput_dma(struct soft_scsi *scsi, uae_u8 v, bool *phaseerr)
 {
 	struct raw_scsi *r = &scsi->rscsi;
 	if (!scsi->dma_direction)
@@ -1804,7 +1805,9 @@ void ncr80_rethink(void)
 		struct soft_scsi *s = soft_scsi_devices[i];
 		if (s->irq && s->intena && ((s->c400 && (s->regs_400[0] & 0x10) && !s->c400_count) || !s->c400)) {
 			if (soft_scsi_devices[i] == x86_hd_data) {
+#ifdef WITH_X86
 				;// x86_doirq(5);
+#endif
 			} else {
 				safe_interrupt_set(IRQ_SOURCE_SCSI, i, soft_scsi_devices[i]->level6);
 			}
@@ -4348,18 +4351,18 @@ bool kronos_init(struct autoconfig_info *aci)
 	scsi->databuffer_size = 1024;
 	scsi->databufferptr = xcalloc(uae_u8, scsi->databuffer_size);
 
-	uae_u16 sum = 0, xor = 0;
+	uae_u16 sum = 0, xor_ = 0;
 	for (int i = 0; i < 16 - 2; i++) {
 		uae_u16 v = (kronos_eeprom[i * 2 + 0] << 8) | (kronos_eeprom[i * 2 + 1]);
 		sum += v;
-		xor ^= v;
+		xor_ ^= v;
 	}
 	sum = 0 - sum;
 	kronos_eeprom[14 * 2 + 0] = sum >> 8;
 	kronos_eeprom[14 * 2 + 1] = (uae_u8)sum;
-	xor ^= sum;
-	kronos_eeprom[15 * 2 + 0] = xor >> 8;
-	kronos_eeprom[15 * 2 + 1] = (uae_u8)xor;
+	xor_ ^= sum;
+	kronos_eeprom[15 * 2 + 0] = xor_ >> 8;
+	kronos_eeprom[15 * 2 + 1] = (uae_u8)xor_;
 
 	scsi->eeprom = eeprom93xx_new(kronos_eeprom, 16, NULL);
 
@@ -5317,6 +5320,8 @@ void overdrive_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romco
 	generic_soft_scsi_add(ch, ci, rc, NCR5380_OVERDRIVE, 65536, 32768, ROMTYPE_OVERDRIVE);
 }
 
+#ifdef WITH_X86
+
 // x86 bridge scsi rancho rt1000
 void x86_rt1000_bput(int portnum, uae_u8 v)
 {
@@ -5341,7 +5346,6 @@ uae_u8 x86_rt1000_bget(int portnum)
 	return v;
 }
 
-extern void x86_rt1000_bios(struct zfile*, struct romconfig *rc);
 bool x86_rt1000_init(struct autoconfig_info *aci)
 {
 	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
@@ -5369,3 +5373,5 @@ void x86_rt1000_add_unit(int ch, struct uaedev_config_info *ci, struct romconfig
 {
 	generic_soft_scsi_add(ch, ci, rc, NCR5380_X86_RT1000, 0, 0, ROMTYPE_X86_RT1000);
 }
+
+#endif // WITH_X86

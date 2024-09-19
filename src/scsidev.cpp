@@ -10,10 +10,12 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef SCSIEMU
+
 #include "config.h"
 #include "threaddep/thread.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "disk.h"
@@ -817,3 +819,4 @@ void scsidev_start_threads (void)
 #endif
 }
 
+#endif /* SCSIEMU */

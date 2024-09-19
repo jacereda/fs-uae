@@ -17,8 +17,10 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef CDTV
+
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "debug.h"
@@ -1624,7 +1626,7 @@ uae_u8 cdtv_battram_read (int addr)
 
 MEMORY_FUNCTIONS(cardmem);
 
-static addrbank cardmem_bank = {
+addrbank cardmem_bank = {
 	cardmem_lget, cardmem_wget, cardmem_bget,
 	cardmem_lput, cardmem_wput, cardmem_bput,
 	cardmem_xlate, cardmem_check, NULL, _T("rom_e0"), _T("CDTV memory card"),
@@ -1908,4 +1910,6 @@ void restore_cdtv_finish (void)
 	}
 }
 
-#endif
+#endif /* SAVESTATE */
+
+#endif /* CDTV */

@@ -10,7 +10,13 @@
 #define UAE_XWIN_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/asm.h"
+#include <string.h>
+#endif
 #include "machdep/rpt.h"
+
+#define MAX_AMIGADISPLAYS 4
 
 typedef uae_u32 xcolnr;
 
@@ -41,20 +47,40 @@ extern int vsync_isdone(frame_time_t*);
 extern void doflashscreen (void);
 extern int flashscreen;
 extern void updatedisplayarea(int monid);
-extern int isvsync_chipset (void);
-extern int isvsync_rtg (void);
-extern int isvsync (void);
+
+#ifdef FSUAE
+
+static inline int isvsync_chipset (void)
+{
+	return 0;
+}
+
+static inline int isvsync_rtg (void)
+{
+	return 0;
+}
+
+static inline int isvsync (void)
+{
+	return 0;
+}
+
+#else
+int isvsync_chipset (void);
+int isvsync_rtg (void);
+int isvsync (void);
+#endif
 
 extern void flush_line(struct vidbuffer*, int);
 extern void flush_block(struct vidbuffer*, int, int);
 extern void flush_screen(struct vidbuffer*, int, int);
 extern void flush_clear_screen(struct vidbuffer*);
-extern bool render_screen(int monid, int, bool);
+extern bool render_screen(int monid, int mode, bool immediate);
 extern void show_screen(int monid, int mode);
 extern bool show_screen_maybe(int monid, bool);
 
-extern int lockscr(struct vidbuffer*, bool, bool);
-extern void unlockscr(struct vidbuffer*, int, int);
+int lockscr(struct vidbuffer *vb, bool fullupdate, bool first);
+void unlockscr(struct vidbuffer *vb, int y_start, int y_end);
 extern bool target_graphics_buffer_update(int monid);
 extern float target_adjust_vblank_hz(int monid, float);
 extern int target_get_display_scanline(int displayindex);
@@ -74,8 +100,16 @@ extern unsigned int doMask256 (int p, int bits, int shift);
 extern void alloc_colors64k (int monid, int, int, int, int, int, int, int, int, int, int, bool);
 extern void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 			      uae_u32 *rc, uae_u32 *gc, uae_u32 *bc);
-extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32 *rgbx16);
 extern float getvsyncrate(int monid, float hz, int *mult);
+
+void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32 *rgbx16);
+int getconvert(int rgbformat, int pixbytes);
+void copyrow_scale(int monid, uae_u8 *src, uae_u8 *src_screen, uae_u8 *dst,
+	int sx, int sy, int sxadd, int width, int srcbytesperrow, int srcpixbytes,
+	int screenbytesperrow, int screenpixbytes,
+	int dx, int dy, int dstwidth, int dstheight, int dstbytesperrow, int dstpixbytes,
+	bool ck, uae_u32 colorkey,
+	int convert_mode, uae_u32 *p96_rgbx16p, uae_u32 *clut, bool yuv_swap);
 
     /* The graphics code has a choice whether it wants to use a large buffer
      * for the whole display, or only a small buffer for a single line.

@@ -10,7 +10,12 @@
 #define UAE_CUSTOM_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/inline.h"
+#include "options.h"
+#else
 #include "machdep/rpt.h"
+#endif
 
 /* These are the masks that are ORed together in the chipset_mask option.
 * If CSMASK_AGA is set, the ECS bits are guaranteed to be set as well.  */
@@ -49,6 +54,11 @@ extern void set_picasso_hack_rate(int hz);
 * Useful if the debugger was active.  */
 extern int bogusframe;
 extern unsigned long int hsync_counter, vsync_counter;
+
+#ifdef FSUAE // NL
+extern int g_uae_vsync_counter;
+// extern int g_uae_hsync_counter;
+#endif
 
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
@@ -246,5 +256,11 @@ struct custom_store
 	uae_u32 pc;
 };
 extern struct custom_store custom_storage[256];
+
+void vsync_event_done(void);
+
+#ifdef CPUEMU_13
+extern uae_u8 cycle_line[256 + 1];
+#endif
 
 #endif /* UAE_CUSTOM_H */

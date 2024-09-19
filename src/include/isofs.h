@@ -1,6 +1,9 @@
 #ifndef UAE_ISOFS_H
 #define UAE_ISOFS_H
 
+#ifdef FSUAE
+#include "config.h"
+#endif
 #include "uae/types.h"
 
 typedef int isofs_gid_t;

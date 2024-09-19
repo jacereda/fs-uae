@@ -16,7 +16,7 @@
 #define NEW_TRAP_DEBUG 0
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "threaddep/thread.h"
@@ -24,6 +24,9 @@
 #include "traps.h"
 #include "uae.h"
 #include "debug.h"
+#ifdef FSUAE
+#include "bsdsocket.h"
+#endif
 
 /*
 * Traps are the mechanism via which 68k code can call emulator code
@@ -153,6 +156,13 @@ void REGPARAM2 m68k_handle_trap (unsigned int trap_num)
 
 	if (trap->name && trap->name[0] != 0 && trace_traps)
 		write_log (_T("TRAP: %s\n"), trap->name);
+#ifdef FSUAE
+#if BSD_TRACING_ENABLED
+	if (trap->name && trap->name[0] != 0)
+		if (strncasecmp("bsdsock", trap->name, 7) == 0)
+			write_log (_T("TRAP: %s\n"), trap->name);
+#endif
+#endif
 
 	if (trap_num < trap_count) {
 		if (trap->flags & TRAPFLAG_EXTRA_STACK) {
@@ -547,21 +557,21 @@ static void hardware_trap_ack(TrapContext *ctx)
 		set_special_exter(SPCFLAG_UAEINT);
 	}
 	if (!trap_in_use[ctx->trap_slot])
-		write_log(_T("TRAP SLOT %d ACK WIIHOUT ALLOCATION!\n"));
+		write_log(_T("TRAP SLOT %d ACK WIIHOUT ALLOCATION!\n"), ctx->trap_slot);
 	trap_in_use[ctx->trap_slot] = false;
 	xfree(ctx);
 }
 
 static void *hardware_trap_thread(void *arg)
 {
-	int tid = (uae_u32)arg;
+	int tid = (uae_u32)(uintptr_t)arg;
 	for (;;) {
 		TrapContext *ctx = (TrapContext*)read_comm_pipe_pvoid_blocking(&trap_thread_pipe[tid]);
 		if (!ctx)
 			break;
 
 		if (trap_in_use[ctx->trap_slot]) {
-			write_log(_T("TRAP SLOT %d ALREADY IN USE!\n"));
+			write_log(_T("TRAP SLOT %d ALREADY IN USE!\n"), ctx->trap_slot);
 		}
 		trap_in_use[ctx->trap_slot] = true;
 
@@ -805,7 +815,7 @@ void init_traps(void)
 		for (int i = 0; i < TRAP_THREADS; i++) {
 			init_comm_pipe(&trap_thread_pipe[i], 100, 1);
 			hardware_trap_kill[i] = 1;
-			uae_start_thread_fast(hardware_trap_thread, (void *)i, &trap_thread_id[i]);
+			uae_start_thread_fast(hardware_trap_thread, (void *)(uintptr_t) i, &trap_thread_id[i]);
 		}
 	}
 }
@@ -1276,7 +1286,7 @@ uae_char *trap_get_alloc_string(TrapContext *ctx, uaecptr addr, int maxlen)
 	return buf;
 }
 
-int trap_get_bstr(TrapContext *ctx, uae_u8 *haddr, uaecptr addr, int maxlen)
+static int trap_get_bstr(TrapContext *ctx, uae_u8 *haddr, uaecptr addr, int maxlen)
 {
 	int len = 0;
 	if (trap_is_indirect_null(ctx)) {

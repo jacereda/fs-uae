@@ -15,7 +15,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "events.h"
 #include "newcpu.h"
@@ -76,10 +76,6 @@ static int blit_cyclecounter, blit_waitcyclecounter;
 static uaecptr blit_waitpc;
 static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_startcycles, blit_misscyclecounter;
-
-#ifdef CPUEMU_13
-extern uae_u8 cycle_line[256];
-#endif
 
 static long blit_firstline_cycles;
 static long blit_first_cycle;
@@ -255,7 +251,7 @@ static const int *set_cycle_diagram_type (uae_u8 diag)
 	if (diag >= 0x00 && diag <= 0x0f)
 		return &blit_cycle_diagram[diag][0];
 	if (diag >= 0x40 && diag <= 0x4f)
-		return &blit_cycle_diagram_fill[diag][0];
+		return &blit_cycle_diagram_fill[diag - 0x40][0];
 	if (diag == 0x80)
 		return blit_cycle_diagram_line;
 	if (diag == 0x81)

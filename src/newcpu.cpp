@@ -1,3 +1,10 @@
+#ifdef FSUAE
+#define _tcstoul strtoul
+// static int _tclen(const char *s) {
+// 	// FIXME: Correctly implement?
+// 	return 1;
+// }
+#endif
 /*
 * UAE - The Un*x Amiga Emulator
 *
@@ -23,7 +30,7 @@
 #include "options.h"
 #include "events.h"
 #include "uae.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cpummu.h"
@@ -57,6 +64,11 @@
 /* Need to have these somewhere */
 bool check_prefs_changed_comp (bool checkonly) { return false; }
 #endif
+
+#ifdef FSUAE // NL
+#include <fs/emu/hacks.h>
+#endif
+
 /* For faster JIT cycles handling */
 uae_s32 pissoff = 0;
 
@@ -1961,6 +1973,9 @@ static void update_68k_cycles (void)
 		if (currprefs.cpu_model >= 68040)
 			cpucycleunit /= 2;
 	} else if (currprefs.cpu_frequency) {
+#ifdef FSUAE
+		// FIXME: overflow when calculating CYCLE_UNIT * baseclock ?
+#endif
 		cpucycleunit = CYCLE_UNIT * baseclock / currprefs.cpu_frequency;
 	} else if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_clock_multiplier == 0) {
 		if (currprefs.cpu_model >= 68040) {
@@ -4580,6 +4595,11 @@ void safe_interrupt_set(int num, int id, bool i6)
 
 int cpu_sleep_millis(int ms)
 {
+#ifdef FSUAE
+	if (fsemu) {
+		printf("cpu_sleep_millis %d\n", ms);
+	}
+#endif
 	int ret = 0;
 #ifdef WITH_PPC
 	int state = ppc_state;
@@ -4890,10 +4910,12 @@ static int do_specialties (int cycles)
 	while ((regs.spcflags & SPCFLAG_STOP) && !(regs.spcflags & SPCFLAG_BRK)) {
 	isstopped:
 		check_uae_int_request();
+#ifdef BSDSOCKET
 		{
 			if (bsd_int_requested)
 				bsdsock_fake_int_handler ();
 		}
+#endif
 
 		if (cpu_tracer > 0) {
 			cputrace.stopped = regs.stopped;
@@ -5566,7 +5588,7 @@ static void run_cpu_thread(void *(*f)(void *))
 
 #endif
 
-void custom_reset_cpu(bool hardreset, bool keyboardreset)
+static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
 #ifdef WITH_THREADED_CPU
 	if (cpu_thread_tid != uae_thread_get_id()) {
@@ -6671,10 +6693,15 @@ void m68k_go (int may_quit)
 
 			if (!restored || hsync_counter == 0)
 				savestate_check ();
+#ifdef FSUAE
+#else
 			if (input_record == INPREC_RECORD_START)
 				input_record = INPREC_RECORD_NORMAL;
+#endif
 			statusline_clear();
 		} else {
+#ifdef FSUAE
+#else
 			if (input_record == INPREC_RECORD_START) {
 				input_record = INPREC_RECORD_NORMAL;
 				savestate_init ();
@@ -6682,6 +6709,7 @@ void m68k_go (int may_quit)
 				vsync_counter = 0;
 				savestate_check ();
 			}
+#endif
 		}
 
 		if (changed_prefs.inprecfile[0] && input_record)
@@ -11424,8 +11452,6 @@ void fill_prefetch (void)
 		regs.irc = x_get_word (pc + 2);
 	}
 }
-
-extern bool cpuboard_fc_check(uaecptr addr, uae_u32 *v, int size, bool write);
 
 uae_u32 sfc_nommu_get_byte(uaecptr addr)
 {

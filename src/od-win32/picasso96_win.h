@@ -8,6 +8,12 @@
 #ifndef __PICASSO96_H__
 #define __PICASSO96_H__
 
+#ifdef FSUAE // NL
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#endif
+
 #ifdef PICASSO96
 
 #include "dxwrap.h"
@@ -669,7 +675,7 @@ extern void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_state(int monid,int on);
 extern uae_u8 *gfx_lock_picasso(int monid, bool, bool);
-extern void gfx_unlock_picasso(int monid, bool);
+void gfx_unlock_picasso(int monid, bool dorender);
 extern int createwindowscursor(int monid, uaecptr src, int w, int h, int hiressprite, int doubledsprite, int chipset);
 
 void lockrtg(void);

@@ -314,6 +314,7 @@ int old_dsp_rec_pos=0;
 int buf_written=0;
 int last_crecord=0;
 #endif
+#if 0
 static void sb_get_buffer_emu8k(int32_t *buffer, int len, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -416,8 +417,9 @@ static void sb_get_buffer_emu8k(int32_t *buffer, int len, void *p)
         sb->dsp.pos = 0;
         sb->emu8k.pos = 0;
 }
+#endif
 
-
+static
 void sb_ct1335_mixer_write(uint16_t addr, uint8_t val, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -462,6 +464,7 @@ void sb_ct1335_mixer_write(uint16_t addr, uint8_t val, void *p)
         }
 }
 
+static
 uint8_t sb_ct1335_mixer_read(uint16_t addr, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -482,12 +485,14 @@ uint8_t sb_ct1335_mixer_read(uint16_t addr, void *p)
         return 0xff;
 }
 
+static
 void sb_ct1335_mixer_reset(sb_t* sb)
 {
         sb_ct1335_mixer_write(0x254,0,sb);
         sb_ct1335_mixer_write(0x255,0,sb);
 }
 
+static
 void sb_ct1345_mixer_write(uint16_t addr, uint8_t val, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -583,6 +588,7 @@ void sb_ct1345_mixer_write(uint16_t addr, uint8_t val, void *p)
         }
 }
 
+static
 uint8_t sb_ct1345_mixer_read(uint16_t addr, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -605,12 +611,15 @@ uint8_t sb_ct1345_mixer_read(uint16_t addr, void *p)
         
         return 0xff;
 }
+
+static
 void sb_ct1345_mixer_reset(sb_t* sb)
 {
         sb_ct1345_mixer_write(4,0,sb);
         sb_ct1345_mixer_write(5,0,sb);
 }
 
+static
 void sb_ct1745_mixer_write(uint16_t addr, uint8_t val, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -749,6 +758,7 @@ void sb_ct1745_mixer_write(uint16_t addr, uint8_t val, void *p)
         }
 }
 
+static
 uint8_t sb_ct1745_mixer_read(uint16_t addr, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -846,6 +856,7 @@ uint8_t sb_ct1745_mixer_read(uint16_t addr, void *p)
         return 0xff;
 }
 
+static
 void sb_ct1745_mixer_reset(sb_t* sb)
 {
         sb_ct1745_mixer_write(4,0,sb);
@@ -855,6 +866,7 @@ void sb_ct1745_mixer_reset(sb_t* sb)
 
 static uint16_t sb_mcv_addr[8] = {0x200, 0x210, 0x220, 0x230, 0x240, 0x250, 0x260, 0x270};
 
+static
 uint8_t sb_mcv_read(int port, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -864,6 +876,7 @@ uint8_t sb_mcv_read(int port, void *p)
         return sb->pos_regs[port & 7];
 }
 
+static
 void sb_mcv_write(int port, uint8_t val, void *p)
 {
         uint16_t addr;
@@ -895,6 +908,7 @@ void sb_mcv_write(int port, uint8_t val, void *p)
 
 static int sb_pro_mcv_irqs[4] = {7, 5, 3, 3};
 
+static
 uint8_t sb_pro_mcv_read(int port, void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -904,6 +918,7 @@ uint8_t sb_pro_mcv_read(int port, void *p)
         return sb->pos_regs[port & 7];
 }
 
+static
 void sb_pro_mcv_write(int port, uint8_t val, void *p)
 {
         uint16_t addr;
@@ -1191,6 +1206,7 @@ void *sb_awe32_init()
 }
 #endif
 
+static
 void sb_close(void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -1222,6 +1238,7 @@ void sb_awe32_close(void *p)
 }
 #endif
 
+static
 void sb_speed_changed(void *p)
 {
         sb_t *sb = (sb_t *)p;
@@ -1229,6 +1246,7 @@ void sb_speed_changed(void *p)
         sb_dsp_speed_changed(&sb->dsp);
 }
 
+static
 void sb_add_status_info(char *s, int max_len, void *p)
 {
         sb_t *sb = (sb_t *)p;

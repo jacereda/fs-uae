@@ -10,8 +10,16 @@
 #define UAE_AUDIO_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/inline.h"
+#endif
 
+#ifdef FSUAE
+// FIXME: changed PERIOD_MAX from ULONG_MAX
+#define PERIOD_MAX UINT_MAX
+#else
 #define PERIOD_MAX ULONG_MAX
+#endif
 #define MAX_EV ~0u
 
 void AUDxDAT (int nr, uae_u16 value);

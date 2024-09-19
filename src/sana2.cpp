@@ -14,7 +14,7 @@
 
 #include "threaddep/thread.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "events.h"
 #include "newcpu.h"
@@ -132,7 +132,7 @@ static int uaenet_getdata (void *dev, uae_u8 *d, int *len);
 #define SANA2IOB_MCAST  5
 #define SANA2IOF_MCAST  (1<<SANA2IOB_MCAST)
 
-#define S2_Dummy                (TAG_USER + 0xB0000)
+#define S2_Dummy                ((uae_u32) TAG_USER + 0xB0000)
 #define S2_CopyToBuff           (S2_Dummy + 1)
 #define S2_CopyFromBuff         (S2_Dummy + 2)
 #define S2_PacketFilter         (S2_Dummy + 3)
@@ -1155,7 +1155,7 @@ static int dev_do_io_2 (TrapContext *ctx, struct s2devstruct *dev, uae_u8 *reque
 		dev->flush_timeout_cnt = 0;
 		dev->flush_timeout = FLUSH_TIMEOUT;
 		if (log_net)
-			write_log (_T("CMD_FLUSH started %08x\n"), request);
+			write_log (_T("CMD_FLUSH started %p\n"), request);
 		uae_sem_wait (&async_sem);
 		flush(ctx, pdev);
 		uae_sem_post (&async_sem);
@@ -1351,7 +1351,7 @@ static int dev_do_io (TrapContext *ctx, struct s2devstruct *dev, uae_u8 *request
 
 	put_byte_host(request + 31, 0);
 	if (!pdev) {
-		write_log (_T("%s unknown iorequest %08x\n"), getdevname (), request);
+		write_log (_T("%s unknown iorequest %p\n"), getdevname (), request);
 		return 0;
 	}
 	if (command == NSCMD_DEVICEQUERY) {
@@ -1444,13 +1444,13 @@ static uae_u32 REGPARAM2 dev_beginio (TrapContext *ctx)
 
 	put_byte_host(request + 8, NT_MESSAGE);
 	if (!pdev) {
-		write_log (_T("%s unknown iorequest (1) %08x\n"), getdevname (), request);
+		write_log (_T("%s unknown iorequest (1) %p\n"), getdevname (), request);
 		err = 32;
 		goto err;
 	}
 	dev = gets2devstruct (pdev->unit);
 	if (!dev) {
-		write_log (_T("%s unknown iorequest (2) %08x\n"), getdevname (), request);
+		write_log (_T("%s unknown iorequest (2) %p\n"), getdevname (), request);
 		err =  32;
 		goto err;
 	}
@@ -1867,7 +1867,10 @@ uaecptr netdev_startup(TrapContext *ctx, uaecptr resaddr)
 {
 	if (!currprefs.sana2)
 		return resaddr;
+#ifdef FSUAE
+#else
 	if (log_net)
+#endif
 		write_log (_T("netdev_startup(0x%x)\n"), resaddr);
 	/* Build a struct Resident. This will set up and initialize
 	* the uaenet.device */
@@ -1894,11 +1897,14 @@ void netdev_install (void)
 
 	if (!currprefs.sana2)
 		return;
+#ifdef FSUAE
+#else
 	if (log_net)
+#endif
 		write_log (_T("netdev_install(): 0x%x\n"), here ());
 
 	ethernet_enumerate_free ();
-	ethernet_enumerate (td, NULL);
+	ethernet_enumerate (td, 0);
 
 	ROM_netdev_resname = ds (getdevname());
 	ROM_netdev_resid = ds (_T("UAE net.device 0.2"));

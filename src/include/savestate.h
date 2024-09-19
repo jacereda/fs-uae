@@ -10,6 +10,11 @@
 #define UAE_SAVESTATE_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/limits.h"
+#include "uae/inline.h"
+#include <stddef.h>
+#endif
 
 /* functions to save byte,word or long word
  * independent of CPU's endianness */
@@ -251,7 +256,11 @@ extern struct zfile *savestate_file;
 
 STATIC_INLINE bool isrestore (void)
 {
+#ifdef SAVESTATE
 	return savestate_state == STATE_RESTORE || savestate_state == STATE_REWIND;
+#else
+	return false;
+#endif
 }
 
 extern void savestate_quick (int slot, int save);

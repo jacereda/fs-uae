@@ -28,7 +28,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "newcpu.h"
 #include "cpummu.h"
 #include "debug.h"

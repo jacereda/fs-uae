@@ -15,7 +15,7 @@
 #include "scsi.h"
 #include "blkdev.h"
 #include "zfile.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "threaddep/thread.h"
 #include "a2091.h"
 #include "fsdb.h"

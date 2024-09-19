@@ -15,7 +15,7 @@
 
 #include "options.h"
 
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "filesys.h"
@@ -1900,6 +1900,8 @@ void check_prefs_changed_gayle(void)
 	}
 }
 
+#ifdef SAVESTATE
+
 uae_u8 *restore_gayle (uae_u8 *src)
 {
 	changed_prefs.cs_ide = restore_u8 ();
@@ -1976,3 +1978,5 @@ uae_u8 *restore_gayle_ide (uae_u8 *src)
 	xfree (path);
 	return src;
 }
+
+#endif /* SAVESTATE */

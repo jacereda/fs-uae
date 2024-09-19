@@ -3,13 +3,21 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef FSUAE
+#include <stdlib.h>
+#include <stddef.h>
+#endif
 
 extern void activate_debugger(void);
 
 //#define DEBUG_VGA_REG
 //#define DEBUG_VGA
 
+#ifdef FSUAE
+#include "uae/log.h"
+#else
 extern void write_log (const char *, ...);
+#endif
 
 #ifndef glue
 #define xglue(x, y) x ## y
@@ -18,7 +26,10 @@ extern void write_log (const char *, ...);
 #define tostring(s)	#s
 #endif
 
+#ifdef FSUAE
+#else
 typedef int ssize_t;
+#endif
 
 #ifdef _MSC_VER
 #include <windows.h>

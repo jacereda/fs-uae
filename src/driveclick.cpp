@@ -163,6 +163,9 @@ void driveclick_init (void)
 {
 	int v, vv;
 	TCHAR tmp[MAX_DPATH];
+#ifdef FSUAE
+	write_log("driveclick_init\n");
+#endif
 
 	driveclick_fdrawcmd_detect ();
 	driveclick_close();
@@ -196,21 +199,21 @@ void driveclick_init (void)
 				for (int j = 0; j < CLICK_TRACKS; j++)
 					drvs[i][DS_CLICK].lengths[j] = drvs[i][DS_CLICK].len;
 				get_plugin_path (path2, sizeof path2 / sizeof (TCHAR), _T("floppysounds"));
-				_stprintf (tmp, _T("%sdrive_click_%s"),
+				_sntprintf(tmp, MAX_DPATH, _T("%sdrive_click_%s"),
 					path2, fs->dfxclickexternal);
 				v = loadsample (tmp, &drvs[i][DS_CLICK]);
 				if (v)
 					processclicks (&drvs[i][DS_CLICK]);
-				_stprintf (tmp, _T("%sdrive_spin_%s"),
+				_sntprintf(tmp, MAX_DPATH, _T("%sdrive_spin_%s"),
 					path2, fs->dfxclickexternal);
 				v += loadsample (tmp, &drvs[i][DS_SPIN]);
-				_stprintf (tmp, _T("%sdrive_spinnd_%s"),
+				_sntprintf(tmp, MAX_DPATH, _T("%sdrive_spinnd_%s"),
 					path2, fs->dfxclickexternal);
 				v += loadsample (tmp, &drvs[i][DS_SPINND]);
-				_stprintf (tmp, _T("%sdrive_startup_%s"),
+				_sntprintf(tmp, MAX_DPATH, _T("%sdrive_startup_%s"),
 					path2, fs->dfxclickexternal);
 				v += loadsample (tmp, &drvs[i][DS_START]);
-				_stprintf (tmp, _T("%sdrive_snatch_%s"),
+				_sntprintf(tmp, MAX_DPATH, _T("%sdrive_snatch_%s"),
 					path2, fs->dfxclickexternal);
 				v += loadsample (tmp, &drvs[i][DS_SNATCH]);
 			}
@@ -484,6 +487,13 @@ void driveclick_motor (int drive, int running)
 
 void driveclick_insert (int drive, int eject)
 {
+#ifdef FSUAE
+	write_log("driveclick_insert drive=%d eject=%d click_initialized=%d "
+			  "wave_initialized=%d currprefs.floppyslots[drive].dfxclick=%d\n",
+			  drive, eject, click_initialized, wave_initialized,
+			  currprefs.floppyslots[drive].dfxclick);
+	drv_has_disk[drive] = !eject;
+#endif
 	if (!click_initialized)
 		return;
 	if (!wave_initialized)
@@ -494,7 +504,11 @@ void driveclick_insert (int drive, int eject)
 		drv_has_spun[drive] = 0;
 	if (drv_has_disk[drive] == 0 && !eject)
 		dr_audio_activate ();
+#ifdef FSUAE
+
+#else
 	drv_has_disk[drive] = !eject;
+#endif
 }
 
 void driveclick_check_prefs (void)

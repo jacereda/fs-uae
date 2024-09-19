@@ -96,7 +96,16 @@
 
 #ifdef UAE
 #define JIT_PATH "jit/"
+#ifdef FSUAE
+
+char *ua (const char *s) {
+    return strdup(s);
+}
+
+#define GEN_PATH "gen/"
+#else
 #define GEN_PATH "jit/"
+#endif
 #define RETURN "return 0;"
 #define RETTYPE "uae_u32"
 #define NEXT_CPU_LEVEL 5
@@ -3111,7 +3120,11 @@ generate_includes (FILE * f)
 	fprintf (f, "#include \"sysdeps.h\"\n");
 #ifdef UAE
 	fprintf (f, "#include \"options.h\"\n");
+#ifdef FSUAE
+	fprintf (f, "#include \"uae/memory.h\"\n");
+#else
 	fprintf (f, "#include \"memory.h\"\n");
+#endif
 #else
 	fprintf (f, "#include \"m68k.h\"\n");
 	fprintf (f, "#include \"memory-uae.h\"\n");
@@ -3521,12 +3534,20 @@ generate_func (int noflags)
 
 }
 
+#if defined(FSUAE) && defined (WINDOWS)
+#include "windows.h"
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+int argc = __argc;
+char** argv = __argv;
+#else
 #ifdef __cplusplus
 int main(int, char **)
 #else
 int main()
 #endif
 {
+#endif
     read_table68k ();
     do_merges ();
 

@@ -11,11 +11,24 @@
 #include "timer.h"
 #include "sound.h"
 #include "sound_mpu401_uart.h"
+#include "xi8088.h"
+#include "ps2_mca.h"
+#include "plat-midi.h"
+#include "rom.h"
+#include "t3100e.h"
+#include "mouse.h"
+
+#define PCEMGLUE
+#include "video.h"
 
 #ifdef _WIN32
 #include <windows.h>
-#include "midi.h"
 #endif
+#include "midi.h"
+
+// ibm.h defines a macro printf to redirect to pclog. This interferes
+// with some GNU attributes used when importing UAE config files.
+#undef printf
 
 #include "pcemglue.h"
 
@@ -152,40 +165,38 @@ int xi8088_bios_128kb(void)
 	return 0;
 }
 
-uint8_t portin(uint16_t portnum);
 uint8_t inb(uint16_t port)
 {
 	return portin(port);
 }
 
-void portout(uint16_t, uint8_t);
 void outb(uint16_t port, uint8_t v)
 {
 	portout(port, v);
 }
-uint16_t portin16(uint16_t portnum);
+
 uint16_t inw(uint16_t port)
 {
 	return portin16(port);
 }
-void portout16(uint16_t portnum, uint16_t value);
+
 void outw(uint16_t port, uint16_t val)
 {
 	portout16(port, val);
 }
-uint32_t portin32(uint16_t portnum);
+
 uint32_t inl(uint16_t port)
 {
 	return portin32(port);
 }
-void portout32(uint16_t portnum, uint32_t value);
+
 void outl(uint16_t port, uint32_t val)
 {
 	portout32(port, val);
 }
 
 
-static void model_init(void)
+void model_init(void)
 {
 
 }
@@ -260,21 +271,25 @@ int rom_present(char *s)
 {
 	return 0;
 }
-static int midi_open;
+static int midi_opened;
 
 void midi_write(uint8_t v)
 {
-	if (!midi_open) {
-		midi_open = Midi_Open();
+#ifdef WITH_MIDI
+	if (!midi_opened) {
+		midi_opened = Midi_Open();
 	}
 	Midi_Parse(midi_output, &v);
+#endif
 }
 
 void pcem_close(void)
 {
-	if (midi_open)
+#ifdef WITH_MIDI
+	if (midi_opened)
 		Midi_Close();
-	midi_open = 0;
+#endif
+	midi_opened = 0;
 }
 
 // void (*code)() = (void(*)(void))&block->data[BLOCK_START];

@@ -14,7 +14,7 @@
 #include "options.h"
 #include "zfile.h"
 #include "flashrom.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "newcpu.h"
 #include "debug.h"
 #include "gui.h"

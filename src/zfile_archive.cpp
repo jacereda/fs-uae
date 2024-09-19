@@ -9,9 +9,12 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef FSUAE
+#else
 #ifdef _WIN32
 #include <windows.h>
 #include "win32.h"
+#endif
 #endif
 
 #include "options.h"
@@ -21,6 +24,10 @@
 #include "crc32.h"
 #include "zarchive.h"
 #include "disk.h"
+
+#ifdef FSUAE // NL
+#undef _WIN32
+#endif
 
 #include <zlib.h>
 
@@ -432,8 +439,12 @@ static struct zfile *archive_do_zip (struct znode *zn, struct zfile *z, int flag
 	if (unzLocateFile (uz, s, 1) != UNZ_OK) {
 		xfree (s);
 		for (i = 0; tmp[i]; i++) {
+#ifdef FSUAE
+
+#else
 			if (tmp[i] == '/')
 				tmp[i] = '\\';
+#endif
 		}
 		s = ua (tmp);
 		if (unzLocateFile (uz, s, 1) != UNZ_OK) {
@@ -1619,7 +1630,7 @@ static struct zfile *archive_access_adf (struct znode *zn)
 		for (i = 0; i < sfsblockcnt; i++)
 			bsize += sfsblocks[i].length * adf->blocksize;
 		if (bsize < size)
-			write_log (_T("SFS extracting error, %s size mismatch %d<%d\n"), z->name, bsize, size);
+			write_log (_T("SFS extracting error, %s size mismatch %lld<%lld\n"), z->name, bsize, size);
 
 		dst = z->data;
 		block = zn->offset;

@@ -13,7 +13,7 @@
 #ifdef A2065
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "a2065.h"
@@ -25,7 +25,11 @@
 #include "debug.h"
 #include "devices.h"
 
+#ifdef FSUAE
+#define DUMPPACKET 1
+#else
 #define DUMPPACKET 0
+#endif
 
 #define MEM_MIN 0xffff
 int log_a2065 = 0;
@@ -1099,6 +1103,8 @@ static bool a2065_config (struct autoconfig_info *aci)
 	return true;
 }
 
+#ifdef SAVESTATE
+
 uae_u8 *save_a2065 (int *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak,*dst;
@@ -1130,6 +1136,8 @@ void restore_a2065_finish (void)
 	if (configured)
 		a2065_config(NULL);
 }
+
+#endif /* SAVESTATE */
 
 bool a2065_init (struct autoconfig_info *aci)
 {

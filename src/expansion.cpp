@@ -15,7 +15,7 @@
 #include "options.h"
 #include "uae.h"
 #include "traps.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -440,7 +440,7 @@ void expansion_cpu_fallback(void)
 }
 
 static void call_card_init(int index)
-{	
+{
 	addrbank *ab, *abe;
 	bool ok = false;
 	card_data *cd = cards[ecard];
@@ -2290,7 +2290,7 @@ static void allocate_expamem (void)
 		z3chipmem_bank.start += (currprefs.mbresmem_high_size - 128 * 1024 * 1024) + 16 * 1024 * 1024;
 
 	if (currprefs.z3chipmem_size && z3fastmem_bank[0].start - z3chipmem_bank.start < currprefs.z3chipmem_size)
-		currprefs.z3chipmem_size = changed_prefs.z3chipmem_size = 0;	
+		currprefs.z3chipmem_size = changed_prefs.z3chipmem_size = 0;
 
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
 		if (fastmem_bank[i].reserved_size != currprefs.fastmem[i].size) {
@@ -2784,7 +2784,7 @@ bool alloc_expansion_bank(addrbank *bank, struct autoconfig_info *aci)
 void free_expansion_bank(addrbank *bank)
 {
 	mapped_free(bank);
-	bank->start = NULL;
+	bank->start = 0;
 	bank->reserved_size = 0;
 }
 
@@ -3109,7 +3109,7 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 				aci->parent_of_previous = true;
 		} else {
 			if (log)
-				write_log(_T("init failed.\n"), i);
+				write_log(_T("init %d failed.\n"), i);
 		}
 	}
 	if (log)
@@ -4665,7 +4665,7 @@ void ethernet_updateselection(void)
 
 static void fastlane_memory_callback(struct romconfig *rc, uae_u8 *ac, int size)
 {
-	struct zfile *z = read_device_from_romconfig(rc, NULL);
+	struct zfile *z = read_device_from_romconfig(rc, 0);
 	if (z) {
 		// load autoconfig data from rom file
 		uae_u8 act[16] = { 0 };
@@ -5448,6 +5448,7 @@ const struct expansionromtype expansionroms[] = {
 		_T("amax"), _T("AMAX ROM dongle"), _T("ReadySoft"),
 		NULL, NULL, NULL, NULL, ROMTYPE_AMAX | ROMTYPE_NONE, 0, 0, 0, false
 	},
+#ifdef WITH_X86
 	{
 		_T("x86athdprimary"), _T("AT IDE Primary"), NULL,
 		NULL, x86_at_hd_init_1, NULL, x86_add_at_hd_unit_1, ROMTYPE_X86_AT_HD1 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_AFTER_Z2, true,
@@ -5514,6 +5515,7 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, x86at386_bridge_settings
 	},
+#endif // WITH_X86
 
 	// only here for rom selection and settings
 	{
@@ -5596,6 +5598,7 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, NULL,
 		{ 0x80, 2, 0x10, 0x00, 6502 >> 8, 6502 & 255, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 	},
+#ifdef WITH_X86
 	{
 		_T("sb_isa"), _T("SoundBlaster ISA (Creative)"), NULL,
 		NULL, isa_expansion_init, NULL, NULL, ROMTYPE_SBISA | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5604,7 +5607,7 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, sb_isa_settings
 	},
-
+#endif // WITH_X86
 
 #if 0
 	{
@@ -5707,6 +5710,7 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, ethernet_settings,
 	},
+#ifdef WITH_X86
 	{
 		_T("ne2000_isa"), _T("RTL8019 ISA (NE2000 compatible)"), NULL,
 		NULL, isa_expansion_init, NULL, NULL, ROMTYPE_NE2KISA | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5715,7 +5719,8 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, ne2k_isa_settings
 	},
-
+#endif
+#ifdef CATWEASEL
 		/* Catweasel */
 	{
 		_T("catweasel"), _T("Catweasel"), _T("Individual Computers"),
@@ -5723,6 +5728,7 @@ const struct expansionromtype expansionroms[] = {
 		NULL, 0,
 		false, EXPANSIONTYPE_FLOPPY
 	},
+#endif
 
 		/* built-in controllers */
 	{
@@ -5805,6 +5811,7 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, cubo_settings,
 	},
+#ifdef WITH_X86
 	{
 		_T("x86_mouse"), _T("x86 Bridgeboard mouse"), NULL,
 		NULL, isa_expansion_init, NULL, NULL, ROMTYPE_X86MOUSE | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5813,7 +5820,7 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, x86_mouse_settings
 	},
-
+#endif // WITH_X86
 
 	{
 		NULL
@@ -6474,12 +6481,11 @@ const struct cpuboardtype cpuboards[] = {
 		harms_sub, 0
 	},
 	{
-		NULL
+		0
 	}
 };
 
-const struct memoryboardtype memoryboards[]
-{
+const struct memoryboardtype memoryboards[] = {
 	// z2
 	{
 		_T("UAE"), _T("0xf00000 RAM"),
@@ -6514,5 +6520,5 @@ const struct memoryboardtype memoryboards[]
 
 	{
 		NULL
-	} 
+	}
 };

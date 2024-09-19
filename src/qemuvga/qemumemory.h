@@ -14,6 +14,10 @@
 #ifndef QMEMORY_H
 #define QMEMORY_H
 
+#ifdef FSUAE // NL
+#include "uae/inline.h"
+#endif
+
 #ifndef CONFIG_USER_ONLY
 
 #include <stdint.h>

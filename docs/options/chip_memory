@@ -1,0 +1,63 @@
+Summary: "Chip RAM"
+Type: Choice
+Default:
+Example: 1024
+
+Override amount of chip memory, specified in KB. Must be a multiple of 512.
+The default value depends on [amiga_model].
+
+Value: 256 (256 KB)
+Value: 512 (512 KB)
+Value: 1024 (1 MB)
+Value: 1536 (1.5 MB)
+Value: 2048 (2 MB)
+Value: 4096 (4 MB)
+Value: 8192 (8 MB)
+
+Code:
+
+    if c.chip_memory.explicit:
+        value = c.chip_memory.explicit
+    elif c.amiga_model == "A500":
+        value = "512"
+    elif c.amiga_model == "A500/512K":
+        value = "512"
+    elif c.amiga_model == "A500+":
+        value = "1024"
+    elif c.amiga_model == "A600":
+        value = "1024"
+    elif c.amiga_model == "A1000":
+        value = "512"
+    elif c.amiga_model == "A1200":
+        value = "2048"
+    elif c.amiga_model == "A1200/3.0":
+        value = "2048"
+    elif c.amiga_model == "A1200/020":
+        value = "2048"
+    elif c.amiga_model == "A1200/1230":
+        value = "2048"
+    elif c.amiga_model == "A1200/1240":
+        value = "2048"
+    elif c.amiga_model == "A1200/1260":
+        value = "2048"
+    elif c.amiga_model == "A1200/PPC":
+        value = "2048"
+    elif c.amiga_model == "A3000":
+        # FIXME: did it usually have 1 MB?
+        value = "2048"
+    elif c.amiga_model == "A4000":
+        value = "2048"
+    elif c.amiga_model == "A4000/040":
+        value = "2048"
+    elif c.amiga_model == "A4000/OS4":
+        value = "2048"
+    elif c.amiga_model == "A4000/PPC":
+        value = "2048"
+    elif c.amiga_model == "CD32":
+        value = "2048"
+    elif c.amiga_model == "CD32/FMV":
+        value = "2048"
+    elif c.amiga_model == "CDTV":
+        value = "512"
+    else:
+        f.fail("Unknown amiga_model")

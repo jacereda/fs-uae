@@ -733,7 +733,6 @@ static int debugmem_free(uaecptr addr, uae_u32 size)
 	return 0;
 }
 
-
 static uae_u32 REGPARAM2 debugmem_chipmem_lget(uaecptr addr)
 {
 	uae_u32 *m;
@@ -767,6 +766,7 @@ static uae_u32 REGPARAM2 debugmem_chipmem_bget(uaecptr addr)
 	return v;
 }
 
+static
 void REGPARAM2 debugmem_chipmem_lput(uaecptr addr, uae_u32 l)
 {
 	if (addr < debugmem_chiplimit) {
@@ -779,6 +779,7 @@ void REGPARAM2 debugmem_chipmem_lput(uaecptr addr, uae_u32 l)
 	}
 }
 
+static
 void REGPARAM2 debugmem_chipmem_wput(uaecptr addr, uae_u32 w)
 {
 	if (addr < debugmem_chiplimit) {
@@ -791,6 +792,7 @@ void REGPARAM2 debugmem_chipmem_wput(uaecptr addr, uae_u32 w)
 	}
 }
 
+static
 void REGPARAM2 debugmem_chipmem_bput(uaecptr addr, uae_u32 b)
 {
 	if (addr < debugmem_chiplimit) {
@@ -2070,6 +2072,8 @@ static bool debugger_load_library(const TCHAR *name)
 	bool ret = false;
 	int filelen;
 	struct zfile *zf = NULL;
+	struct libname *lvo = NULL;
+	int lvoid = 1;
 
 	if (libraries_loaded)
 		return true;
@@ -2101,8 +2105,6 @@ static bool debugger_load_library(const TCHAR *name)
 		libsymbols = xcalloc(struct libsymbol, 10000);
 	}
 
-	struct libname *lvo = NULL;
-	int lvoid = 1;
 	for (;;) {
 		if (p == file + filelen) {
 			ret = true;
@@ -3501,7 +3503,7 @@ static struct debugmemallocs *ismysegment(uaecptr addr)
 		return NULL;
 	addr -= debugmem_bank.start;
 	if (addr >= debugmem_bank.allocated_size)
-		return false;
+		return NULL;
 	for (int i = 1; i <= executable_last_segment; i++) {
 		struct debugmemallocs *alloc = allocs[i];
 		if (addr >= alloc->start && addr < alloc->start + alloc->size)

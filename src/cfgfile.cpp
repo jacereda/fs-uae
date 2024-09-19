@@ -12,6 +12,14 @@
 
 #include <ctype.h>
 
+#ifdef FSUAE // NL
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
+#endif
+
 #include "options.h"
 #include "uae.h"
 #include "audio.h"
@@ -20,7 +28,7 @@
 #include "inputdevice.h"
 #include "gfxfilter.h"
 #include "savestate.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "autoconf.h"
 #include "rommgr.h"
 #include "gui.h"
@@ -40,9 +48,16 @@
 #include "native2amiga_api.h"
 #include "ini.h"
 #include "specialmonitors.h"
+#include "ide.h"
 
+#ifdef FSUAE
+#include <uae/fs.h>
+#define cfgfile_warning error_log
+#define cfgfile_warning_obsolete error_log
+#else
 #define cfgfile_warning write_log
 #define cfgfile_warning_obsolete write_log
+#endif
 
 #if SIZEOF_TCHAR != 1
 /* FIXME: replace strcasecmp with _tcsicmp in source code instead */
@@ -221,6 +236,15 @@ static const TCHAR *ppc_implementations[] = {
 	_T("qemu"),
 	NULL
 };
+#ifdef FSUAE
+static const TCHAR *slirp_implementations[] = {
+	_T("auto"),
+	_T("none"),
+	_T("builtin"),
+	_T("qemu"),
+	NULL
+};
+#endif
 static const TCHAR *ppc_cpu_idle[] = {
 	_T("disabled"),
 	_T("1"),
@@ -902,8 +926,9 @@ void cfgfile_target_dwrite (struct zfile *f, const TCHAR *option, const TCHAR *f
 
 static void cfgfile_write_rom (struct zfile *f, struct multipath *mp, const TCHAR *romfile, const TCHAR *name)
 {
-	TCHAR *str = cfgfile_subst_path (mp->path[0], UNEXPANDED, romfile);
-	str = cfgfile_put_multipath (mp, str);
+	TCHAR *str0 = cfgfile_subst_path (mp->path[0], UNEXPANDED, romfile);
+	TCHAR *str = cfgfile_put_multipath (mp, str0);
+	xfree(str0);
 	cfgfile_write_str (f, name, str);
 	struct zfile *zf = zfile_fopen (str, _T("rb"), ZFD_ALL);
 	if (zf) {
@@ -2066,6 +2091,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	}
 
 #ifdef WITH_SLIRP
+#ifdef FSUAE
+	cfgfile_dwrite_str(f, _T("slirp_implementation"), slirp_implementations[p->slirp_implementation]);
+#endif
 	tmp[0] = 0;
 	for (i = 0; i < MAX_SLIRP_REDIRS; i++) {
 		struct slirp_redir *sr = &p->slirp_redirs[i];
@@ -3861,6 +3889,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	if (cfgfile_path(option, value, _T("trainerfile"), p->trainerfile, sizeof p->trainerfile / sizeof(TCHAR)))
 		return 1;
 
+#ifdef SAVESTATE
+
 	if (cfgfile_path (option, value, _T("statefile_quit"), p->quitstatefile, sizeof p->quitstatefile / sizeof (TCHAR)))
 		return 1;
 
@@ -3879,6 +3909,12 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			savestate_state = STATE_DORESTORE;
 		} else {
 			int ok = 0;
+#ifdef FSUAE
+            // code above seems broken, checks dir but removes file
+            // simple fix: force ok (but leave WIN32 version as it
+            // is, in case it is supposed to work like this
+            ok = 1;
+#else
 			if (savestate_fname[0]) {
 				for (;;) {
 					TCHAR *p;
@@ -3894,6 +3930,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					*p = 0;
 				}
 			}
+#endif
 			if (!ok) {
 				TCHAR tmp[MAX_DPATH];
 				fetch_statefilepath (tmp, sizeof tmp / sizeof (TCHAR));
@@ -3908,6 +3945,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 		return 1;
 	}
+
+#endif /* SAVESTATE */
 
 	if (cfgfile_strval (option, value, _T("sound_channels"), &p->sound_stereo, stereomode, 1)) {
 		if (p->sound_stereo == SND_NONE) { /* "mixed stereo" compatibility hack */
@@ -4115,6 +4154,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 #ifdef WITH_SLIRP
+#ifdef FSUAE
+	if (cfgfile_strval(option, value, _T("slirp_implementation"), &p->slirp_implementation, slirp_implementations, 0))
+		return 1;
+#endif
 	if (cfgfile_string (option, value, _T("slirp_ports"), tmpbuf, sizeof (tmpbuf) / sizeof (TCHAR))) {
 		TCHAR *tmpp2 = tmpbuf;
 		_tcscat (tmpbuf, _T(","));
@@ -4400,6 +4443,9 @@ static void parse_addmem (struct uae_prefs *p, TCHAR *buf, int num)
 
 static void get_filesys_controller (const TCHAR *hdc, int *type, int *typenum, int *num)
 {
+#ifdef FSUAE
+	write_log("get_filesys_controller %s\n", hdc);
+#endif
 	int hdcv = HD_CONTROLLER_TYPE_UAE;
 	int hdunit = 0;
 	int idx = 0;
@@ -4410,6 +4456,9 @@ static void get_filesys_controller (const TCHAR *hdc, int *type, int *typenum, i
 			hdunit = 0;
 	} else if(_tcslen (hdc) >= 5 && !_tcsncmp (hdc, _T("scsi"), 4)) {
 		hdcv = HD_CONTROLLER_TYPE_SCSI_AUTO;
+#ifdef FSUAE
+	write_log(" - HD_CONTROLLER_TYPE_SCSI_AUTO\n");
+#endif
 		hdunit = hdc[4] - '0';
 		if (hdunit < 0 || hdunit >= 8 + 2)
 			hdunit = 0;
@@ -4460,6 +4509,9 @@ static void get_filesys_controller (const TCHAR *hdc, int *type, int *typenum, i
 						else if (hdcv == HD_CONTROLLER_TYPE_SCSI_AUTO) {
 							hdcv = i + HD_CONTROLLER_EXPANSION_MAX;
 						}
+#ifdef FSUAE
+						write_log(" - found\n");
+#endif
 						found = true;
 						break;
 					}
@@ -4475,6 +4527,9 @@ static void get_filesys_controller (const TCHAR *hdc, int *type, int *typenum, i
 						else {
 							hdcv = HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST + i;
 						}
+#ifdef FSUAE
+						write_log(" - ert->name=%s ext=%s len=%d\n", ert->name, ext, len);
+#endif
 						break;
 					}
 				}
@@ -4657,9 +4712,6 @@ static bool parse_geo (const TCHAR *tname, struct uaedev_config_info *uci, struc
 		xfree(out);
 		ret = true;
 	}
-
-	void ata_parse_identity(uae_u8 *out, struct uaedev_config_info *uci, bool *lba, bool *lba48, int *max_multiple);
-	bool ata_get_identity(struct ini_data *ini, uae_u8 *out, bool overwrite);
 
 	uae_u8 ident[512];
 	if (ata_get_identity(ini, ident, true)) {
@@ -5411,6 +5463,21 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno (option, value, _T("uaeserial"), &p->uaeserial))
 		return 1;
 
+#ifdef FSUAE // NL
+	if (!g_fs_uae_jit_compiler) {
+		if (cfgfile_intval(option, value, _T("cachesize"), &p->cachesize, 1)) {
+			/* If FS-UAE wasn't started with JIT support initially, we cannot
+			 * enable it at a later time, since 32-bit memory may not be
+			 * configured. */
+			if (p->cachesize) {
+				error_log(_T("uae_cachesize set without jit_compiler"));
+				p->cachesize = 0;
+				return 1;
+			}
+		}
+	}
+#endif
+
 	if (cfgfile_intval(option, value, _T("cachesize"), &p->cachesize, 1)
 		|| cfgfile_intval(option, value, _T("cd32nvram_size"), &p->cs_cd32nvram_size, 1024)
 		|| cfgfile_intval(option, value, _T("chipset_hacks"), &p->cs_hacks, 1)
@@ -5708,6 +5775,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 
 	if (cfgfile_string (option, value, _T("cart"), p->cartident, sizeof p->cartident / sizeof (TCHAR))) {
 		decode_rom_ident (p->cartfile, sizeof p->cartfile / sizeof (TCHAR), p->cartident, ROMTYPE_ALL_CART);
+#ifdef FSUAE
+		write_log("Cartridge file: %s\n", p->cartfile);
+#endif
 		return 1;
 	}
 
@@ -5987,7 +6057,7 @@ void cfgfile_compatibility_rtg(struct uae_prefs *p)
 				for (int j = i; j < MAX_RTG_BOARDS; j++) {
 					rtgs[j] = 1;
 					if (gfxboard_get_romtype(&p->rtgboards[j]) == romtype) {
-						TCHAR *romname = NULL;
+						const TCHAR *romname = NULL;
 						if (romtype == ROMTYPE_PICASSOIV) {
 							romname = p->picassoivromfile;
 						} else if (romtype == ROMTYPE_x86_VGA) {
@@ -6616,7 +6686,11 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 {
 	struct zfile *fh;
 
+#ifdef FSUAE
+	// don't back up config file
+#else
 	cfgfile_backup (filename);
+#endif
 	fh = zfile_fopen (filename, unicode_config ? _T("w, ccs=UTF-8") : _T("w"), ZFD_NORMAL);
 	if (! fh)
 		return 0;
@@ -6672,7 +6746,7 @@ int cfgfile_get_description (struct uae_prefs *p, const TCHAR *filename, TCHAR *
 	return 1;
 }
 
-bool cfgfile_detect_art_path(const TCHAR *path, TCHAR *outpath)
+static bool cfgfile_detect_art_path(const TCHAR *path, TCHAR *outpath)
 {
 	TCHAR tmp[MAX_DPATH];
 	const TCHAR *p;
@@ -7340,6 +7414,10 @@ uae_u32 cfgfile_modify (uae_u32 index, const TCHAR *parms, uae_u32 size, TCHAR *
 	int argv, i;
 	uae_u32 err;
 	static TCHAR *configsearch;
+
+#ifdef FSUAE // NL
+	write_log("*** cfgfile_modify *** %s\n", parms);
+#endif
 
 	*out = 0;
 	err = 0;
@@ -8292,7 +8370,11 @@ static int bip_a1000 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[2];
 
+#ifdef FSUAE
+	roms[0] = 5;
+#else
 	roms[0] = 24;
+#endif
 	roms[1] = -1;
 	p->chipset_mask = 0;
 	p->bogomem_size = 0;
@@ -8437,6 +8519,9 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 	roms[1] = 15;
 	roms[2] = 31;
 	roms[3] = -1;
+#ifdef FSUAE
+	roms[1] = -1;
+#endif
 	roms_bliz[0] = -1;
 	roms_bliz[1] = -1;
 	p->cs_rtc = 0;
@@ -8487,6 +8572,12 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		roms_bliz[0] = 100;
 		configure_rom(p, roms_bliz, romcheck);
 		break;
+#ifdef FSUAE
+		case 6:
+		roms[0] = 15;
+		roms[3] = -1;
+		break;
+#endif
 	}
 	set_68020_compa (p, compa, 0);
 	return configure_rom (p, roms, romcheck);
@@ -8761,8 +8852,18 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 	return v;
 }
 
+#ifdef FSUAE
+/**
+ * This function will be called (twice) by fixup_prefs after custom uae_
+ * options have been applied, and may reset some (chipset) options overriden
+ * by the user unless also uae_chipset_compatible has been set to -.
+ */
+#endif
 int built_in_chipset_prefs (struct uae_prefs *p)
 {
+#ifdef FSUAE
+	write_log("built_in_chipset_prefs, ignore = %d\n", !p->cs_compatible);
+#endif
 	if (!p->cs_compatible)
 		return 1;
 
@@ -8783,7 +8884,11 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 	p->cs_ksmirror_a8 = 0;
 	p->cs_ciaoverlay = 1;
 	p->cs_ciaatod = 0;
+#ifdef FSUAE
+	/* Allow RTC to be set without disabling cs_compatible */
+#else
 	p->cs_rtc = 0;
+#endif
 	p->cs_rtc_adjust_mode = p->cs_rtc_adjust = 0;
 	p->cs_df0idhw = 1;
 	p->cs_resetwarning = 1;
@@ -8862,6 +8967,10 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 		p->cs_ciatodbug = true;
 		break;
 	case CP_A600: // A600
+#ifdef FSUAE
+		if (p->chipmem_size > 0x100000 || p->fastmem[0].size)
+			p->cs_rtc = 1;
+#endif
 		p->cs_ide = IDE_A600A1200;
 		p->cs_pcmcia = 1;
 		p->cs_ksmirror_a8 = 1;
@@ -9182,6 +9291,10 @@ void error_log (const TCHAR *format, ...)
 	u->option = my_strdup (bufp);
 	u->next = error_lines;
 	error_lines = u;
+
+#ifdef FSUAE // NL
+	gui_message("%s", bufp);
+#endif
 
 	if (bufp != buffer)
 		xfree (bufp);

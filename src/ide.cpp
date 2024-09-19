@@ -1725,6 +1725,8 @@ struct ide_hdf *add_ide_unit (struct ide_hdf **idetable, int max, int ch, struct
 	return ide;
 }
 
+#ifdef SAVESTATE
+
 uae_u8 *ide_save_state(uae_u8 *dst, struct ide_hdf *ide)
 {
 	save_u64 (ide->hdhfd.size);
@@ -1782,3 +1784,5 @@ uae_u8 *ide_restore_state(uae_u8 *src, struct ide_hdf *ide)
 	ide->hdhfd.hfd.ci.bootpri = restore_u32 ();
 	return src;
 }
+
+#endif /* SAVESTATE */

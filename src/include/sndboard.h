@@ -2,6 +2,9 @@
 #define UAE_SNDBOARD_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/memory.h"
+#endif
 
 bool toccata_init(struct autoconfig_info *aci);
 bool prelude_init(struct autoconfig_info *aci);

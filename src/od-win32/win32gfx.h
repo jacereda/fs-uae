@@ -1,7 +1,15 @@
 #ifndef __WIN32GFX_H__
 #define __WIN32GFX_H__
 
+#ifdef FSUAE
+#ifdef _WIN32
+#else
+typedef int HCURSOR;
+typedef int HDC;
+#endif
+#else
 #include <ddraw.h>
+#endif
 
 #define RTG_MODE_SCALE 1
 #define RTG_MODE_CENTER 2

@@ -16,6 +16,10 @@
 
 #include <math.h>
 
+#ifdef FSUAE // NL
+#define gamma gamma_table
+#endif
+
 float getvsyncrate(int monid, float hz, int *mult)
 {
 	struct amigadisplay *ad = &adisplays[monid];
@@ -45,6 +49,10 @@ float getvsyncrate(int monid, float hz, int *mult)
 unsigned int doMask (int p, int bits, int shift)
 {
 	/* scale to 0..255, shift to align msb with mask, and apply mask */
+#ifdef FSUAE
+	// using uae_u32 here instead of long is important for 64-bit archs
+	// on non-Windows systems
+#endif
 	uae_u32 val;
 
 	if (flashscreen)
@@ -221,6 +229,7 @@ static uae_u32 get_cr(int monid, int r, int g, int b)
 	return limit256rb(monid, 0.5f * r - 0.418688f * g - 0.081312f * b);
 }
 
+// FIXME: Remove (moved to gfxfilter.h header)
 extern uae_s32 tyhrgb[65536];
 extern uae_s32 tylrgb[65536];
 extern uae_s32 tcbrgb[65536];

@@ -11,13 +11,17 @@
 #include "options.h"
 #include "uae.h"
 #include "gui.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "rommgr.h"
 #include "zfile.h"
 #include "crc32.h"
 #include "fsdb.h"
 #include "autoconf.h"
 #include "filesys.h"
+
+#ifdef FSUAE // NL
+#include "uae/fs.h"
+#endif
 
 #define SAVE_ROM 0
 
@@ -944,6 +948,12 @@ struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, co
 			continue;
 		if (model && !_tcsicmp (model, rd->name))
 			ok = 2;
+#ifdef FSUAE
+		/* If we get an exact match by model name, we do not want to downgrade
+		 * the match, otherwise we will fail the second model check below. */
+		// FIXME: Should probably send this else fix upstream.
+		else
+#endif
 		if ((ver < 0 || rd->ver == ver) && (rev < 0 || rd->rev == rev) && (rd->rev != 0 || rd->ver != 0)) {
 			if (subver >= 0) {
 				if (rd->subver == subver && (subrev < 0 || rd->subrev == subrev) && rd->subver > 0)
@@ -1587,6 +1597,7 @@ struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
 	return NULL;
 }
 
+static
 struct romdata *getromdatabyids (const int *ids)
 {
 	struct romdata *rd;
@@ -1715,9 +1726,15 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
 	struct zfile *zf;
 	struct romlist *rl = romlist_getrl (rd);
 	uae_char tmp[11];
+#ifdef FSUAE
+	write_log("read_rom_file\n");
+#endif
 
 	if (!rl || _tcslen (rl->path) == 0)
 		return 0;
+#ifdef FSUAE
+	write_log("read_rom_file (rl->path: '%s')\n", rl->path);
+#endif
 	zf = zfile_fopen (rl->path, _T("rb"), ZFD_NORMAL);
 	if (!zf)
 		return 0;
@@ -1730,6 +1747,9 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
 		memcpy (buf, tmp, sizeof tmp);
 		zfile_fread (buf + sizeof tmp, rd->size - sizeof (tmp), 1, zf);
 	}
+#ifdef FSUAE
+	romlist_patch_rom(buf, rd->size);
+#endif
 	zfile_fclose (zf);
 	return 1;
 }
@@ -1754,6 +1774,9 @@ struct zfile *read_rom (struct romdata *prd)
 	uae_u32 crc32;
 	int size;
 	uae_u8 *buf, *buf2;
+#ifdef FSUAE
+	write_log("read_rom '%s'\n", prd->name);
+#endif
 
 	/* find parent node */
 	for (;;) {
@@ -1972,8 +1995,14 @@ static struct zfile *rom_fopen2(const TCHAR *name, const TCHAR *mode, int mask)
 struct zfile *read_rom_name (const TCHAR *filename)
 {
 	struct zfile *f;
+#ifdef FSUAE
+		write_log("read_rom_name %s\n", filename);
+#endif
 
 	for (int i = 0; i < romlist_cnt; i++) {
+#ifdef FSUAE
+		// FIXME: implement my_issamepath
+#endif
 		if (my_issamepath(filename, rl[i].path)) {
 			struct romdata *rd = rl[i].rd;
 			f = read_rom (rd);
@@ -1997,6 +2026,9 @@ struct zfile *read_rom_name (const TCHAR *filename)
 			zfile_fread(buf, size, 1, f);
 			df = zfile_fopen_empty(f, _T("tmp.rom"), size);
 			decode_cloanto_rom_do(buf, size, size);
+#ifdef FSUAE
+			romlist_patch_rom(buf, size);
+#endif
 			zfile_fwrite(buf, size, 1, df);
 			zfile_fclose(f);
 			xfree(buf);
@@ -2124,9 +2156,15 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 void set_device_rom(struct uae_prefs *p, const TCHAR *path, int romtype, int devnum)
 {
 	int idx;
+#ifdef FSUAE
+	write_log("set_device_rom path=%s romtype=%d devnum=%d\n", path ? path : "(null)", romtype, devnum);
+#endif
 	const struct expansionromtype *ert = get_device_expansion_rom(romtype);
 	if (path == NULL) {
 		struct boardromconfig *brc = get_device_rom(p, romtype, devnum, &idx);
+#ifdef FSUAE
+		write_log("boardromconfig %p\n", brc);
+#endif
 		if (brc) {
 			brc->roms[idx].romfile[0] = 0;
 			brc->roms[idx].romident[0] = 0;
@@ -2188,9 +2226,15 @@ struct boardromconfig *get_device_rom_new(struct uae_prefs *p, int romtype, int 
 	int idx2;
 	static struct boardromconfig fake;
 	const struct expansionromtype *ert = get_device_expansion_rom(romtype);
+#ifdef FSUAE
+	write_log("get_device_rom_new romtype=%d devnum=%d\n", romtype, devnum);
+#endif
 	if (!ert) {
 		if (index)
 			*index = 0;
+#ifdef FSUAE
+	write_log("- return &fake\n");
+#endif
 		return &fake;
 	}
 	if (index)
@@ -2213,11 +2257,20 @@ struct boardromconfig *get_device_rom_new(struct uae_prefs *p, int romtype, int 
 			brc = &p->expansionboard[i];
 			if (brc->device_type == 0) {
 				device_rom_defaults(p, brc, romtype, devnum);
+#ifdef FSUAE
+	write_log("- return brc ()\n");
+#endif
 				return brc;
 			}
 		}
+#ifdef FSUAE
+	write_log("- return &fake (2)\n");
+#endif
 		return &fake;
 	}
+#ifdef FSUAE
+	write_log("- return brc (2)\n");
+#endif
 	return brc;
 }
 
@@ -2331,6 +2384,9 @@ struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype)
 struct zfile *read_device_rom(struct uae_prefs *p, int romtype, int devnum, int *roms)
 {
 	int idx;
+#ifdef FSUAE
+	write_log("read_device_rom romtype=%d devnum=%d\n", romtype, devnum);
+#endif
 	struct boardromconfig *brc = get_device_rom(p, romtype, devnum, &idx);
 	if (brc) {
 		const TCHAR *romname = brc->roms[idx].romfile;

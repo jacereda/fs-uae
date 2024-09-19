@@ -10,6 +10,29 @@
 #ifndef __WIN32_H__
 #define __WIN32_H__
 
+#ifdef FSUAE // NL
+
+#ifndef _WIN32
+// Dummy types so this header file can be included on other platforms (for
+// a few declarations).
+typedef void * HINSTANCE;
+typedef void * HMODULE;
+typedef void * HWND;
+typedef void * HKEY;
+typedef void * OSVERSIONINFO;
+typedef bool BOOL;
+typedef int LPARAM;
+typedef int WPARAM;
+typedef int WORD;
+typedef unsigned int UINT;
+typedef long LONG;
+#define WINAPI
+typedef long GUID;
+typedef wchar_t * LPCWSTR;
+#endif
+
+#endif
+
 #define MAKEBD(x,y,z) ((((x) - 2000) * 10000 + (y)) * 100 + (z))
 #define GETBDY(x) ((x) / 1000000 + 2000)
 #define GETBDM(x) (((x) - ((x / 10000) * 10000)) / 100)
@@ -213,7 +236,10 @@ struct assext {
 	struct contextcommand *cc;
     int enabled;
 };
+#ifdef FSUAE
+#else
 struct assext exts[];
+#endif
 void associate_file_extensions (void);
 
 #define PATHPREFIX _T("\\\\?\\")

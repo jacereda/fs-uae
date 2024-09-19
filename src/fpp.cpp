@@ -21,7 +21,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "uae/attributes.h"
 #include "uae/vm.h"
 #include "custom.h"
@@ -3188,6 +3188,8 @@ void fpu_reset (void)
 
 }
 
+#ifdef SAVESTATE
+
 uae_u8 *restore_fpu (uae_u8 *src)
 {
 	uae_u32 w1, w2, w3;
@@ -3326,3 +3328,5 @@ uae_u8 *save_fpu (int *len, uae_u8 *dstptr)
 	*len = dst - dstbak;
 	return dstbak;
 }
+
+#endif /* SAVESTATE */

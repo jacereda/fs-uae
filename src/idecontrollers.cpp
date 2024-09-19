@@ -28,6 +28,7 @@
 #include "ncr9x_scsi.h"
 #include "autoconf.h"
 #include "devices.h"
+#include "x86.h"
 
 #define DEBUG_IDE 0
 #define DEBUG_IDE_GVP 0
@@ -265,10 +266,12 @@ void idecontroller_rethink(void)
 	bool irq = false;
 	for (int i = 0; ide_boards[i]; i++) {
 		if (ide_boards[i] == x86_at_ide_board[0] || ide_boards[i] == x86_at_ide_board[1]) {
+#ifdef WITH_X86
 			bool x86irq = ide_rethink(ide_boards[i], true);
 			if (x86irq && ide_boards[i] == x86_at_ide_board[0]) {
 				x86_doirq(14);
 			}
+#endif
 		} else {
 			if (ide_rethink(ide_boards[i], false))
 				safe_interrupt_set(IRQ_SOURCE_IDE, i, ide_boards[i]->intlev6);
@@ -2714,7 +2717,6 @@ void trumpcard500at_add_ide_unit(int ch, struct uaedev_config_info *ci, struct r
 	add_ide_standard_unit(ch, ci, rc, ivst500at_board, IVST500AT_IDE, true, false, 2);
 }
 
-
 bool tandem_init(struct autoconfig_info *aci)
 {
 	const struct expansionromtype *ert = get_device_expansion_rom(ROMTYPE_TANDEM);
@@ -2742,7 +2744,8 @@ void tandem_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig
 	add_ide_standard_unit(ch, ci, rc, tandem_board, TANDEM_IDE, false, false, 2);
 }
 
-extern void x86_xt_ide_bios(struct zfile*, struct romconfig*);
+#ifdef WITH_X86
+
 static bool x86_at_hd_init(struct autoconfig_info *aci, int type)
 {
 	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
@@ -2871,3 +2874,5 @@ uae_u16 x86_ide_hd_get(int portnum, int size)
 	}
 	return v;
 }
+
+#endif // WITH_X86

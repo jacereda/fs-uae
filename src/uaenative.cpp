@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "traps.h"
@@ -30,6 +30,9 @@
 #include "uaenative.h"
 #include "fsdb.h"
 
+#if defined(FSUAE) && defined(WINDOWS) && !defined(_WIN32)
+#define _WIN32
+#endif
 
 #ifndef _WIN32
 #include <dlfcn.h>

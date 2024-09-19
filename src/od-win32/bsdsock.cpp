@@ -9,6 +9,8 @@
 * GNU Public License
 *
 */
+#ifdef _WIN32
+
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 
@@ -23,7 +25,7 @@
 #include <process.h>
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "uae/seh.h"
 #include "custom.h"
 #include "events.h"
@@ -33,13 +35,33 @@
 #include "bsdsocket.h"
 
 #include "threaddep/thread.h"
+#ifdef FSUAE
+#else
 #include "registry.h"
+#endif
 #include "native2amiga.h"
+#ifdef FSUAE
+#else
 #include "win32gui.h"
+#endif
 #include "wininet.h"
 #include "mmsystem.h"
+#ifdef FSUAE
+#else
 #include "win32.h"
+#endif
 #include "dxwrap.h"
+
+#ifdef FSUAE // NL
+
+// __try and __except is a MS extension to C/C++. What are the consequence
+// of ignoring these constructs in the code below?
+
+#define hInst GetModuleHandle(NULL)
+
+HWND hAmigaWnd = 0;
+
+#endif
 
 int rawsockets = 0;
 static int hWndSelector = 0; /* Set this to zero to get hSockWnd */
@@ -158,9 +180,13 @@ static int mySockStartup(void)
 	if (WSAStartup (MAKEWORD (SOCKVER_MAJOR, SOCKVER_MINOR), &bsd->wsbData)) {
 		lasterror = WSAGetLastError();
 		if(lasterror == WSAVERNOTSUPPORTED) {
+#ifdef FSUAE
+			gui_message("Winsock2 needed");
+#else
 			TCHAR szMessage[MAX_DPATH];
 			WIN32GUI_LoadUIString(IDS_WSOCK2NEEDED, szMessage, MAX_DPATH);
 			gui_message(szMessage);
+#endif
 		} else
 			write_log (_T("BSDSOCK: ERROR - Unable to initialize Windows socket layer! Error code: %d\n"), lasterror);
 		return 0;
@@ -205,8 +231,13 @@ int init_socket_layer (void)
 				wc.cbClsExtra = 0;
 				wc.cbWndExtra = 0;
 				wc.hInstance = hInst;
+#ifdef FSUAE
+				wc.hIcon = NULL;
+				wc.hCursor = NULL;
+#else
 				wc.hIcon = LoadIcon (GetModuleHandle (NULL), MAKEINTRESOURCE (IDI_APPICON));
 				wc.hCursor = LoadCursor (NULL, IDC_ARROW);
+#endif
 				wc.hbrBackground = (HBRUSH)GetStockObject (BLACK_BRUSH);
 				wc.lpszMenuName = 0;
 				wc.lpszClassName = _T("SocketFun");
@@ -2169,7 +2200,7 @@ uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
 	addr = htonl(inet_addr(cp_rp));
 	if (ISBSDTRACE) {
 		TCHAR *s = au (cp_rp);
-		BSDTRACE((_T("inet_addr(%s) -> 0x%08lx\n"), s, addr));
+		BSDTRACE((_T("inet_addr(%s) -> 0x%08x\n"), s, addr));
 		xfree (s);
 	}
 	xfree(cp_rp);
@@ -2183,6 +2214,9 @@ static BOOL CheckOnline(SB)
 	DWORD dwFlags;
 	BOOL bReturn = TRUE;
 
+#ifdef FSUAE
+	// We don't mess with the dialer in FS-UAE
+#else
 	hAmigaSockWnd = mon->hAmigaWnd;
 	if (InternetGetConnectedState(&dwFlags,0) == FALSE) { // Internet is offline
 		if (InternetAttemptConnect(0) != ERROR_SUCCESS) { // Show Dialer window
@@ -2196,6 +2230,7 @@ static BOOL CheckOnline(SB)
 			SetActiveWindow(mon->hAmigaWnd);
 		}
 	}
+#endif
 	return bReturn;
 }
 
@@ -2671,7 +2706,7 @@ void host_getprotobyname(TrapContext *ctx, SB, uae_u32 name)
 	release_get_thread (tindex);
 }
 
-void host_getprotobynumber(TrapContext *ctx, SB, uae_u32 name)
+void host_getprotobynumber(TrapContext *ctx, SB, uae_u32 number)
 {
 	bsdsocklib_seterrno(ctx, sb, 1);
 }
@@ -2790,3 +2825,5 @@ uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
 #endif
 
 #endif
+
+#endif // _WIN32

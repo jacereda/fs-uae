@@ -2,7 +2,10 @@
 #define UAE_SCSI_H
 
 #include "uae/types.h"
-#include "memory.h"
+#include "uae/memory.h"
+#ifdef FSUAE
+#include "uae/limits.h"
+#endif
 
 #define SCSI_DEFAULT_DATA_BUFFER_SIZE (256 * 512)
 

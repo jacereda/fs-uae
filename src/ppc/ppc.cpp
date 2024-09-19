@@ -2,6 +2,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef WITH_PPC
+
 #include "options.h"
 #include "threaddep/thread.h"
 #include "machdep/rpt.h"
@@ -231,7 +233,11 @@ static bool load_qemu_implementation(void)
 
 	UAE_DLHANDLE handle = uae_qemu_uae_init();
 	if (!handle) {
+#ifdef FSUAE
+		gui_message(_T("PPC: Error loading qemu-uae plugin\n"));
+#else
 		notify_user (NUMSG_NO_PPC);
+#endif
 		return false;
 	}
 	write_log(_T("PPC: Loaded qemu-uae library at %p\n"), handle);
@@ -352,8 +358,14 @@ static PPCLockStatus get_ppc_lock(PPCLockMethod method)
 			trylock_called = true;
 		}
 	} else {
+#ifdef FSUAE
+		//uae_abort("invalid ppc loc method");
+		write_log("invalid ppc loc method");
+		abort();
+#else
 		write_log("?\n");
 		return PPC_NO_LOCK_NEEDED;
+#endif
 	}
 }
 
@@ -979,3 +991,33 @@ void uae_ppc_pause(int pause)
 	}
 #endif
 }
+
+#ifdef FSUAE // NL
+
+UAE_EXTERN_C void fsuae_ppc_pause(int pause);
+UAE_EXTERN_C void fsuae_ppc_pause(int pause)
+{
+	/* We cannot call uae_ppc_pause except from the UAE thread due
+	 * to use of the spinlock */
+	if (using_qemu()) {
+		if (pause) {
+			set_and_wait_for_state(PPC_CPU_STATE_PAUSED, 0);
+		}
+		else {
+			set_and_wait_for_state(PPC_CPU_STATE_RUNNING, 0);
+		}
+	}
+}
+
+#endif
+
+#else
+
+#include "uae/ppc.h"
+
+bool uae_self_is_ppc(void)
+{
+	return false;
+}
+
+#endif /* WITH_PPC */

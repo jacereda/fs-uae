@@ -47,10 +47,10 @@ using namespace std;
 #define CPU_i386 1
 #elif defined(__arm__) || defined(_M_ARM)
 #define CPU_arm 1
-#elif defined(__powerpc__) || defined(_M_PPC)
+#elif defined(__powerpc__) || defined(__ppc__) || defined(_M_PPC)
 #define CPU_powerpc 1
 #else
-#error unrecognized CPU type
+#define CPU_unknown 1
 #endif
 
 #ifdef _WIN32
@@ -73,7 +73,11 @@ using namespace std;
 #define REGPARAM2 JITCALL
 #define REGPARAM3 JITCALL
 
+#ifdef FSUAE
+#include "uae/types.h"
+#else
 #include <tchar.h>
+#endif
 
 #ifndef __STDC__
 #ifndef _MSC_VER
@@ -165,6 +169,11 @@ typedef char uae_char;
 
 typedef struct { uae_u8 RGB[3]; } RGB;
 
+#ifdef FSUAE
+#define VAL64(a) (a ## LL)
+#define UVAL64(a) (a ## uLL)
+
+#else
 #if SIZEOF_SHORT == 2
 typedef unsigned short uae_u16;
 typedef short uae_s16;
@@ -206,12 +215,17 @@ typedef uae_u32 uaecptr;
 #define VAL64(a) (a ## l)
 #define UVAL64(a) (a ## ul)
 #endif
+#endif
 
+#ifdef FSUAE
+#include "uae/atomic.h"
+#else
 uae_atomic atomic_and(volatile uae_atomic *p, uae_u32 v);
 uae_atomic atomic_or(volatile uae_atomic *p, uae_u32 v);
 uae_atomic atomic_inc(volatile uae_atomic *p);
 uae_atomic atomic_dec(volatile uae_atomic *p);
 uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 v);
+#endif
 
 #ifdef HAVE_STRDUP
 #define my_strdup _tcsdup
@@ -425,10 +439,14 @@ extern void mallocemu_free (void *ptr);
 
 #endif
 
+#ifdef FSUAE
+#include "uae/asm.h"
+#else
 #ifdef X86_ASSEMBLY
 #define ASM_SYM_FOR_FUNC(a) __asm__(a)
 #else
 #define ASM_SYM_FOR_FUNC(a)
+#endif
 #endif
 
 #include "target.h"
@@ -438,6 +456,9 @@ extern void mallocemu_free (void *ptr);
 #define write_log write_log_standard
 #endif
 
+#ifdef FSUAE
+#include "uae/log.h"
+#else
 #if __GNUC__ - 1 > 1 || __GNUC_MINOR__ - 1 > 6
 extern void write_log(const TCHAR *, ...);
 extern void write_logx(const TCHAR *, ...);
@@ -446,6 +467,7 @@ extern void write_log(const char *, ...) __attribute__ ((format (printf, 1, 2)))
 extern void write_log(const TCHAR *, ...);
 extern void write_logx(const TCHAR *, ...);
 extern void write_log(const char *, ...);
+#endif
 #endif
 extern void write_dlog (const TCHAR *, ...);
 extern int read_log(void);
@@ -477,6 +499,9 @@ extern bool use_long_double;
 #define O_BINARY 0
 #endif
 
+#ifdef FSUAE
+#include "uae/inline.h"
+#else
 #ifndef STATIC_INLINE
 #if __GNUC__ - 1 > 2 || (__GNUC__ - 1 == 2 && __GNUC_MINOR__ - 1 >= 0)
 #define STATIC_INLINE static __inline__ __attribute__ ((always_inline))
@@ -492,6 +517,11 @@ extern bool use_long_double;
 #define NORETURN
 #endif
 #endif
+#endif
+
+#ifdef FSUAE // NL
+#include "uae/cycleunit.h"
+#else
 /* Every Amiga hardware clock cycle takes this many "virtual" cycles.  This
    used to be hardcoded as 1, but using higher values allows us to time some
    stuff more precisely.
@@ -505,6 +535,7 @@ extern bool use_long_double;
 /* This one is used by cfgfile.c.  We could reduce the CYCLE_UNIT back to 1,
    I'm not 100% sure this code is bug free yet.  */
 #define OFFICIAL_CYCLE_UNIT 512
+#endif
 
 /*
  * You can specify numbers from 0 to 5 here. It is possible that higher
@@ -553,7 +584,7 @@ extern void xfree (const void*);
 #else
 
 #define xmalloc(T, N) static_cast<T*>(malloc (sizeof (T) * (N)))
-#define xcalloc(T, N) static_cast<T*>(calloc (sizeof (T), N))
+#define xcalloc(T, N) static_cast<T*>(calloc ((N), sizeof (T)))
 #define xrealloc(T, TP, N) static_cast<T*>(realloc (TP, sizeof (T) * (N)))
 #define xfree(T) free(T)
 
@@ -565,6 +596,16 @@ extern void xfree (const void*);
 #define NOWARN_UNUSED(x) __attribute__((unused)) x
 #else
 #define NOWARN_UNUSED(x) x
+#endif
+
+#ifdef FSUAE // NL
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int fsemu;
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 #endif /* UAE_SYSDEPS_H */

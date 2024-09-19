@@ -10,6 +10,12 @@
 #define UAE_COMMPIPE_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/inline.h"
+#include "threaddep/sem.h"
+#include <stdlib.h>
+#include <string.h>
+#endif
 
 typedef union {
 	int i;

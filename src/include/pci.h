@@ -1,6 +1,10 @@
 #ifndef UAE_PCI_H
 #define UAE_PCI_H
 
+#ifdef FSUAE // NL
+#include "uae/memory.h"
+#endif
+
 extern void pci_free(void);
 extern void pci_reset(void);
 extern void pci_hsync(void);

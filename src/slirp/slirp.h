@@ -11,7 +11,13 @@
 #include "sysconfig.h"
 #include "slirp_config.h"
 
-#define SLIRP_ICMP 0
+#ifdef FSUAE // NL
+#ifndef _MSC_VER
+#define container_of(ptr, type, member) ({ \
+                const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+                (type *)( (char *)__mptr - offsetof(type,member) );})
+#endif
+#endif
 
 #ifdef _WIN32
 #include <stdint.h>
@@ -289,8 +295,11 @@ void if_start(struct ttys *);
  extern char *strerror(int error);
 #endif
 
+#ifdef FSUAE
+#else
 #ifndef HAVE_INDEX
  char *index(const char *, int);
+#endif
 #endif
 
 #ifndef HAVE_GETHOSTID

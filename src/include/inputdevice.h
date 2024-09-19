@@ -11,6 +11,9 @@
 #define UAE_INPUTDEVICE_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "options.h"
+#endif
 
 #define DIR_LEFT_BIT 0
 #define DIR_RIGHT_BIT 1
@@ -366,5 +369,7 @@ extern void inputdevice_settest (int);
 extern int inputdevice_testread_count (void);
 
 extern bool target_can_autoswitchdevice(void);
+void target_inputdevice_acquire(void);
+void target_inputdevice_unacquire(void);
 
 #endif /* UAE_INPUTDEVICE_H */

@@ -14,7 +14,11 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef HAVE_SYS_TIMEB_H
 #include <sys/timeb.h>
+#else
+
+#endif
 
 #include "options.h"
 #include "traps.h"
@@ -26,7 +30,7 @@
 #include "scsidev.h"
 #include "mp3decoder.h"
 #include "cda_play.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "audio.h"
 #include "uae.h"
 #include "uae/cdrom.h"
@@ -34,7 +38,11 @@
 #include "rp.h"
 #endif
 
+#ifdef FSUAE
+#else
 #define FLAC__NO_DLL
+#endif // NL
+
 #include "FLAC/stream_decoder.h"
 
 #ifdef WITH_CHD
@@ -492,12 +500,18 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 		if (oldplay != cdu->cdda_play) {
 			struct cdtoc *t;
 			int sector, diff;
+#ifdef HAVE_SYS_TIMEB_H
 			struct _timeb tb1, tb2;
+#else
+#warning Missing timing functions
+#endif
 
 			idleframes = 0;
 			silentframes = 0;
 			foundsub = false;
+#ifdef HAVE_SYS_TIMEB_H
 			_ftime (&tb1);
+#endif
 			cdda_pos = cdu->cdda_start;
 			oldplay = cdu->cdda_play;
 			sector = cdu->cd_last_pos = cdda_pos;
@@ -552,9 +566,13 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			cdda_pos -= idleframes;
 
 			if (*outpos < 0) {
+#ifdef HAVE_SYS_TIMEB_H
 				_ftime (&tb2);
 				diff = (tb2.time * (uae_s64)1000 + tb2.millitm) - (tb1.time * (uae_s64)1000 + tb1.millitm);
 				diff -= cdu->cdda_delay;
+#else
+				diff = 0;
+#endif
 				if (idleframes >= 0 && diff < 0 && cdu->cdda_play > 0)
 					sleep_millis(-diff);
 				setstate (cdu, AUDIO_STATUS_IN_PROGRESS, cdda_pos);

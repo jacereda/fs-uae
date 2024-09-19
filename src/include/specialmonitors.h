@@ -1,7 +1,10 @@
 #ifndef UAE_SPECIALMONITORS_H
 #define UAE_SPECIALMONITORS_H
 
-#include "memory.h"
+#include "uae/memory.h"
+#ifdef FSUAE
+#include "xwin.h"
+#endif
 
 bool emulate_specialmonitors(struct vidbuffer *src, struct vidbuffer *dst);
 bool emulate_specialmonitors_line(struct vidbuffer *src, struct vidbuffer *dst, int line);
@@ -14,8 +17,8 @@ bool emulate_genlock(struct vidbuffer*, struct vidbuffer*);
 bool emulate_grayscale(struct vidbuffer*, struct vidbuffer*);
 bool specialmonitor_linebased(void);
 
-const TCHAR *specialmonitorfriendlynames[];
-const TCHAR *specialmonitormanufacturernames[];
-const TCHAR *specialmonitorconfignames[];
+extern const TCHAR *specialmonitorfriendlynames[];
+extern const TCHAR *specialmonitormanufacturernames[];
+extern const TCHAR *specialmonitorconfignames[];
 
 #endif /* UAE_SPECIALMONITORS_H */

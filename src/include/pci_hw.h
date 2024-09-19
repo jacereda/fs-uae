@@ -2,6 +2,9 @@
 #define UAE_PCI_HW_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/memory.h"
+#endif
 
 #define MAX_PCI_BOARDS 6
 #define MAX_PCI_BARS 7

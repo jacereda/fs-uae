@@ -2537,13 +2537,18 @@ static void unmap_linear_vram(CirrusVGAState *s)
 }
 
 /* Compute the memory access functions */
+#ifdef FSUAE
+// FIXME: Put in header
+#endif
 extern void x86_map_lfb(int);
 static void cirrus_update_memory_access(CirrusVGAState *s)
 {
     unsigned mode;
 
+#ifdef WITH_X86
 	if (s->x86vga)
 		x86_map_lfb(s->vga.sr[7] >> 4);
+#endif
 
 	memory_region_transaction_begin();
     if ((s->vga.sr[0x17] & 0x44) == 0x44) {

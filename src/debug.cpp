@@ -16,7 +16,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cpu_prefetch.h"
@@ -37,18 +37,27 @@
 #include "rommgr.h"
 #include "inputrecord.h"
 #include "calc.h"
+#include "uae/debuginfo.h"
+#include "uae/segtracker.h"
 #include "cpummu.h"
 #include "cpummu030.h"
 #include "ar.h"
 #include "pci.h"
-#include "ppc/ppcd.h"
 #include "uae/io.h"
+#ifdef WITH_PPC
+#include "ppc/ppcd.h"
 #include "uae/ppc.h"
+#endif
 #include "drawing.h"
 #include "devices.h"
 #include "blitter.h"
 #include "ini.h"
 #include "readcpu.h"
+
+#ifdef FSUAE // NL
+#include "uae/fs.h"
+#undef _WIN32
+#endif
 
 #define TRACE_SKIP_INS 1
 #define TRACE_MATCH_PC 2
@@ -229,6 +238,16 @@ static const TCHAR help[] = {
 	_T("  dm                    Dump current address space map.\n")
 	_T("  v <vpos> [<hpos>]     Show DMA data (accurate only in cycle-exact mode).\n")
 	_T("                        v [-1 to -4] = enable visual DMA debugger.\n")
+#ifdef WITH_SEGTRACKER
+	_T("  Z                     print SegmentTracker status.\n")
+	_T("  Ze [<0-1>]            enable/disable/toggle SegmentTracker\n")
+	_T("  Zl                    show seglists tracked by SegmentTracker.\n")
+	_T("  Za <addr>             find segment that contains given address.\n")
+	_T("  Zs 'name'             search seglist with given name.\n")
+	_T("  Zf 'hostfile'         load debug info from given executable file.\n")
+	_T("  Zy 'symbol'           find symbol address.\n")
+	_T("  Zc 'file' <line>      find source code line address.\n")
+#endif /* WITH_SEGTRACKER */
 	_T("  vh [<ratio> <lines>]  \"Heat map\"\n")
 	_T("  I <custom event>      Send custom event string\n")
 	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n")
@@ -436,6 +455,8 @@ uae_u32 get_ilong_debug (uaecptr addr)
 		return 0xffffffff;
 	}
 }
+
+static
 uae_u8 *get_real_address_debug(uaecptr addr)
 {
 	if (debug_mmu_mode) {
@@ -1226,10 +1247,12 @@ static void dump_custom_regs(bool aga, bool ext)
 
 	extra1[0] = 0;
 	extra2[0] = 0;
+#ifdef AGA
 	if (aga) {
 		dump_aga_custom();
 		return;
 	}
+#endif
 
 	p1 = p2 = save_custom (&len, 0, 1);
 	p1 += 4; // skip chipset type
@@ -4017,9 +4040,21 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 			k = j;
 			caddr = dump_xlate (k << 16);
 			mirrored = caddr ? 1 : 0;
+#ifdef FSUAE
+#if 0
+			if (caddr) {
+				printf("-> bank at %08x mirrored at %08x (%p - %p)\n", (j << 16), (uint32_t)(caddr - NATMEM_OFFSET), caddr, NATMEM_OFFSET);
+			}
+#endif
+#endif
 			k++;
 			while (k < i && caddr) {
 				if (dump_xlate (k << 16) == caddr) {
+#ifdef FSUAE
+#if 0
+					printf("   bank at %08x mirrored at %08x\n", (j << 16), (k << 16));
+#endif
+#endif
 					mirrored++;
 				}
 				k++;
@@ -5364,6 +5399,189 @@ static void m68k_modify (TCHAR **inptr)
 	}
 }
 
+#ifdef WITH_SEGTRACKER
+
+static int parse_string(TCHAR **inptr, TCHAR *str, int max_len)
+{
+	int len = 0;
+	ignore_ws (inptr);
+	if ((**inptr == '"')||(**inptr == '\'')) {
+		TCHAR delim = **inptr;
+		(*inptr)++;
+		while (**inptr != delim && **inptr != 0) {
+			str[len++] = tolower(**inptr);
+			(*inptr)++;
+			if (len == max_len) {
+				break;
+			}
+		}
+		if (**inptr != 0) {
+			(*inptr)++;
+		}
+	}
+	str[len] = '\0';
+	return len;
+}
+
+/* SegmentTracker Z* command parser */
+static void segtracker(TCHAR **inptr)
+{
+	int show_status = 0;
+	if (more_params (inptr)) {
+		switch (next_char (inptr))
+		{
+		case 'a': /* 'Za' <address> searches segment for address */
+			{
+				uae_u32 addr = readhex (inptr);
+				seglist *sl;
+				int num_seg;
+				int found = segtracker_search_address(addr, &sl, &num_seg);
+				if(found) {
+					segment *seg = &sl->segments[num_seg];
+					uae_u32 seg_addr = seg->addr;
+					uae_u32 seg_size = seg->size;
+					uae_u32 seg_end = seg_addr + seg_size;
+					uae_u32 offset = addr - seg_addr;
+					console_out_f(_T("%08x: '%s' #%02d [%08x,%08x,%08x] +%08x\n"),
+								addr, sl->name, num_seg,
+								seg_addr, seg_size, seg_end,
+								offset);
+
+					/* try to find symbol info */
+					debug_symbol *symbol;
+					uae_u32 reloff;
+					int ok = segtracker_find_symbol(seg, offset, &symbol, &reloff);
+					if(ok == 1) {
+						console_out_f(_T("    %08x +%08x  %s\n"),
+									  symbol->offset + seg->addr,
+									  reloff,
+									  symbol->name);
+					}
+
+					/* try to find src line info */
+					debug_src_file *src_file;
+					debug_src_line *src_line;
+					ok = segtracker_find_src_line(seg, offset, &src_file,
+												  &src_line, &reloff);
+					if(ok == 1) {
+						console_out_f(_T("    %08x +%08x  %s:%d\n"),
+									  seg->addr + src_line->offset, reloff,
+									  src_file->src_file, src_line->line);
+					}
+
+				} else {
+					console_out_f(_T("%08x: not found in any segments.\n"), addr);
+				}
+			}
+			break;
+		case 's': /* 'Zs' "pattern" show seglists matching name pattern */
+			{
+				TCHAR str[64];
+				int len = parse_string(inptr, str, 64);
+				if(len > 0) {
+					char *cstr = au(str);
+					console_out_f(_T("Searching seglists matching '%s'\n"),cstr);
+					segtracker_dump(cstr);
+					xfree(cstr);
+				}
+			}
+			break;
+		case 'l': /* 'Zl' list all tracked segments */
+			segtracker_dump(NULL);
+			break;
+		case 'e': /* 'Ze' enable segtracker */
+			ignore_ws(inptr);
+			if(more_params(inptr)) {
+				int v = readint(inptr);
+				segtracker_enabled = v ? 1 : 0;
+			} else {
+				segtracker_enabled = segtracker_enabled ? 0 : 1;
+			}
+			show_status = 1;
+			/* clear seglist if disabled */
+			if(!segtracker_enabled) {
+				segtracker_clear();
+			}
+			break;
+		case 'f': /* 'Zf': load symbols from hunk file */
+			{
+				TCHAR str[256];
+				int len = parse_string(inptr, str, 256);
+				if(len > 0) {
+					/* find segment */
+					seglist *sl = segtracker_find_by_name(str);
+					if(sl != NULL) {
+						console_out_f(_T("Loading debug info for seglist '%s' from hunk file '%s'\n"),
+									  sl->name, str);
+						/* try to load hunk file */
+						debug_file *file = debug_info_load_hunks(str);
+						if(file != NULL) {
+							debug_info_dump_file(file);
+							/* try to add debug info to segment */
+							const char *err;
+							int ok = segtracker_add_debug_info(sl, file, &err);
+							if(ok != 0) {
+								/* adding debug info failed -> free debug info */
+								console_out_f(_T("Error adding debug info: %s\n"), err);
+								debug_info_free_file(file);
+							}
+						} else {
+							console_out_f(_T("Error loading hunk file!\n"));
+						}
+					} else {
+						console_out_f(_T("No loaded segment list found for '%s'\n"), str);
+					}
+				} else {
+					console_out_f(_T("No hunk file given!\n"));
+				}
+			}
+			break;
+		case 'y': /* 'Zy': find symbol */
+			{
+				TCHAR str[64];
+				int len = parse_string(inptr, str, 64);
+				if(len > 0) {
+					char *cstr = au(str);
+					console_out_f(_T("Searching symbols matching '%s'\n"),cstr);
+					segtracker_dump_symbols(cstr);
+					xfree(cstr);
+				}
+			}
+			break;
+		case 'c': /* 'Zc': find code line */
+			{
+				TCHAR str[64];
+				int len = parse_string(inptr, str, 64);
+				if(len > 0) {
+					char *cstr = au(str);
+					ignore_ws(inptr);
+					if(more_params(inptr)) {
+						int line = readint(inptr);
+						console_out_f(_T("Searching code line matching %s:%d\n"),cstr, line);
+						segtracker_dump_src_lines(cstr, line);
+					}
+					xfree(cstr);
+				}
+			}
+			break;
+		}
+	} else {
+		/* only 'Z': show tracker status */
+		show_status = 1;
+	}
+
+	if(show_status) {
+		console_out_f(_T("SegmentTracker is %s\n"), segtracker_enabled ? "enabled":"disabled");
+		int num = segtracker_pool.num_seglists;
+		if(num > 0) {
+			console_out_f(_T("Found %d segment lists\n"), num);
+		}
+	}
+}
+
+#endif /* WITH_SEGTRACKER */
+
+#ifdef WITH_PPC
 static void ppc_disasm(uaecptr addr, uaecptr *nextpc, int cnt)
 {
 	PPCD_CB disa;
@@ -5383,6 +5601,7 @@ static void ppc_disasm(uaecptr addr, uaecptr *nextpc, int cnt)
 	if (nextpc)
 		*nextpc = addr;
 }
+#endif
 
 static void dma_disasm(int frames, int vp, int hp, int frames_end, int vp_end, int hp_end)
 {
@@ -5613,7 +5832,9 @@ static bool debug_line (TCHAR *input)
 					else
 						count = 10;
 					if (ppcmode) {
+#ifdef WITH_PPC
 						ppc_disasm(daddr, &nxdis, count);
+#endif
 					} else {
 						m68k_disasm (daddr, &nxdis, 0xffffffff, count);
 					}
@@ -6028,6 +6249,11 @@ static bool debug_line (TCHAR *input)
 				console_out_f (_T("\n"));
 			}
 			break;
+#ifdef WITH_SEGTRACKER
+		case 'Z':
+			segtracker(&inptr);
+			break;
+#endif /* WITH_SEGTRACKER */
 		case 'h':
 		case '?':
 			if (more_params (&inptr))
@@ -6288,6 +6514,7 @@ void debug (void)
 
 	debug_1 ();
 	debugmem_enable();
+#ifdef SAVESTATE
 	if (!debug_rewind && !currprefs.cachesize
 #ifdef FILESYS
 		&& nr_units () == 0
@@ -6295,6 +6522,7 @@ void debug (void)
 		) {
 			savestate_capture (1);
 	}
+#endif
 	if (!trace_mode) {
 		for (i = 0; i < BREAKPOINT_TOTAL; i++) {
 			if (bpnodes[i].enabled)

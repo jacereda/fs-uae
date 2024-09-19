@@ -14,7 +14,7 @@
 
 #include "options.h"
 #include "events.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"
@@ -45,6 +45,10 @@
 #include "scsi.h"
 #include "rtc.h"
 #include "devices.h"
+
+#ifdef FSUAE // NL
+#include "uae/fs.h"
+#endif
 
 #define CIAA_DEBUG_R 0
 #define CIAA_DEBUG_W 0
@@ -732,6 +736,9 @@ static void resetwarning_check (void)
 
 void CIA_hsync_prehandler (void)
 {
+#ifdef FSUAE
+	parallel_poll_ack();
+#endif
 }
 
 static void keyreq (void)
@@ -997,10 +1004,12 @@ static void bfe001_change (void)
 			map_overlay (0);
 		}
 	}
+#ifdef CD32
 	if (currprefs.cs_cd32cd && (v & 1) != oldcd32mute) {
 		oldcd32mute = v & 1;
 		akiko_mute (oldcd32mute ? 0 : 1);
 	}
+#endif
 }
 
 static uae_u32 getciatod(uae_u32 tod)
@@ -1075,8 +1084,9 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 		return v;
 	}
 	case 1:
+		if (0) {
 #ifdef PARALLEL_PORT
-		if (isprinter () > 0) {
+		} else if (isprinter () > 0) {
 			tmp = ciaaprb;
 		} else if (isprinter () < 0) {
 			uae_u8 v;
@@ -1400,7 +1410,11 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 				cia_parallelack();
 			} else if (isprinter() < 0) {
 				parallel_direct_write_data(val, ciaadrb);
+#ifdef FSUAE
+				parallel_ack();
+#else
 				cia_parallelack();
+#endif
 			}
 		}
 #endif
@@ -2232,9 +2246,13 @@ static void write_battclock (void)
 	struct zfile *f = zfile_fopen (path, _T("wb"));
 	if (f) {
 		struct tm *ct;
+#ifdef FSUAE
+		ct = uae_get_amiga_time();
+#else
 		time_t t = time (0);
 		t += currprefs.cs_rtc_adjust;
 		ct = localtime (&t);
+#endif
 		uae_u8 od;
 		if (currprefs.cs_rtc == 2) {
 			od = rtc_ricoh.clock_control_d;
@@ -2340,9 +2358,13 @@ static uae_u32 REGPARAM2 clock_bget (uaecptr addr)
 	if ((addr & 3) == 2 || (addr & 3) == 0 || currprefs.cs_rtc == 0) {
 		return dummy_get_safe(addr, 1, false, v);
 	}
+#ifdef FSUAE
+	ct = uae_get_amiga_time();
+#else
 	time_t t = time (0);
 	t += currprefs.cs_rtc_adjust;
 	ct = localtime (&t);
+#endif
 	addr >>= 2;
 	return getclockreg (addr, ct);
 }

@@ -10,15 +10,17 @@
 #ifndef UAE_OPTIONS_H
 #define UAE_OPTIONS_H
 
+#ifdef FSUAE
+#include "uae/limits.h"
+#endif
 #include "uae/types.h"
 
 #include "traps.h"
+#include "xwin.h"
 
 #define UAEMAJOR 4
 #define UAEMINOR 2
 #define UAESUBREV 1
-
-#define MAX_AMIGADISPLAYS 4
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
@@ -846,6 +848,9 @@ struct uae_prefs {
 	bool win32_warn_exit;
 	bool right_control_is_right_win_key;
 #ifdef WITH_SLIRP
+#ifdef FSUAE
+	int slirp_implementation;
+#endif
 	struct slirp_redir slirp_redirs[MAX_SLIRP_REDIRS];
 #endif
 	int statecapturerate, statecapturebuffersize;

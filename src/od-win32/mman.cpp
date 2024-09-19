@@ -7,7 +7,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "uae/mman.h"
 #include "uae/vm.h"
 #include "autoconf.h"
@@ -18,6 +18,10 @@
 #include "gui.h"
 #ifdef WINUAE
 #include "win32.h"
+#endif
+
+#ifdef FSUAE // NL
+#include "uae/fs.h"
 #endif
 
 #if defined(NATMEM_OFFSET)
@@ -46,7 +50,13 @@ static uae_u32 p96base_offset;
 static SYSTEM_INFO si;
 static uaecptr start_rtg = 0;
 static uaecptr end_rtg = 0;
+#ifdef FSUAE
+static uint32_t maxmem;
+/* FIXME: check if signed int is a bit small */
+/* FIXME: check where maxmem is set */
+#else
 int maxmem;
+#endif
 bool jit_direct_compatible_memory;
 
 static uae_u8 *virtualallocwithlock (LPVOID addr, SIZE_T size, DWORD allocationtype, DWORD protect)
@@ -95,6 +105,8 @@ static uae_u32 lowmem (void)
 	return change;
 }
 
+#ifdef FSUAE
+#else
 int mman_GetWriteWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize, PVOID *lpAddresses, PULONG_PTR lpdwCount, PULONG lpdwGranularity)
 {
 	return GetWriteWatch (WRITE_WATCH_FLAG_RESET, lpBaseAddress, dwRegionSize, lpAddresses, lpdwCount, lpdwGranularity);
@@ -104,6 +116,7 @@ void mman_ResetWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize)
 	if (ResetWriteWatch (lpBaseAddress, dwRegionSize))
 		write_log (_T("ResetWriteWatch() failed, %d\n"), GetLastError ());
 }
+#endif
 
 static uae_u64 size64;
 #ifdef _WIN32
@@ -121,6 +134,9 @@ static void clear_shm (void)
 
 bool preinit_shm (void)
 {
+#ifdef FSUAE
+	write_log("preinit_shm\n");
+#endif
 	uae_u64 total64;
 	uae_u64 totalphys64;
 #ifdef _WIN32
@@ -134,6 +150,9 @@ bool preinit_shm (void)
 #ifdef _WIN32
 		VirtualFree (natmem_reserved, 0, MEM_RELEASE);
 #else
+#ifdef FSUAE
+		free (natmem_reserved);
+#endif
 #endif
 	natmem_reserved = NULL;
 	natmem_offset = NULL;
@@ -142,12 +161,20 @@ bool preinit_shm (void)
 #ifdef _WIN32
 		VirtualFree (p96mem_offset, 0, MEM_RELEASE);
 #else
+#ifdef FSUAE
+		/* Don't free p96mem_offset - it is freed as part of natmem_offset */
+		// free (p96mem_offset);
+#endif
 #endif
 	}
 	p96mem_offset = NULL;
 #endif
 	GetSystemInfo (&si);
+#ifdef FSUAE
+	max_allowed_mman = 2048;
+#else
 	max_allowed_mman = 512 + 256;
+#endif
 #if 1
 	if (os_64bit) {
 //#ifdef WIN64
@@ -165,7 +192,11 @@ bool preinit_shm (void)
 	GlobalMemoryStatus(&memstats);
 	totalphys64 = memstats.dwTotalPhys;
 	total64 = (uae_u64)memstats.dwAvailPageFile + (uae_u64)memstats.dwTotalPhys;
+#ifdef FSUAE
+	pGlobalMemoryStatusEx = GlobalMemoryStatusEx;
+#else
 	pGlobalMemoryStatusEx = (GLOBALMEMORYSTATUSEX)GetProcAddress (GetModuleHandle (_T("kernel32.dll")), "GlobalMemoryStatusEx");
+#endif
 	if (pGlobalMemoryStatusEx) {
 		memstatsex.dwLength = sizeof (MEMORYSTATUSEX);
 		if (pGlobalMemoryStatusEx(&memstatsex)) {
@@ -174,6 +205,22 @@ bool preinit_shm (void)
 		}
 	}
 #else
+#ifdef FSUAE
+#ifdef __APPLE__
+	int mib[2];
+	size_t len;
+
+	mib[0] = CTL_HW;
+	// FIXME: check 64-bit compat
+	mib[1] = HW_MEMSIZE; /* gives a 64 bit int */
+	len = sizeof(totalphys64);
+	sysctl(mib, 2, &totalphys64, &len, NULL, 0);
+	total64 = (uae_u64) totalphys64;
+#else
+	totalphys64 = sysconf (_SC_PHYS_PAGES) * (uae_u64)getpagesize();
+	total64 = (uae_u64)sysconf (_SC_PHYS_PAGES) * (uae_u64)getpagesize();
+#endif
+#endif
 #endif
 	size64 = total64;
 	if (os_64bit) {
@@ -183,7 +230,12 @@ bool preinit_shm (void)
 		if (size64 > MAXZ3MEM32)
 			size64 = MAXZ3MEM32;
 	}
+#ifdef FSUAE
+	/* FIXME: check */
+	if (maxmem == 0) {
+#else
 	if (maxmem < 0) {
+#endif
 		size64 = MAXZ3MEM64;
 		if (!os_64bit) {
 			if (totalphys64 < 1536 * 1024 * 1024)
@@ -215,19 +267,25 @@ bool preinit_shm (void)
 				  totalphys64 >> 20, total64 >> 20);
 	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
 
-#if 1
-	natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH);
-#else
-	natmem_size = 0x20000000;
-	natmem_reserved = (uae_u8 *) uae_vm_reserve_fixed(
-		(void *) 0x90000000, natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH);
+	int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
+#ifdef FSUAE
+	write_log("NATMEM: jit compiler %d\n", g_fs_uae_jit_compiler);
+	if (!g_fs_uae_jit_compiler) {
+		/* Not using the JIT compiler, so we do not need "32-bit memory". */
+		vm_flags &= ~UAE_VM_32BIT;
+	}
 #endif
+	natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
 
 	if (!natmem_reserved) {
 		if (natmem_size <= 768 * 1024 * 1024) {
 			uae_u32 p = 0x78000000 - natmem_size;
 			for (;;) {
+#ifdef FSUAE
+				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+#else
 				natmem_reserved = (uae_u8*) VirtualAlloc((void*)(intptr_t)p, natmem_size, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
+#endif
 				if (natmem_reserved)
 					break;
 				p -= 128 * 1024 * 1024;
@@ -239,20 +297,34 @@ bool preinit_shm (void)
 	if (!natmem_reserved) {
 		DWORD vaflags = MEM_RESERVE | MEM_WRITE_WATCH;
 #ifdef _WIN32
+#ifdef FSUAE
+		OSVERSIONINFO osVersion;
+		osVersion.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
+		bool os_vista = (osVersion.dwMajorVersion == 6 &&
+						 osVersion.dwMinorVersion == 0);
+#endif
 #ifndef _WIN64
 		if (!os_vista)
 			vaflags |= MEM_TOP_DOWN;
 #endif
 #endif
 		for (;;) {
+#ifdef FSUAE
+			natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+#else
 			natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
+#endif
 			if (natmem_reserved)
 				break;
 			natmem_size -= 64 * 1024 * 1024;
 			if (!natmem_size) {
 				write_log (_T("MMAN: Can't allocate 257M of virtual address space!?\n"));
 				natmem_size = 17 * 1024 * 1024;
+#ifdef FSUAE
+				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+#else
 				natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
+#endif
 				if (!natmem_size) {
 					write_log (_T("MMAN: Can't allocate 17M of virtual address space!? Something is seriously wrong\n"));
 					notify_user(NUMSG_NOMEMORY);
@@ -422,6 +494,13 @@ static int doinit_shm (void)
 			end_rtg = aci->start + aci->size;
 		}
 	}
+#ifdef FSUAE
+	//write_log("NATMEM: size            0x%08x\n", size);
+	//write_log("NATMEM: z3size        + 0x%08x\n", z3size);
+	write_log("NATMEM: z3rtgmem_size + 0x%08x\n", z3rtgmem_size);
+	//write_log("NATMEM: othersize     + 0x%08x\n", othersize);
+	write_log("NATMEM: totalsize     = 0x%08x\n", totalsize);
+#endif
 
 	// rtg outside of natmem?
 	if (start_rtg > 0 && start_rtg < 0xffffffff && end_rtg > natmem_reserved_size) {
@@ -435,6 +514,9 @@ static int doinit_shm (void)
 			return -1;
 		}
 #ifdef _WIN64
+#ifdef FSUAE
+		/* FIXME: Check for FS-UAE. */
+#endif
 		// 64-bit can't do natmem_offset..
 		notify_user(NUMSG_NOMEMORY);
 		return -1;
@@ -503,6 +585,9 @@ static int doinit_shm (void)
 		write_log(_T("Z3 UAE mapping.\n"));
 	}
 #endif
+#ifdef FSUAE
+	write_log("NATMEM: JIT direct compatible: %d\n", jit_direct_compatible_memory);
+#endif
 
 #if 0
 	p96mem_offset = NULL;
@@ -547,6 +632,9 @@ static int doinit_shm (void)
 					// adjust p96mem_offset to beginning of natmem
 					// by subtracting start of original p96mem_offset from natmem_offset
 					if (p96base_offset >= 0x10000000) {
+#ifdef FSUAE
+						write_log("NATMEM: natmem_offset = %p - 0x%x\n", natmem_reserved, p96base_offset);
+#endif
 						natmem_offset = natmem_reserved - p96base_offset;
 						p96mem_offset = natmem_offset + p96base_offset;
 					}
@@ -582,6 +670,9 @@ static int ortgmem_type[MAX_RTG_BOARDS];
 
 bool init_shm (void)
 {
+#ifdef FSUAE
+	write_log("init_shm\n");
+#endif
 	bool changed = false;
 
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
@@ -889,6 +980,10 @@ bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 
 void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md)
 {
+#ifdef FSUAE
+	write_log("uae_shmat shmid %d shmaddr %p, shmflg %d natmem_offset = %p\n",
+			shmid, shmaddr, shmflg, natmem_offset);
+#endif
 	void *result = (void *)-1;
 	bool got = false, readonly = false, maprom = false;
 	int p96special = FALSE;
@@ -1023,7 +1118,7 @@ int uae_shmget (uae_key_t key, addrbank *ab, int shmflg)
 	int result = -1;
 
 	if ((key == UAE_IPC_PRIVATE) || ((shmflg & UAE_IPC_CREAT) && (find_shmkey (key) == -1))) {
-		write_log (_T("shmget of size %zd (%zdk) for %s (%s)\n"), ab->reserved_size, ab->reserved_size >> 10, ab->label, ab->name);
+		write_log (_T("shmget of size %ud (%udk) for %s (%s)\n"), ab->reserved_size, ab->reserved_size >> 10, ab->label, ab->name);
 		if ((result = get_next_shmkey ()) != -1) {
 			shmids[result].size = ab->reserved_size;
 			_tcscpy (shmids[result].name, ab->label);
@@ -1061,6 +1156,10 @@ int uae_shmctl (int shmid, int cmd, struct uae_shmid_ds *buf)
 
 #endif
 
+#ifdef FSUAE
+/* The function isinf is provided by libc. */
+/* FIXME: Replace with HAVE_ISINF? */
+#else
 int isinf (double x)
 {
 	const int nClass = _fpclass (x);
@@ -1071,3 +1170,4 @@ int isinf (double x)
 		result = 0;
 	return result;
 }
+#endif

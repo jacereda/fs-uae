@@ -13,9 +13,11 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef SCSIEMU
+
 #include "threaddep/thread.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "events.h"
 #include "newcpu.h"
@@ -1538,6 +1540,8 @@ void scsidev_reset (void)
 	dev_reset ();
 }
 
+#ifdef SAVESTATE
+
 uae_u8 *save_scsidev (int num, int *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
@@ -1624,3 +1628,7 @@ uae_u8 *restore_scsidev (uae_u8 *src)
 	}
 	return src;
 }
+
+#endif /* SAVESTATE */
+
+#endif /* SCSIEMU */

@@ -16,7 +16,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "autoconf.h"
@@ -24,6 +24,7 @@
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "events.h"
+#include "fpp.h"
 #include "savestate.h"
 #include "driveclick.h"
 #include "zfile.h"
@@ -256,7 +257,7 @@ void audio_sampleripper (int mode)
 				cfgfile_resolve_path_load(name, sizeof(name) / sizeof(TCHAR), type);
 			namesplit (name);
 			_tcscpy (extension, _T("wav"));
-			_stprintf (filename, _T("%s%s%s%03d.%s"), path, name, underline, cnt, extension);
+			_sntprintf (filename, MAX_DPATH, _T("%s%s%s%03d.%s"), path, name, underline, cnt, extension);
 			wavfile = zfile_fopen (filename, _T("wb"), 0);
 			if (wavfile) {
 				int freq = rs->per > 0 ? (currprefs.ntscmode ? 3579545 : 3546895 / rs->per) : 8000;
@@ -1481,6 +1482,11 @@ static void loaddat (int nr, bool modper)
 			return;
 		if (modper && audap) {
 			if (cdp->dat == 0)
+#ifdef FSUAE
+				// FIXME: changed PERIOD_MAX from ULONG_MAX to UINT_MAX
+				// since cdp[1].per is int, not long. But should per
+				// be an unsigned int??
+#endif
                 cdp[1].per = 65536 * CYCLE_UNIT;
 			else if (cdp->dat > PERIOD_MIN)
 				cdp[1].per = cdp->dat * CYCLE_UNIT;
@@ -1810,8 +1816,6 @@ static int sound_prefs_changed (void)
 		return -1;
 	return 0;
 }
-
-double softfloat_tan(double v);
 
 /* This computes the 1st order low-pass filter term b0.
 * The a1 term is 1.0 - b0. The center frequency marks the -3 dB point. */
@@ -2447,6 +2451,8 @@ void audio_vsync (void)
 #endif
 }
 
+#ifdef SAVESTATE
+
 void restore_audio_finish (void)
 {
 	last_cycles = get_cycles ();
@@ -2488,6 +2494,10 @@ uae_u8 *restore_audio (int nr, uae_u8 *src)
 	return src;
 }
 
+#endif /* SAVESTATE */
+
+#if defined SAVESTATE || defined DEBUGGER
+
 uae_u8 *save_audio (int nr, int *len, uae_u8 *dstptr)
 {
 	struct audio_channel_data *acd = audio_channel + nr;
@@ -2512,6 +2522,8 @@ uae_u8 *save_audio (int nr, int *len, uae_u8 *dstptr)
 	*len = dst - dstbak;
 	return dstbak;
 }
+
+#endif /* defined SAVESTATE || defined DEBUGGER */
 
 static void audio_set_extra_channels(void)
 {

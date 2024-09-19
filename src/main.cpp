@@ -16,7 +16,7 @@
 #include "gensound.h"
 #include "audio.h"
 #include "events.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "custom.h"
 #include "serial.h"
 #include "newcpu.h"
@@ -45,6 +45,13 @@
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
+
+#ifdef FSUAE // NL
+// SDL is not used directly here by FS-UAE, but USE_SDL is still defined when
+// compiling FS-UAE so we explicitly undef it here.
+#undef USE_SDL
+#endif // NL
+
 #ifdef USE_SDL
 #include "SDL.h"
 #endif
@@ -65,6 +72,9 @@ TCHAR warning_buffer[256];
 
 TCHAR optionsfile[256];
 
+#ifdef FSUAE
+// moved to random.cpp
+#else
 static uae_u32 randseed;
 static int oldhcounter;
 
@@ -90,6 +100,7 @@ uae_u32 uaerandgetseed (void)
 {
 	return randseed;
 }
+#endif
 
 void my_trim (TCHAR *s)
 {
@@ -221,6 +232,9 @@ void fixup_prefs_dimensions (struct uae_prefs *prefs)
 
 void fixup_cpu (struct uae_prefs *p)
 {
+#ifdef FSUAE
+	uae_log("fixup_cpu\n");
+#endif
 	if (p->cpu_frequency == 1000000)
 		p->cpu_frequency = 0;
 
@@ -372,6 +386,9 @@ void fixup_cpu (struct uae_prefs *p)
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
 {
+#ifdef FSUAE
+	uae_log("fixup_prefs\n");
+#endif
 	int err = 0;
 
 	built_in_chipset_prefs (p);
@@ -729,9 +746,15 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->gfx_display_sections = 99;
 	}
 	if (p->maprom && !p->address_space_24) {
+#ifdef FSUAE
+		write_log("MAPROM: Setting address 0x0f000000 (was 0x%08x)\n", p->maprom);
+#endif
 		p->maprom = 0x0f000000;
 	}
 	if (((p->maprom & 0xff000000) && p->address_space_24) || (p->maprom && p->mbresmem_high_size >= 0x08000000)) {
+#ifdef FSUAE
+		write_log("MAPROM: Setting address 0x00e00000 (was 0x%08x)\n", p->maprom);
+#endif
 		p->maprom = 0x00e00000;
 	}
 	if (p->maprom && p->cpuboard_type) {
@@ -778,6 +801,9 @@ void uae_reset (int hardreset, int keyboardreset)
 
 void uae_quit (void)
 {
+#ifdef FSUAE
+	write_log("uae_quit\n");
+#endif
 	deactivate_debugger ();
 	if (quit_program != -UAE_QUIT)
 		quit_program = -UAE_QUIT;
@@ -787,6 +813,9 @@ void uae_quit (void)
 /* 0 = normal, 1 = nogui, -1 = disable nogui */
 void uae_restart (int opengui, const TCHAR *cfgfile)
 {
+#ifdef FSUAE
+	write_log("uae_restart\n");
+#endif
 	uae_quit ();
 	restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
 	restart_config[0] = 0;
@@ -908,12 +937,14 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			xfree (txt);
 			firstconfig = false;
 			loaded = true;
+#ifdef SAVESTATE
 		} else if (_tcsncmp (argv[i], _T("-statefile="), 11) == 0) {
 			TCHAR *txt = parsetextpath (argv[i] + 11);
 			savestate_state = STATE_DORESTORE;
 			_tcscpy (savestate_fname, txt);
 			xfree (txt);
 			loaded = true;
+#endif
 		} else if (_tcscmp (argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
 			if (i + 1 == argc) {
@@ -963,9 +994,11 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					if (type == ZFILE_CONFIGURATION) {
 						currprefs.mountitems = 0;
 						target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
+#ifdef SAVESTATE
 					} else if (type == ZFILE_STATEFILE) {
 						savestate_state = STATE_DORESTORE;
 						_tcscpy(savestate_fname, txt);
+#endif
 					}
 				}
 				xfree(txt);
@@ -1083,7 +1116,11 @@ static int real_main2 (int argc, TCHAR **argv)
 	}
 
 #ifdef NATMEM_OFFSET
+#ifdef FSUAE
+	preinit_shm ();
+#else
 	//preinit_shm ();
+#endif
 #endif
 
 	if (restart_config[0])
@@ -1165,7 +1202,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	/* force sound settings change */
 	currprefs.produce_sound = 0;
 
+#ifdef SAVESTATE
 	savestate_init ();
+#endif
 	keybuf_init (); /* Must come after init_joystick */
 
 	memory_hardreset (2);

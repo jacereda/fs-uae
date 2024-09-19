@@ -10,6 +10,11 @@
 #define UAE_OSEMU_H
 
 #include "uae/types.h"
+#ifdef FSUAE
+#include "uae/inline.h"
+#include "uae/memory.h"
+#include <stddef.h>
+#endif
 
 STATIC_INLINE char *raddr(uaecptr p)
 {

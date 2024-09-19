@@ -2,15 +2,20 @@
 #define __DXWRAP_H__
 
 #include "rtgmodes.h"
+#ifdef FSUAE
+#else
 #include <ddraw.h>
 #include <d3d9.h>
 #include <D3dkmthk.h>
+#endif
 
 #define MAX_DISPLAYS 10
 
 extern int ddforceram;
 extern int useoverlay;
 
+#ifdef FSUAE
+#else
 struct ddstuff
 {
 	int ddinit;
@@ -43,6 +48,7 @@ struct ddcaps
 };
 extern struct ddstuff dxdata;
 extern struct ddcaps dxcaps;
+#endif
 
 struct ScreenResolution
 {
@@ -72,17 +78,23 @@ struct PicassoResolution
 
 struct MultiDisplay {
 	bool primary;
+#ifdef FSUAE
+#else
 	GUID ddguid;
+#endif
 	TCHAR *adaptername, *adapterid, *adapterkey;
 	TCHAR *monitorname, *monitorid;
 	TCHAR *fullname;
 	struct PicassoResolution *DisplayModes;
+#ifdef FSUAE
+#else
 	RECT rect;
 	RECT workrect;
 	LUID AdapterLuid;
 	UINT VidPnSourceId;
 	UINT AdapterHandle;
 	bool HasAdapterData;
+#endif
 };
 extern struct MultiDisplay Displays[MAX_DISPLAYS + 1];
 
@@ -102,9 +114,12 @@ struct winuae_currentmode {
 #define MAX_AMIGAMONITORS 4
 struct AmigaMonitor {
 	int monitor_id;
+#ifdef FSUAE
+#else
 	HWND hAmigaWnd;
 	HWND hMainWnd;
 	struct MultiDisplay *md;
+#endif
 
 	RECT amigawin_rect, mainwin_rect;
 	RECT amigawinclip_rect;
@@ -131,8 +146,11 @@ struct AmigaMonitor {
 	int p96_double_buffer_first, p96_double_buffer_last;
 	int p96_double_buffer_needs_flushing;
 
+#ifdef FSUAE
+#else
 	HWND hStatusWnd;
 	HBRUSH hStatusBkgB;
+#endif
 
 	struct winuae_currentmode currentmode;
 	struct uae_filter *usedfilter;
@@ -147,6 +165,8 @@ typedef enum
 	blue_mask
 } DirectDraw_Mask_e;
 
+#ifdef FSUAE
+#else
 extern const TCHAR *DXError (HRESULT hr);
 extern TCHAR *outGUID (const GUID *guid);
 
@@ -194,6 +214,8 @@ void DirectDraw_Fill (RECT *rect, uae_u32 color);
 void DirectDraw_FillPrimary (void);
 bool DD_getvblankpos (int *vpos);
 void DD_vblank_reset (double freq);
+
+#endif
 
 void dx_check (void);
 int dx_islost (void);

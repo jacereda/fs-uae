@@ -40,7 +40,7 @@ static void generate_func(void)
     printf("#include \"sysdeps.h\"\n");
     printf("#include \"options.h\"\n");
     printf("#include \"custom.h\"\n");
-    printf("#include \"memory.h\"\n");
+    printf("#include \"uae/memory.h\"\n");
     printf("#include \"blitter.h\"\n");
     printf("#include \"blitfunc.h\"\n\n");
 
@@ -55,8 +55,17 @@ static void generate_func(void)
 	if (c_is_on) printf("uae_u32 srcc = b->bltcdat;\n");
 	printf("uae_u32 dstd=0;\n");
 	printf("uaecptr dstp = 0;\n");
+#ifdef FSUAE_XXX
+	printf("for (j = b->vblitsize; j--; ) {\n");
+	if (a_is_on) {
+		printf("\tfor (i = 0; i < b->hblitsize; i++) {\n\t\tuae_u32 bltadat, srca;\n\n");
+	} else {
+		printf("\tfor (i = b->hblitsize; i--; ) {\n\t\tuae_u32 bltadat, srca;\n\n");
+	}
+#else
 	printf("for (j = 0; j < b->vblitsize; j++) {\n");
 	printf("\tfor (i = 0; i < b->hblitsize; i++) {\n\t\tuae_u32 bltadat, srca;\n\n");
+#endif
 	if (c_is_on) printf("\t\tif (ptc) { srcc = chipmem_wget_indirect (ptc); ptc += 2; }\n");
 	if (b_is_on) printf("\t\tif (ptb) {\n\t\t\tuae_u32 bltbdat = b->bltbdat = chipmem_wget_indirect (ptb); ptb += 2;\n");
 	if (b_is_on) printf("\t\t\tsrcb = (((uae_u32)b->bltbold << 16) | bltbdat) >> b->blitbshift;\n");
@@ -89,8 +98,17 @@ static void generate_func(void)
 	if (c_is_on) printf("uae_u32 srcc = b->bltcdat;\n");
 	printf("uae_u32 dstd = 0;\n");
 	printf("uaecptr dstp = 0;\n");
+#ifdef FSUAE_XXX
+	printf("for (j = b->vblitsize; j--; ) {\n");
+	if (a_is_on) {
+		printf("\tfor (i = 0; i < b->hblitsize; i++) {\n\t\tuae_u32 bltadat, srca;\n");
+	} else {
+		printf("\tfor (i = b->hblitsize; i--; ) {\n\t\tuae_u32 bltadat, srca;\n");
+	}
+#else
 	printf("for (j = 0; j < b->vblitsize; j++) {\n");
 	printf("\tfor (i = 0; i < b->hblitsize; i++) {\n\t\tuae_u32 bltadat, srca;\n");
+#endif
 	if (c_is_on) printf("\t\tif (ptc) { srcc = chipmem_wget_indirect (ptc); ptc -= 2; }\n");
 	if (b_is_on) printf("\t\tif (ptb) {\n\t\t\tuae_u32 bltbdat = b->bltbdat = chipmem_wget_indirect (ptb); ptb -= 2;\n");
 	if (b_is_on) printf("\t\t\tsrcb = ((bltbdat << 16) | b->bltbold) >> b->blitdownbshift;\n");
@@ -125,7 +143,7 @@ static void generate_table(void)
     printf("#include \"sysdeps.h\"\n");
     printf("#include \"options.h\"\n");
     printf("#include \"custom.h\"\n");
-    printf("#include \"memory.h\"\n");
+    printf("#include \"uae/memory.h\"\n");
     printf("#include \"blitter.h\"\n");
     printf("#include \"blitfunc.h\"\n\n");
     printf("blitter_func * const blitfunc_dofast[256] = {\n");

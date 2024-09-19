@@ -10,11 +10,18 @@
 #include "sysdeps.h"
 
 #include <stdlib.h>
+#ifdef FSUAE
+#else
 #include <tchar.h>
+#endif
 #include <assert.h>
 #include <ctype.h>
 
+#ifdef FSUAE
+#include "uae/types.h"
+#else
 #define TCHAR char
+#endif
 
 #include "readcpu.h"
 
@@ -56,8 +63,16 @@ static int nextchtohex(void)
     }
 }
 
+#if defined(FSUAE) && defined (WINDOWS)
+#include "windows.h"
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+int argc = __argc;
+char** argv = __argv;
+#else
 int main(int argc, char **argv)
 {
+#endif
     int no_insns = 0;
 
     printf ("#include \"sysconfig.h\"\n");

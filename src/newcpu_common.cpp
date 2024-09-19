@@ -6,7 +6,7 @@
 #define MOVEC_DEBUG 0
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
 #include "newcpu.h"
 #include "cpummu.h"
 #include "cpummu030.h"
@@ -481,6 +481,7 @@ uae_u32 REGPARAM2 x_get_disp_ea_020 (uae_u32 base, int idx)
 	return v;
 }
 
+#ifdef CPUEMU_23
 uae_u32 REGPARAM2 x_get_disp_ea_ce030 (uae_u32 base, int idx)
 {
 	uae_u16 dp = next_iword_030ce ();
@@ -527,6 +528,7 @@ uae_u32 REGPARAM2 x_get_disp_ea_ce030 (uae_u32 base, int idx)
 	}
 	return v;
 }
+#endif
 
 uae_u32 REGPARAM2 x_get_disp_ea_ce020 (uae_u32 base, int idx)
 {

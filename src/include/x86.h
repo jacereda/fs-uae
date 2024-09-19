@@ -1,6 +1,10 @@
 #ifndef UAE_X86_H
 #define UAE_X86_H
 
+#ifdef FSUAE // NL
+#include "uae/memory.h"
+#endif
+
 bool a1060_init(struct autoconfig_info *aci);
 bool a2088xt_init(struct autoconfig_info *aci);
 bool a2088t_init(struct autoconfig_info *aci);
@@ -21,5 +25,11 @@ void x86_mouse(int port, int x, int y, int z, int b);
 #define X86_STATE_ACTIVE 2
 
 int is_x86_cpu(struct uae_prefs*);
+
+void x86_rt1000_bios(struct zfile*, struct romconfig *rc);
+void x86_xt_ide_bios(struct zfile*, struct romconfig*);
+int device_get_config_int(char *name);
+
+void x86_map_lfb(int);
 
 #endif /* UAE_X86_H */

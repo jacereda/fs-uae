@@ -17,7 +17,8 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
+#include "a2091.h"
 #include "zfile.h"
 #include "rommgr.h"
 #include "autoconf.h"
@@ -35,6 +36,10 @@
 #include "scsi.h"
 #include "cpummu030.h"
 #include "devices.h"
+
+#ifdef FSUAE // NL
+#include "uae/fs.h"
+#endif
 
 // ROM expansion board diagrom call
 // 00F83B7C 3.1 A4000
@@ -170,6 +175,8 @@ static bool blizzardmaprom_bank_mapped, blizzardmaprom2_bank_mapped;
 static bool cpuboard_non_byte_ea;
 static uae_u16 a2630_io;
 
+#ifdef WITH_PPC
+
 static bool ppc_irq_pending;
 
 static void set_ppc_interrupt(void)
@@ -241,6 +248,8 @@ bool ppc_interrupt(int new_m68k_ipl)
 
 	return m68kint;
 }
+
+#endif /* WITH_PPC */
 
 static bool mapromconfigured(void)
 {
@@ -372,7 +381,7 @@ static bool is_aca500(struct uae_prefs *p)
 
 extern addrbank cpuboardmem1_bank;
 MEMORY_FUNCTIONS(cpuboardmem1);
-static addrbank cpuboardmem1_bank = {
+addrbank cpuboardmem1_bank = {
 	cpuboardmem1_lget, cpuboardmem1_wget, cpuboardmem1_bget,
 	cpuboardmem1_lput, cpuboardmem1_wput, cpuboardmem1_bput,
 	cpuboardmem1_xlate, cpuboardmem1_check, NULL, _T("*B"), _T("cpuboard ram"),
@@ -381,7 +390,7 @@ static addrbank cpuboardmem1_bank = {
 };
 extern addrbank cpuboardmem2_bank;
 MEMORY_FUNCTIONS(cpuboardmem2);
-static addrbank cpuboardmem2_bank = {
+addrbank cpuboardmem2_bank = {
 	cpuboardmem2_lget, cpuboardmem2_wget, cpuboardmem2_bget,
 	cpuboardmem2_lput, cpuboardmem2_wput, cpuboardmem2_bput,
 	cpuboardmem2_xlate, cpuboardmem2_check, NULL, _T("*B"), _T("cpuboard ram #2"),
@@ -981,6 +990,9 @@ static void cyberstorm_copymaprom(void)
 	} else if (blizzardmaprom_bank.baseaddr) {
 		uae_u8 *src = blizzardmaprom_bank.baseaddr;
 		uae_u8 *dst = kickmem_bank.baseaddr;
+#ifdef FSUAE
+		write_log("cyberstorm_copymaprom src=%p dst=%p\n", src, dst);
+#endif
 		protect_roms(false);
 		memcpy(dst, src, 524288);
 		protect_roms(true);
@@ -1052,8 +1064,10 @@ void cpuboard_rethink(void)
 		} else {
 			atomic_and(&uae_int_requested, ~0x010000);
 		}
+#ifdef WITH_PPC
 		check_ppc_int_lvl();
 		ppc_interrupt(intlev());
+#endif
 	}
 }
 
@@ -1345,11 +1359,15 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					flash_unlocked &= ~2;
 				if (v & P5_LOCK_CPU) {
 					if (v & 0x80) {
+#ifdef WITH_PPC
 						if (uae_ppc_cpu_unlock())
+#endif
 							regval |= P5_LOCK_CPU;
 					} else {
+#ifdef WITH_PPC
 						if (!(regval & P5_LOCK_CPU))
 							uae_ppc_cpu_lock();
+#endif
 						regval &= ~P5_LOCK_CPU;
 					}
 #if CPUBOARD_IO_LOG > 0
@@ -1395,9 +1413,13 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					}
 					if (!(io_reg[CSIII_REG_SHADOW] & P5_SELF_RESET) || uae_self_is_ppc() == false) {
 						if ((oldval & P5_PPC_RESET) && !(regval & P5_PPC_RESET)) {
+#ifdef WITH_PPC
 							uae_ppc_cpu_stop();
+#endif
 						} else if (!(oldval & P5_PPC_RESET) && (regval & P5_PPC_RESET)) {
+#ifdef WITH_PPC
 							uae_ppc_cpu_reboot();
+#endif
 						}
 					} else {
 						io_reg[CSIII_REG_RESET] &= ~P5_PPC_RESET;
@@ -1423,7 +1445,9 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					}
 					if (!(io_reg[CSIII_REG_SHADOW] & P5_SELF_RESET)) {
 						if (!(regval & P5_AMIGA_RESET)) {
+#ifdef WITH_PPC
 							uae_ppc_cpu_stop();
+#endif
 							uae_reset(0, 0);
 							write_log(_T("CS: Amiga Reset\n"));
 							io_reg[addr] |= P5_AMIGA_RESET;
@@ -1437,8 +1461,11 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					regval &= ~P5_M68k_IPL_MASK;
 					regval |= oldval & P5_M68k_IPL_MASK;
 					bool active = (regval & P5_DISABLE_INT) == 0;
-					if (!active)
+					if (!active) {
+#ifdef WITH_PPC
 						clear_ppc_interrupt();
+#endif
+					}
 					io_reg[addr] = regval;
 #if CPUBOARD_IRQ_LOG > 0
 					if ((regval & P5_DISABLE_INT) != (oldval & P5_DISABLE_INT))
@@ -1506,7 +1533,6 @@ static void REGPARAM2 blizzardio_wput(uaecptr addr, uae_u32 v)
 			cpu_fallback(0);
 		}
 	} else if (is_a1230s2(&currprefs)) {
-		extern void gvp_accelerator_set_dma_bank(uae_u8);
 		io_reg[0] = v & 0xff;
 		gvp_accelerator_set_dma_bank((v >> 4) & 3);
 	}
@@ -1535,7 +1561,9 @@ void cpuboard_hsync(void)
 	// after PPC CPU's interrupt flag is cleared but this
 	// should be fast enough for now
 	if (is_csmk3(&currprefs) || is_blizzardppc(&currprefs)) {
+#ifdef WITH_PPC
 		check_ppc_int_lvl();
+#endif
 	}
 }
 
@@ -1550,6 +1578,9 @@ void cpuboard_vsync(void)
 
 void cpuboard_map(void)
 {
+#ifdef FSUAE
+    write_log("cpuboard_map currprefs.cpuboard_type = %d\n", currprefs.cpuboard_type);
+#endif
 	if (!currprefs.cpuboard_type)
 		return;
 
@@ -2370,10 +2401,16 @@ static void fixserial(struct uae_prefs *p, uae_u8 *rom, int size)
 static struct zfile *board_rom_open(int romtype, const TCHAR *name)
 {
 	struct zfile *zf = NULL;
+#ifdef FSUAE
+	write_log("board_rom_open roms=... name=%s\n", name ? name : "(null)");
+#endif
 	struct romlist *rl = getromlistbyromtype(romtype, name);
 	if (rl)
 		zf = read_rom(rl->rd);
 	if (!zf && name) {
+#ifdef FSUAE
+	write_log("zfile_fopen %s\n", name);
+#endif
 		zf = zfile_fopen(name, _T("rb"), ZFD_NORMAL);
 		if (zf) {
 			return zf;
@@ -2381,6 +2418,9 @@ static struct zfile *board_rom_open(int romtype, const TCHAR *name)
 		TCHAR path[MAX_DPATH];
 		fetch_rompath(path, sizeof path / sizeof(TCHAR));
 		_tcscat(path, name);
+#ifdef FSUAE
+	write_log("zfile_fopen %s\n", path);
+#endif
 		zf = zfile_fopen(path, _T("rb"), ZFD_NORMAL);
 	}
 	return zf;

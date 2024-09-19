@@ -97,7 +97,7 @@ extern int inscounts[256];
 void x86illegal();
 
 void x86seg_reset();
-void x86gpf(char *s, uint16_t error);
+void x86gpf(const char *s, uint16_t error);
 
 extern uint16_t zero;
 
@@ -114,3 +114,13 @@ void exec386_dynarec(int cycs);
 
 extern int codegen_flat_ds;
 extern int codegen_flat_ss;
+
+uint8_t x86_get_jumpers(void);
+void x86_ack_keyboard(void);
+
+uint8_t portin(uint16_t portnum);
+void portout(uint16_t portnum, uint8_t v);
+uint16_t portin16(uint16_t portnum);
+void portout16(uint16_t portnum, uint16_t value);
+uint32_t portin32(uint16_t portnum);
+void portout32(uint16_t portnum, uint32_t value);

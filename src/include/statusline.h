@@ -12,7 +12,11 @@
 #define TD_RIGHT 1
 #define TD_BOTTOM 2
 
+#ifdef FSUAE
+#define td_pos (TD_RIGHT | TD_BOTTOM)
+#else
 static int td_pos = (TD_RIGHT | TD_BOTTOM);
+#endif
 
 #define TD_NUM_WIDTH 7
 #define TD_NUM_HEIGHT 7

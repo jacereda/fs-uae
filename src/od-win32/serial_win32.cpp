@@ -32,7 +32,10 @@
 #define SERIALHSDEBUG 0
 #define SERIAL_HSYNC_BEFORE_OVERFLOW 200
 
+#ifdef FSUAE
+#else
 #define SERIAL_MAP
+#endif
 
 #ifdef SERIAL_MAP
 #define SERMAP_SIZE 256
@@ -556,6 +559,9 @@ void serial_hsynchandler (void)
 			serial_check_irq();
 		}
 	}
+#ifdef FSUAE
+	/* no read_log implementation */
+#else
 	if (seriallog > 0 && !data_in_serdatr && gotlogwrite) {
 		int ch = read_log();
 		if (ch > 0) {
@@ -564,6 +570,7 @@ void serial_hsynchandler (void)
 			serial_check_irq ();
 		}
 	}
+#endif
 
 	if (lastbitcycle_active_hsyncs > 0)
 		lastbitcycle_active_hsyncs--;

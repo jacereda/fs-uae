@@ -149,7 +149,11 @@ void uae_lua_load(const TCHAR *filename)
 {
 	char *fn;
 	lua_State *L = luaL_newstate();
+#ifdef FSUAE
+
+#else
 	luaL_openlibs(L);
+#endif
 	fn = ua (filename);
 	int err = luaL_loadfilex(L, fn, NULL);
 	if (!err) {

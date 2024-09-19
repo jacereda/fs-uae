@@ -1,6 +1,10 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
+#ifdef FSUAE // NL
+#include "uae/types.h"
+#endif
+
 extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 
 #define ROMTYPE_SUB_MASK    0x000000ff
@@ -272,6 +276,8 @@ extern void addkeyfile (const TCHAR *path);
 extern int romlist_count (void);
 extern struct romlist *romlist_getit (void);
 extern int configure_rom (struct uae_prefs *p, const int *rom, int msg);
+
+void dumpromlist(void);
 
 int is_device_rom(struct uae_prefs *p, int romtype, int devnum);
 struct zfile *read_device_rom(struct uae_prefs *p, int romtype, int devnum, int *roms);
