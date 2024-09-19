@@ -1,8 +1,8 @@
 #ifndef LIBFSEMU_INPUT_H
 #define LIBFSEMU_INPUT_H
 
-#include <fs/ml.h>
-#include <fs/emu.h>
+#include "fs/ml.h"
+#include "fs/emu.h"
 
 void fse_init_input(void);
 

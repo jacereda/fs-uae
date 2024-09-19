@@ -15,6 +15,6 @@
 #define OPTION_TITLE "title"
 #define OPTION_VIDEO_DRIVER "video_driver"
 
-#include <fs/ml/options.h>
+#include "fs/ml/options.h"
 
 #endif /* FS_EMU_OPTIONS_H */

@@ -2,9 +2,9 @@
 #include "config.h"
 #endif
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 #include <string.h>
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 #include "scanlines.h"
 

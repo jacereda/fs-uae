@@ -23,7 +23,7 @@
 #include "readcpu.h"
 #include "machdep/m68k.h"
 #include "events.h"
-#include <softfloat/softfloat.h>
+#include "softfloat/softfloat.h"
 
 #ifndef SET_CFLG
 

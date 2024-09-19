@@ -3,8 +3,8 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fs/emu/audio.h>
-#include <fs/log.h>
+#include "fs/emu/audio.h"
+#include "fs/log.h"
 
 static void configure(fse_audio_stream_options **options)
 {

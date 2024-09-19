@@ -7,7 +7,7 @@
 #include "audio.h"
 #include "uae/fs.h"
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 #include "fsemu-audio.h"
 #include "fsemu-audiobuffer.h"

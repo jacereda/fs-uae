@@ -5,10 +5,10 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu/input.h>
-#include <fs/emu/options.h>
-#include <fs/conf.h>
-#include <fs/log.h>
+#include "fs/emu/input.h"
+#include "fs/emu/options.h"
+#include "fs/conf.h"
+#include "fs/log.h"
 #include <string.h>
 
 fse_input_t fse_input = {};

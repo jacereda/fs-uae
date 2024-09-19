@@ -6,13 +6,13 @@
 #endif
 
 #define _GNU_SOURCE 1
-#include <fs/emu.h>
-#include <fs/filesys.h>
-#include <fs/glib.h>
-#include <fs/log.h>
+#include "fs/emu.h"
+#include "fs/filesys.h"
+#include "fs/glib.h"
+#include "fs/log.h"
 #include <stdlib.h>
 #include <string.h>
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 #include "fs-uae.h"
 

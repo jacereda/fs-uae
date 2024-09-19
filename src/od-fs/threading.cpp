@@ -1,7 +1,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae.h"
-#include <fs/thread.h>
+#include "fs/thread.h"
 
 #include "fsemu-sdl.h"
 

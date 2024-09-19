@@ -1,7 +1,7 @@
 #ifndef LIBFSEMU_DIALOG_H_
 #define LIBFSEMU_DIALOG_H_
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 // void fs_emu_dialog_init();
 void fs_emu_dialog_render();

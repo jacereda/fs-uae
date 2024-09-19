@@ -2056,7 +2056,7 @@ void mapped_free (addrbank *ab)
 
 #else
 
-#include <uae/mman.h>
+#include "uae/mman.h"
 
 shmpiece *shm_start;
 

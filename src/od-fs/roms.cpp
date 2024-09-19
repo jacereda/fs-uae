@@ -7,8 +7,8 @@
 #include "rommgr.h"
 #include "zfile.h"
 
-#include <fs/filesys.h>
-#include <fs/glib.h>
+#include "fs/filesys.h"
+#include "fs/glib.h"
 
 void romlist_init (void)
 {

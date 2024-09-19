@@ -7,7 +7,7 @@
 #ifdef WINDOWS
 #define WINVER 0x0502
 #endif
-#include <fs/emu.h>
+#include "fs/emu.h"
 #define _GNU_SOURCE 1
 #include "netplay.h"
 
@@ -43,8 +43,8 @@ void fs_emu_set_state_check_function(fs_emu_checksum_function function) {
 #include <stdlib.h>
 #include <string.h>
 
-#include <fs/emu.h>
-#include <fs/thread.h>
+#include "fs/emu.h"
+#include "fs/thread.h"
 
 #include "hud.h"
 #include "libfsemu.h"

@@ -3,8 +3,8 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fs/emu/input.h>
-#include <fs/log.h>
+#include "fs/emu/input.h"
+#include "fs/log.h"
 #include <SDL.h>
 
 static int sdl_input_handler(void)

@@ -5,14 +5,14 @@
 #include "config.h"
 #endif
 
-#include <fs/emu.h>
-#include <fs/emu/buffer.h>
-#include <fs/emu/video.h>
-#include <fs/i18n.h>
+#include "fs/emu.h"
+#include "fs/emu/buffer.h"
+#include "fs/emu/video.h"
+#include "fs/i18n.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 #include "fs-uae.h"
 #include "fsuae-options.h"
@@ -864,7 +864,7 @@ static void toggle_zoom(int flags)
 }
 #endif
 
-#include <fs/emu/render.h>
+#include "fs/emu/render.h"
 
 void fs_uae_init_zoom_mode(void)
 {

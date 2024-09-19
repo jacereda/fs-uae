@@ -10,7 +10,7 @@
 #define FSGS_PATH_MAX 4096
 
 // #define USE_GLIB
-// #include <fs/emu/video.h>
+// #include "fs/emu/video.h"
 
 #include <SDL_opengl.h>
 #include <png.h>

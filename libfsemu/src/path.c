@@ -3,9 +3,9 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fs/emu/path.h>
+#include "fs/emu/path.h"
 
-#include <fs/glib.h>
+#include "fs/glib.h"
 
 static fs_emu_path_expand_function g_expand_function;
 

@@ -5,8 +5,8 @@
 #ifdef FSE_DRIVERS
 
 #define FSEMU_INTERNAL
-#include <fs/emu/input.h>
-#include <fs/log.h>
+#include "fs/emu/input.h"
+#include "fs/log.h"
 #include <stdio.h>
 
 #define MAX_INPUT_ACTIONS 1024

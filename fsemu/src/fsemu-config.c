@@ -4,7 +4,7 @@
 #include "fsemu-option.h"
 
 #ifdef FSUAE
-#include <fs/conf.h>
+#include "fs/conf.h"
 #endif
 
 int fsemu_config_read_bool_default(const char *name,

@@ -23,13 +23,13 @@
 #ifdef FSUAE_LEGACY
 
 #include "hud.h"
-#include <fs/emu.h>
-#include <fs/emu/options.h>
-#include <fs/emu/render.h>
-#include <fs/emu/video.h>
-#include <fs/conf.h>
-#include <fs/glib.h>
-#include <fs/thread.h>
+#include "fs/emu.h"
+#include "fs/emu/options.h"
+#include "fs/emu/render.h"
+#include "fs/emu/video.h"
+#include "fs/conf.h"
+#include "fs/glib.h"
+#include "fs/thread.h"
 #include "libfsemu.h"
 #include "menu.h"
 #include "font.h"
@@ -38,7 +38,7 @@
 #include <stdlib.h>
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
  
 #define MAX_VISIBLE_TIME (10 * 1000 * 1000)

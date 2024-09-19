@@ -5,12 +5,12 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu.h>
-#include <fs/emu/audio.h>
-#include <fs/emu/options.h>
-#include <fs/emu/path.h>
-#include <fs/emu/render.h>
-#include <fs/emu/video.h>
+#include "fs/emu.h"
+#include "fs/emu/audio.h"
+#include "fs/emu/options.h"
+#include "fs/emu/path.h"
+#include "fs/emu/render.h"
+#include "fs/emu/video.h"
 
 #include "render.h"
 
@@ -18,14 +18,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <fs/conf.h>
-#include <fs/filesys.h>
-#include <fs/i18n.h>
-#include <fs/glib.h>
-#include <fs/ml.h>
-#include <fs/thread.h>
-#include <fs/time.h>
-#include <fs/util.h>
+#include "fs/conf.h"
+#include "fs/filesys.h"
+#include "fs/i18n.h"
+#include "fs/glib.h"
+#include "fs/ml.h"
+#include "fs/thread.h"
+#include "fs/time.h"
+#include "fs/util.h"
 
 #include "libfsemu.h"
 #include "audio.h"
@@ -43,7 +43,7 @@
 #include "xml_shader.h"
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
 #ifdef USE_GLES
@@ -924,7 +924,7 @@ static void render_overlays(void)
     }
 }
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 double fs_emu_video_scale_x = 0.0;
 double fs_emu_video_scale_y = 0.0;

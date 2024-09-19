@@ -24,13 +24,13 @@
 
 #include "dialog.h"
 
-#include <fs/emu.h>
-#include <fs/glib.h>
+#include "fs/emu.h"
+#include "fs/glib.h"
 
 #include <stdlib.h>
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
 #include "font.h"

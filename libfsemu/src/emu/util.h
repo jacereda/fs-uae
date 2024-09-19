@@ -1,8 +1,8 @@
 #ifndef LIBFSEMU_UTIL_H_
 #define LIBFSEMU_UTIL_H_
 
-#include <fs/emu.h>
-#include <fs/glib.h>
+#include "fs/emu.h"
+#include "fs/glib.h"
 
 typedef struct fs_emu_stat_queue_ {
     int seq_no;

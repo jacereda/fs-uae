@@ -4,9 +4,9 @@
 
 #ifdef FSUAE_LEGACY
 
-#include <fs/emu.h>
-#include <fs/emu/audio.h>
-#include <fs/emu/render.h>
+#include "fs/emu.h"
+#include "fs/emu/audio.h"
+#include "fs/emu/render.h"
 
 #include "menu.h"
 
@@ -22,7 +22,7 @@
 #include "video.h"
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
 static fs_emu_font *g_font_title = NULL;

@@ -2,7 +2,7 @@
 #include "fsemu-path.h"
 
 #define _GNU_SOURCE 1
-// #include <fs/filesys.h>
+// #include "fs/filesys.h"
 
 #ifdef FSEMU_OS_LINUX
 #define HAVE_STRUCT_STAT_ST_BLOCKS 1
@@ -29,8 +29,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
-// #include <fs/base.h>
-// #include <fs/log.h>
+// #include "fs/base.h"
+// #include "fs/log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>

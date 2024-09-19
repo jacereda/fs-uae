@@ -19,8 +19,8 @@
 #ifndef LIBFSML_ML_H_
 #define LIBFSML_ML_H_
 
-#include <fs/malloc.h>
-#include <fs/base.h>
+#include "fs/malloc.h"
+#include "fs/base.h"
 #include <stdint.h>
 #include <stdbool.h>
 

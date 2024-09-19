@@ -5,18 +5,18 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu.h>
-#include <fs/emu/hacks.h>
-#include <fs/emu/video.h>
+#include "fs/emu.h"
+#include "fs/emu/hacks.h"
+#include "fs/emu/video.h"
 #include <stdio.h>
 #include <string.h>
-#include <fs/glib.h>
-#include <fs/ml.h>
-#include <fs/thread.h>
+#include "fs/glib.h"
+#include "fs/ml.h"
+#include "fs/thread.h"
 #include <math.h>
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
 #include "audio.h"

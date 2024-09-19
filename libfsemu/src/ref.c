@@ -2,8 +2,8 @@
 #include "config.h"
 #endif
 
-#include <fs/ref.h>
-#include <fs/log.h>
+#include "fs/ref.h"
+#include "fs/log.h"
 #include <stdio.h>
 
 void fs_ref_initialize(void *ptr, void (*destroy_function)(void *ptr))

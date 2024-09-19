@@ -69,8 +69,8 @@
 #include "uae/fs.h"
 #include "uae/glib.h"
 // FIXME
-#include <fs/emu.h>
-#include <fs/emu/hacks.h>
+#include "fs/emu.h"
+#include "fs/emu/hacks.h"
 
 #include "fsemu-frame.h"
 
@@ -9757,7 +9757,7 @@ void uae_mousehack_helper(int x, int y)
 	mousehack_helper(0xffffffff);
 }
 
-#include <fs/i18n.h>
+#include "fs/i18n.h"
 
 static bool g_amiga_allow_auto_mouse_mode = false;
 static int g_requested_port_modes[4];

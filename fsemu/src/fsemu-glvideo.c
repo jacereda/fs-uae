@@ -1451,7 +1451,7 @@ void fsemu_glvideo_init_gl_state(void)
 
 #ifdef VSYNCTHREAD
 
-#include <fsemu-thread.h>
+#include "fsemu-thread.h"
 
 static void *fsemu_vsyncthread_entry(void *data)
 {

@@ -5,12 +5,12 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/conf.h>
-#include <fs/emu/buffer.h>
-#include <fs/emu/input.h>
-#include <fs/emu/options.h>
-#include <fs/emu/video.h>
-#include <fs/log.h>
+#include "fs/conf.h"
+#include "fs/emu/buffer.h"
+#include "fs/emu/input.h"
+#include "fs/emu/options.h"
+#include "fs/emu/video.h"
+#include "fs/log.h"
 
 #include <stdbool.h>
 #include <string.h>

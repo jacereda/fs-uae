@@ -1,7 +1,7 @@
 #ifndef FS_EMU_BUFFER_H
 #define FS_EMU_BUFFER_H
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 typedef struct fs_emu_buffer {
     int seq;

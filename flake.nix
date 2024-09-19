@@ -20,8 +20,10 @@
               nativeBuildInputs = with pkgs; [
                 autoconf
                 automake
+                bear
                 # bison
                 # binutils
+                enet
                 # expat
                 # flex
                 # gettext
@@ -48,6 +50,7 @@
                 freetype
                 # texinfo
                 # wget
+                udis86
                 zip
                 xorg.libXcursor
                 xorg.libXxf86vm

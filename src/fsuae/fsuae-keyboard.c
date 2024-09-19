@@ -236,8 +236,8 @@ void fsuae_keyboard_init(void)
 
 #ifdef FSUAE_LEGACY
 
-#include <fs/emu.h>
-#include <fs/emu/actions.h>
+#include "fs/emu.h"
+#include "fs/emu/actions.h"
 #include <uae/uae.h>
 
 #include "fs-uae.h"

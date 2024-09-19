@@ -3,7 +3,7 @@
 #endif
 
 #define _GNU_SOURCE 1
-#include <fs/filesys.h>
+#include "fs/filesys.h"
 #ifdef WINDOWS
 //#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -22,9 +22,9 @@
 #include <copyfile.h>
 #endif
 #include <stdio.h>
-// #include <fs/log.h>
-#include <fs/base.h>
-#include <fs/data.h>
+// #include "fs/log.h"
+#include "fs/base.h"
+#include "fs/data.h"
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif

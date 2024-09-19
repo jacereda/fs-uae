@@ -3,9 +3,9 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fs/emu/video.h>
-#include <fs/emu/buffer.h>
-#include <fs/log.h>
+#include "fs/emu/video.h"
+#include "fs/emu/buffer.h"
+#include "fs/log.h"
 
 #include "SDL.h"
 

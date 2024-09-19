@@ -2,8 +2,8 @@
 #include "config.h"
 #endif
 
-#include <fs/ml.h>
-#include <fs/glib.h>
+#include "fs/ml.h"
+#include "fs/glib.h"
 
 char *fs_ml_input_unique_device_name(char *name)
 {

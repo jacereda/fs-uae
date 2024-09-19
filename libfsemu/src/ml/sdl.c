@@ -26,24 +26,24 @@
 //#include <glib.h>
 //#endif
 
-#include <fs/conf.h>
-#include <fs/lazyness.h>
+#include "fs/conf.h"
+#include "fs/lazyness.h"
 #ifdef WITH_GLEW
 #include <GL/glew.h>
 #endif
-#include <fs/glib.h>
-#include <fs/ml.h>
-#include <fs/thread.h>
+#include "fs/glib.h"
+#include "fs/ml.h"
+#include "fs/thread.h"
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
-#include <fs/ml/options.h>
+#include "fs/ml/options.h"
 
 #define FSEMU_INTERNAL
-#include <fs/emu/input.h>
-#include <fs/emu/monitor.h>
-#include <fs/emu/video.h>
+#include "fs/emu/input.h"
+#include "fs/emu/monitor.h"
+#include "fs/emu/video.h"
 #include "ml_internal.h"
 
 SDL_Window *g_fs_ml_window = NULL;

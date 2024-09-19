@@ -10,7 +10,7 @@
 
 #ifdef FSUAE
 // For now...
-#include <fs/log.h>
+#include "fs/log.h"
 #endif
 
 static struct {

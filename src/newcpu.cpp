@@ -66,7 +66,7 @@ bool check_prefs_changed_comp (bool checkonly) { return false; }
 #endif
 
 #ifdef FSUAE // NL
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 #endif
 
 /* For faster JIT cycles handling */

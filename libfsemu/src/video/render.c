@@ -5,11 +5,11 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu/log.h>
-#include <fs/emu/options.h>
-#include <fs/emu/render.h>
-#include <fs/ml/opengl.h>
-#include <fs/conf.h>
+#include "fs/emu/log.h"
+#include "fs/emu/options.h"
+#include "fs/emu/render.h"
+#include "fs/ml/opengl.h"
+#include "fs/conf.h"
 #include <assert.h>
 #include <string.h>
 

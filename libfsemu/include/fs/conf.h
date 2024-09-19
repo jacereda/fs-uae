@@ -2,7 +2,7 @@
 #define FS_CONF_H
 
 #include <stdbool.h>
-#include <fs/inifile.h>
+#include "fs/inifile.h"
 
 #define FS_CONFIG_NONE 0x12345678
 #define FS_CONFIG_AUTO "auto"

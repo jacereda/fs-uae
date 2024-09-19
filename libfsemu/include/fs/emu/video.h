@@ -1,8 +1,8 @@
 #ifndef FSE_VIDEO_H
 #define FSE_VIDEO_H
 
-#include <fs/ml.h>
-#include <fs/emu/buffer.h>
+#include "fs/ml.h"
+#include "fs/emu/buffer.h"
 
 #include <stdbool.h>
 

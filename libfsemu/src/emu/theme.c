@@ -4,15 +4,15 @@
 
 #ifdef FSUAE_LEGACY
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 #include "theme.h"
 
-#include <fs/conf.h>
-#include <fs/base.h>
-#include <fs/data.h>
-#include <fs/filesys.h>
-#include <fs/i18n.h>
-#include <fs/log.h>
+#include "fs/conf.h"
+#include "fs/base.h"
+#include "fs/data.h"
+#include "fs/filesys.h"
+#include "fs/i18n.h"
+#include "fs/log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

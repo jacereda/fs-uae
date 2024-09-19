@@ -5,8 +5,8 @@
 #include "config.h"
 #endif
 
-#include <fs/emu.h>
-#include <fs/log.h>
+#include "fs/emu.h"
+#include "fs/log.h"
 #include <uae/uae.h>
 
 #include "fs-uae.h"

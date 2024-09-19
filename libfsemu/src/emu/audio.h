@@ -1,8 +1,8 @@
 #ifndef LIBFSEMU_AUDIO_H_
 #define LIBFSEMU_AUDIO_H_
 
-#include <fs/emu.h>
-#include <fs/thread.h>
+#include "fs/emu.h"
+#include "fs/thread.h"
 #include "util.h"
 
 #define MAX_STREAMS 4

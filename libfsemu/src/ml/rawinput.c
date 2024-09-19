@@ -12,8 +12,8 @@
 #include <stddef.h>
 #include <glib.h>
 
-#include <fs/lazyness.h>
-#include <fs/log.h>
+#include "fs/lazyness.h"
+#include "fs/log.h"
 #include "fs/ml.h"
 #include "ml_internal.h"
 

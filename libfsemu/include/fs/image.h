@@ -1,7 +1,7 @@
 #ifndef FS_IMAGE_H_
 #define FS_IMAGE_H_
 
-#include <fs/ref.h>
+#include "fs/ref.h"
 
 #define FS_IMAGE_FORMAT_NONE 0
 #define FS_IMAGE_FORMAT_RGB 1

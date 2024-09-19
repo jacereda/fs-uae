@@ -5,7 +5,7 @@
 #include "config.h"
 #endif
 
-#include <fs/defines.h>
+#include "fs/defines.h"
 #include <stdio.h>
 #include <stdint.h>
 #ifdef WINDOWS
@@ -17,7 +17,7 @@
 #endif
 #include <time.h>
 
-#include <fs/util.h>
+#include "fs/util.h"
 
 #ifdef __cplusplus
 extern "C" {

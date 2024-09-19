@@ -3,8 +3,8 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fs/emu/video.h>
-#include <fs/log.h>
+#include "fs/emu/video.h"
+#include "fs/log.h"
 
 static void register_functions(void)
 {

@@ -5,18 +5,18 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu/video.h>
-#include <fs/emu/input.h>
-#include <fs/emu/buffer.h>
-#include <fs/emu/options.h>
-#include <fs/conf.h>
-#include <fs/log.h>
+#include "fs/emu/video.h"
+#include "fs/emu/input.h"
+#include "fs/emu/buffer.h"
+#include "fs/emu/options.h"
+#include "fs/conf.h"
+#include "fs/log.h"
 #include <string.h>
 
 #include "SDL.h"
 
 // FIXME: move
-#include <fs/emu/benchmark.h>
+#include "fs/emu/benchmark.h"
 bool g_fs_emu_benchmark_mode = false;
 
 volatile int g_fs_emu_benchmark_emu_frame_count = 0;

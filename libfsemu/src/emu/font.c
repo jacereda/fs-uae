@@ -6,16 +6,16 @@
 
 #include "font.h"
 
-#include <fs/emu.h>
-#include <fs/emu/video.h>
-#include <fs/glib.h>
-#include <fs/i18n.h>
+#include "fs/emu.h"
+#include "fs/emu/video.h"
+#include "fs/glib.h"
+#include "fs/i18n.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
 #ifdef USE_FREETYPE

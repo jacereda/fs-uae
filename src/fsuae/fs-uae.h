@@ -1,7 +1,7 @@
 #ifndef FS_UAE_FS_UAE_H
 #define FS_UAE_FS_UAE_H
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 #ifndef MAX_PATH
 #ifdef WINDOWS
@@ -89,7 +89,7 @@ void fs_uae_toggle_auto_zoom(void);
 
 extern int g_fs_uae_frame;
 
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 enum {
     FS_UAE_ACTION_DUMMY = INPUTEVENT_SPC_LAST + 1,
@@ -101,7 +101,7 @@ enum {
 #endif
 };
 
-#include <fs/emu/actions.h>
+#include "fs/emu/actions.h"
 
 enum {
     FS_UAE_ACTION_FIRST = FS_EMU_ACTION_LOCAL,

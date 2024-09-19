@@ -1,7 +1,7 @@
 #ifndef FS_INIT_H_
 #define FS_INIT_H_
 
-#include <fs/defines.h>
+#include "fs/defines.h"
 
 #define FS_INIT_FUNCTION(name) static int g_fs_init_ ## name = 0; \
 static void fs_init_function_ ## name ## _2(); \

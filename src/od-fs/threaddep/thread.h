@@ -1,7 +1,7 @@
 #ifndef THREADDEP_THREAD_H
 #define THREADDEP_THREAD_H
 
-#include <fs/thread.h>
+#include "fs/thread.h"
 #include "threaddep/sem.h"
 
 typedef fs_thread *uae_thread_id;

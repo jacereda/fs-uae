@@ -1,4 +1,6 @@
-
+#if !defined WIN32
+#include_next "registry.h"
+#else
 typedef struct UAEREG {
     HKEY fkey;
     TCHAR *inipath;
@@ -30,3 +32,4 @@ extern int regenumstr (UAEREG*, int idx, TCHAR *name, int *nsize, TCHAR *str, in
 extern UAEREG *regcreatetree (UAEREG*, const TCHAR *name);
 extern void regclosetree (UAEREG *key);
 
+#endif

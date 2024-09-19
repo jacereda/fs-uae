@@ -10,9 +10,9 @@
 #include "fsemu-time.h"
 #include "fsemu-util.h"
 
-// #include <fs/base.h>
-// #include <fs/log.h>
-// #include <fs/thread.h>
+// #include "fs/base.h"
+// #include "fs/log.h"
+// #include "fs/thread.h"
 
 #ifdef FSEMU_SDL
 #ifndef USE_SDL2

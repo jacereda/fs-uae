@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 
-#include <fs/fs.h>
+#include "fs/fs.h"
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -12,7 +12,7 @@
 #include "options.h"
 #include "filesys.h"
 #include "zfile.h"
-#include <fs/util.h>
+#include "fs/util.h"
 #include <unistd.h>
 #ifdef WINDOWS
 #include <Windows.h>

@@ -3,13 +3,13 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fsemu/performance.h>
+#include "fsemu/performance.h"
 
-#include <fs/emu/path.h>
-#include <fs/log.h>
-#include <fs/glib.h>
-#include <fs/base.h>
-#include <fs/thread.h>
+#include "fs/emu/path.h"
+#include "fs/log.h"
+#include "fs/glib.h"
+#include "fs/base.h"
+#include "fs/thread.h"
 
 #include <inttypes.h>
 

@@ -22,7 +22,7 @@
 // be "sticky" as long as O is kept pressed
 
 #ifdef FSUAE
-#include <fs/ml.h>
+#include "fs/ml.h"
 #endif
 
 #ifdef FSFUSE

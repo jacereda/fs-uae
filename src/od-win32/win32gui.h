@@ -1,3 +1,7 @@
+#if !defined _WIN32
+#include_next "win32gui.h"
+#else
+
 #ifndef WIN32GUI_H
 #define WIN32GUI_H
 
@@ -53,4 +57,6 @@ extern void close_box_art_window(void);
 extern LRESULT CALLBACK BoxArtWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 extern int max_visible_boxart_images;
 extern int stored_boxart_window_width;
+#endif
+
 #endif

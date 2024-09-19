@@ -2,12 +2,12 @@
 #include "config.h"
 #endif
 
-#include <fs/base.h>
-#include <fs/conf.h>
-#include <fs/glib.h>
-#include <fs/log.h>
-#include <fs/thread.h>
-#include <fs/util.h>
+#include "fs/base.h"
+#include "fs/conf.h"
+#include "fs/glib.h"
+#include "fs/log.h"
+#include "fs/thread.h"
+#include "fs/util.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

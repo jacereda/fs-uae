@@ -14,7 +14,7 @@
 #include <SDL.h>
 #include <SDL_syswm.h>
 
-#include <fs/log.h>
+#include "fs/log.h"
 #include "fs/ml.h"
 #include "ml_internal.h"
 

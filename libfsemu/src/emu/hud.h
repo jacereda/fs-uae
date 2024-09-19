@@ -1,7 +1,7 @@
 #ifndef FSE_HUD_H
 #define FSE_HUD_H
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 #define FSE_MAX_CHAT_STRING_LENGTH 128
 

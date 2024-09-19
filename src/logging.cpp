@@ -13,7 +13,7 @@
 #include <stdarg.h>
 
 #ifdef FSUAE
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 #include "fsemu-time.h"
 static int64_t g_timestamp;
 #endif

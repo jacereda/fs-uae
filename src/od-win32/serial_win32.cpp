@@ -10,7 +10,7 @@
 
 #include "sysconfig.h"
 #ifdef SERIAL_ENET
-#include "enet/enet.h"
+#include <enet/enet.h>
 #endif
 #include "sysdeps.h"
 

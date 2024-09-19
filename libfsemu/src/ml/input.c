@@ -4,15 +4,15 @@
 
 #include <SDL.h>
 #include <stdlib.h>
-#include <fs/conf.h>
-#include <fs/lazyness.h>
-#include <fs/log.h>
-#include <fs/glib.h>
-#include <fs/ml/options.h>
+#include "fs/conf.h"
+#include "fs/lazyness.h"
+#include "fs/log.h"
+#include "fs/glib.h"
+#include "fs/ml/options.h"
 #include "ml_internal.h"
 
 // For fs_emu_mouse_integration
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 static GQueue *g_input_queue = NULL;
 static fs_mutex *g_input_mutex = NULL;

@@ -25,7 +25,7 @@
 #include "fsemu-window.h"
 
 // #ifdef FSUAE
-// #include <fs/emu/input.h>
+// #include "fs/emu/input.h"
 // #endif
 
 // ----------------------------------------------------------------------------

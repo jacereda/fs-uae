@@ -5,10 +5,10 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu/audio.h>
-#include <fs/emu/options.h>
-#include <fs/conf.h>
-#include <fs/log.h>
+#include "fs/emu/audio.h"
+#include "fs/emu/options.h"
+#include "fs/conf.h"
+#include "fs/log.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>

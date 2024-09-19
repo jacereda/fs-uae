@@ -4,12 +4,12 @@
 
 #ifdef FSUAE_LEGACY
 
-#include <fs/emu.h>
-#include <fs/emu/render.h>
-#include <fs/emu/video.h>
+#include "fs/emu.h"
+#include "fs/emu/render.h"
+#include "fs/emu/video.h"
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
 #ifdef USE_SDL2
@@ -21,7 +21,7 @@
 
 #include "texture.h"
 
-#include <fs/ml.h>
+#include "fs/ml.h"
 #include "fs/image.h"
 
 #include "libfsemu.h"

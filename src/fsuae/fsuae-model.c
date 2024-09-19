@@ -5,8 +5,8 @@
 #include "config.h"
 #endif
 
-#include <fs/conf.h>
-#include <fs/emu.h>
+#include "fs/conf.h"
+#include "fs/emu.h"
 #include <stddef.h>
 
 amiga_config g_fs_uae_amiga_configs[CONFIG_LAST + 1] = {};

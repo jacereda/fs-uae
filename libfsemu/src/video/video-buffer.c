@@ -3,12 +3,12 @@
 #endif
 
 #define FSEMU_INTERNAL
-#include <fs/emu/buffer.h>
-#include <fs/emu/benchmark.h>
-#include <fs/emu/options.h>
-#include <fs/conf.h>
-#include <fs/log.h>
-#include <fs/thread.h>
+#include "fs/emu/buffer.h"
+#include "fs/emu/benchmark.h"
+#include "fs/emu/options.h"
+#include "fs/conf.h"
+#include "fs/log.h"
+#include "fs/thread.h"
 #include <string.h>
 
 static fs_mutex* g_fs_emu_buffer_mutex = NULL;

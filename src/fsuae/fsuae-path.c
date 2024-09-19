@@ -6,14 +6,14 @@
 #endif
 
 #define _GNU_SOURCE 1
-#include <fs/base.h>
-#include <fs/emu.h>
+#include "fs/base.h"
+#include "fs/emu.h"
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 #include "fs-uae.h"
 #include "fsuae-config.h"

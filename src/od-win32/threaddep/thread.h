@@ -1,3 +1,7 @@
+#if !defined _WIN32
+#include_next "threaddep/thread.h"
+#else
+
 typedef HANDLE uae_sem_t;
 typedef HANDLE uae_thread_id;
 
@@ -20,3 +24,4 @@ STATIC_INLINE void uae_wait_thread(uae_thread_id tid)
     WaitForSingleObject (tid, INFINITE);
     CloseHandle (tid);
 }
+#endif

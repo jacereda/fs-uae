@@ -10,12 +10,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <fs/log.h>
-#include <fs/ml.h>
-#include <fs/base.h>
-#include <fs/image.h>
-#include <fs/filesys.h>
-#include <fs/conf.h>
+#include "fs/log.h"
+#include "fs/ml.h"
+#include "fs/base.h"
+#include "fs/image.h"
+#include "fs/filesys.h"
+#include "fs/conf.h"
 #include "ml_internal.h"
 
 #ifdef USE_SDL2

@@ -1,3 +1,4 @@
+#if !defined FSUAE
 /*
 * UAE - The Un*x Amiga Emulator
 *
@@ -4444,3 +4445,5 @@ void releasehdc(int monid, HDC hdc)
 #endif
 	DirectDraw_ReleaseDC(hdc);
 }
+
+#endif

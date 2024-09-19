@@ -5,12 +5,12 @@
 #include "config.h"
 #endif
 
-#include <fs/conf.h>
-#include <fs/emu.h>
-#include <fs/i18n.h>
+#include "fs/conf.h"
+#include "fs/emu.h"
+#include "fs/i18n.h"
 #include <glib.h>
 #include <stdlib.h>
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 #include "fs-uae.h"
 #include "fsemu-media.h"

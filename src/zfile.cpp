@@ -32,7 +32,7 @@
 #ifdef FSUAE // NL
 #include "uae/fs.h"
 #include "uae/glib.h"
-#include <fs/data.h>
+#include "fs/data.h"
 #undef _WIN32
 #endif
 

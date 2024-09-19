@@ -1,4 +1,4 @@
-#include <fs/filesys.h>
+#include "fs/filesys.h"
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -6,7 +6,7 @@
 #include "uae/fs.h"
 #include "uae/glib.h"
 
-#include <fs/data.h>
+#include "fs/data.h"
 
 #if 0
 static const char *g_driveclick_path = "";

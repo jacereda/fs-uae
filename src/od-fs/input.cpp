@@ -69,7 +69,7 @@ static int handle_custom_action(int action, int state)
     return 0;
 }
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 extern "C" {
 

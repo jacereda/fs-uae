@@ -9,7 +9,7 @@
 
 #ifdef FSUAE
 
-#include <fs/glib.h>
+#include "fs/glib.h"
 
 #else
 

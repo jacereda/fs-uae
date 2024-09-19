@@ -5,20 +5,20 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu.h>
-#include <fs/emu/input.h>
-#include <fs/emu/options.h>
-#include <fs/lazyness.h>
+#include "fs/emu.h"
+#include "fs/emu/input.h"
+#include "fs/emu/options.h"
+#include "fs/lazyness.h"
 #include "input.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fs/base.h>
-#include <fs/i18n.h>
-#include <fs/inifile.h>
-#include <fs/glib.h>
-#include <fs/thread.h>
-#include <fs/emu/actions.h>
+#include "fs/base.h"
+#include "fs/i18n.h"
+#include "fs/inifile.h"
+#include "fs/glib.h"
+#include "fs/thread.h"
+#include "fs/emu/actions.h"
 #include "hud.h"
 #include "menu.h"
 #include "netplay.h"
@@ -1871,7 +1871,7 @@ static void adjust_mouse_movement(int mouse, int axis, int *movement)
     *movement = v;
 }
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 int fs_emu_mouse_absolute_x = 0;
 int fs_emu_mouse_absolute_y = 0;

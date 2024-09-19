@@ -6,7 +6,7 @@
 #endif
 
 #define _GNU_SOURCE 1
-#include <uae/uae.h>
+#include "uae/uae.h"
 #ifdef USE_SDL
 /* We must include SDL first before emu.h, so libfsemu's #definition of main
  * is the current one (on Windows) when main is encountered further down. */
@@ -15,18 +15,18 @@
 #ifdef MACOSX
 #include <SDL.h>
 #endif
-#include <fs/base.h>
-#include <fs/data.h>
-#include <fs/emu.h>
-#include <fs/emu/audio.h>
-#include <fs/emu/options.h>
-#include <fs/emu/path.h>
-#include <fs/emu/video.h>
-#include <fs/glib.h>
-#include <fs/i18n.h>
-#include <fs/lazyness.h>
-#include <fs/main.h>
-#include <fs/thread.h>
+#include "fs/base.h"
+#include "fs/data.h"
+#include "fs/emu.h"
+#include "fs/emu/audio.h"
+#include "fs/emu/options.h"
+#include "fs/emu/path.h"
+#include "fs/emu/video.h"
+#include "fs/glib.h"
+#include "fs/i18n.h"
+#include "fs/lazyness.h"
+#include "fs/main.h"
+#include "fs/thread.h"
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,9 +44,9 @@
 #include "fsuae-savestate.h"
 #include "fsuae.h"
 #ifdef WITH_CEF
-#include <fs/emu/cef.h>
+#include "fs/emu/cef.h"
 #endif
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 #ifdef USE_NFD
 #include "nfd.h"
 #endif

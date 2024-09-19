@@ -13,8 +13,8 @@
 #include <Carbon/Carbon.h>
 //#include <MacApplication.h>
 
-#include <fs/log.h>
-#include <fs/ml.h>
+#include "fs/log.h"
+#include "fs/ml.h"
 #include "ml_internal.h"
 
 void fs_ml_configure_window(void)

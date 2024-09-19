@@ -5,10 +5,10 @@
 #include "config.h"
 #endif
 
-#include <fs/conf.h>
-#include <fs/emu.h>
+#include "fs/conf.h"
+#include "fs/emu.h"
 #include <glib.h>
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 #include "fs-uae.h"
 #include "fsuae-model.h"

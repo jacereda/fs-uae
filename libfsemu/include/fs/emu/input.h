@@ -1,7 +1,7 @@
 #ifndef FS_EMU_INPUT_H
 #define FS_EMU_INPUT_H
 
-#include <fs/ml.h>
+#include "fs/ml.h"
 
 bool fs_emu_full_keyboard_emulation(void);
 void fs_emu_set_full_keyboard_emulation(bool full, bool notification);

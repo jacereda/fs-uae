@@ -2,9 +2,9 @@
 #include "config.h"
 #endif
 
-#include <fs/glib.h>
-#include <fs/init.h>
-#include <fs/thread.h>
+#include "fs/glib.h"
+#include "fs/init.h"
+#include "fs/thread.h"
 #include <stdlib.h>
 #include <string.h>
 

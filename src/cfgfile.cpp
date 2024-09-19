@@ -51,7 +51,7 @@
 #include "ide.h"
 
 #ifdef FSUAE
-#include <uae/fs.h>
+#include "uae/fs.h"
 #define cfgfile_warning error_log
 #define cfgfile_warning_obsolete error_log
 #else

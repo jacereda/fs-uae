@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <fs/lazyness.h>
-#include <fs/log.h>
-#include <fs/thread.h>
+#include "fs/lazyness.h"
+#include "fs/log.h"
+#include "fs/thread.h"
 
 #include "../../../fsemu/manymouse/manymouse.h"
 

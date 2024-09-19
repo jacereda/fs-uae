@@ -2,9 +2,9 @@
 #include "config.h"
 #endif
 
-#include <fs/image.h>
-#include <fs/log.h>
-#include <fs/filesys.h>
+#include "fs/image.h"
+#include "fs/log.h"
+#include "fs/filesys.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

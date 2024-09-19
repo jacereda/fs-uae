@@ -1,3 +1,7 @@
+#if !defined _WIN32
+#include_next "sysconfig.h"
+#else
+
 #ifndef WINUAE_SYSCONFIG_H
 #define WINUAE_SYSCONFIG_H
 
@@ -579,3 +583,5 @@ typedef long uae_atomic;
 #define HAVE_STRUCT_IN_ADDR_S_UN 1
 
 #endif /* WINUAE_SYSCONFIG_H */
+
+#endif

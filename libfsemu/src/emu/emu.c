@@ -5,13 +5,13 @@
 #ifdef FSUAE_LEGACY
 
 #define FSEMU_INTERNAL
-#include <fs/emu.h>
-#include <fs/emu/audio.h>
-#include <fs/emu/benchmark.h>
-#include <fs/emu/input.h>
-#include <fs/emu/options.h>
-#include <fsemu/performance.h>
-#include <fs/emu/video.h>
+#include "fs/emu.h"
+#include "fs/emu/audio.h"
+#include "fs/emu/benchmark.h"
+#include "fs/emu/input.h"
+#include "fs/emu/options.h"
+#include "fsemu/performance.h"
+#include "fs/emu/video.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,11 +22,11 @@
 #include <SDL.h>
 #endif
 
-#include <fs/base.h>
-#include <fs/i18n.h>
-#include <fs/ml.h>
-#include <fs/thread.h>
-#include <fs/time.h>
+#include "fs/base.h"
+#include "fs/i18n.h"
+#include "fs/ml.h"
+#include "fs/thread.h"
+#include "fs/time.h"
 
 #ifdef USE_GLIB
 #include <glib.h>

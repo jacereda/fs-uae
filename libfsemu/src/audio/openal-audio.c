@@ -9,13 +9,13 @@
 #ifdef WITH_OPENAL
 
 #define FSEMU_INTERNAL
-#include <fs/emu/audio.h>
-#include <fs/emu/benchmark.h>
-#include <fs/emu.h>
+#include "fs/emu/audio.h"
+#include "fs/emu/benchmark.h"
+#include "fs/emu.h"
 #include <stdio.h>
-#include <fs/base.h>
-#include <fs/glib.h>
-#include <fs/thread.h>
+#include "fs/base.h"
+#include "fs/glib.h"
+#include "fs/thread.h"
 
 #ifdef HAVE_AL_AL_H
 #include <AL/al.h>

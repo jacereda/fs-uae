@@ -206,15 +206,16 @@ fs_uae_device_helper_SOURCES = \
 fs_uae_device_helper_LDADD =
 
 noinst_LIBRARIES += libuae.a
-AM_CPPFLAGS += -I$(s)/flac/include
-AM_CPPFLAGS += -I$(b)/gen
-AM_CPPFLAGS += -I$(s)/src
-AM_CPPFLAGS += -I$(s)/src/jit
-AM_CPPFLAGS += -I$(s)/src/include
-AM_CPPFLAGS += -I$(s)/src/od-fs
-AM_CPPFLAGS += -I$(s)/src/od-fs/include
-AM_CPPFLAGS += -I$(s)/src/od-win32
-AM_CPPFLAGS += -I$(s)/src/od-win32/caps
+AM_CPPFLAGS += -iquote$(s)/src/include/uae
+AM_CPPFLAGS += -iquote$(s)/flac/include
+AM_CPPFLAGS += -iquote$(b)/gen
+AM_CPPFLAGS += -iquote$(s)/src
+AM_CPPFLAGS += -iquote$(s)/src/jit
+AM_CPPFLAGS += -iquote$(s)/src/include
+AM_CPPFLAGS += -iquote$(s)/src/od-fs
+AM_CPPFLAGS += -iquote$(s)/src/od-fs/include
+AM_CPPFLAGS += -iquote$(s)/src/od-win32
+AM_CPPFLAGS += -iquote$(s)/src/od-win32/caps
 fs_uae_LDADD += libuae.a
 # libuae_a_CXXFLAGS = $(CM_CFLAGS) -fpermissive
 libuae_a_SOURCES = \
@@ -687,7 +688,7 @@ nodist_libcpuemu_a_SOURCES = \
 BUILT_SOURCES += $(nodist_libcpuemu_a_SOURCES)
 
 noinst_LIBRARIES += libfsemu.a
-AM_CPPFLAGS += -I$(s)/libfsemu/include
+AM_CPPFLAGS += -iquote$(s)/libfsemu/include
 fs_uae_LDADD += libfsemu.a
 fs_uae_device_helper_LDADD += libfsemu.a
 libfsemu_a_SOURCES = \
@@ -821,7 +822,7 @@ libfsemu_a_SOURCES = \
 if FSEMU
 
 noinst_LIBRARIES += libfsemu2.a
- AM_CPPFLAGS += -I$(s)/fsemu/src
+ AM_CPPFLAGS += -iquote$(s)/fsemu/src
 fs_uae_LDADD += libfsemu2.a
 fs_uae_device_helper_LDADD += libfsemu2.a
 libfsemu2_a_SOURCES = \
@@ -1054,13 +1055,13 @@ fsemu-data:
 endif
 
 if BUILTIN_CEF
-AM_CPPFLAGS += -I$(s)/cef
+AM_CPPFLAGS += -iquote$(s)/cef
 fs_uae_LDADD += cef/libcef_dll/libcef_dll_wrapper.a -L $(s)/cef/Release -lcef
 endif
 
 if BUILTIN_MANYMOUSE
 # noinst_LIBRARIES += libmanymouse.a
-# AM_CPPFLAGS += -I$(s)/manymouse
+# AM_CPPFLAGS += -iquote$(s)/manymouse
 # fs_uae_LDADD += libmanymouse.a
 # fs_uae_device_helper_LDADD += libmanymouse.a
 # libmanymouse_a_SOURCES = \
@@ -1075,7 +1076,7 @@ endif
 
 if WITH_GLAD
 noinst_LIBRARIES += libglad.a
-AM_CPPFLAGS += -I$(s)/glad/include
+AM_CPPFLAGS += -iquote$(s)/glad/include
 fs_uae_LDADD += libglad.a
 fs_uae_device_helper_LDADD += libglad.a
 libglad_a_SOURCES = \
@@ -1084,7 +1085,7 @@ endif
 
 if WITH_PEARPC_CPU
 noinst_LIBRARIES += libpearpc.a
-AM_CPPFLAGS += -I$(s)/src/ppc/pearpc
+AM_CPPFLAGS += -iquote$(s)/src/ppc/pearpc
 fs_uae_LDADD += libpearpc.a
 libpearpc_a_SOURCES = \
 	src/ppc/pearpc/cpu/common.h \
@@ -1130,7 +1131,7 @@ endif
 
 if WITH_CHD
 noinst_LIBRARIES += libchd.a
-# AM_CPPFLAGS += -I$(s)/src/ppc/pearpc
+# AM_CPPFLAGS += -iquote$(s)/src/ppc/pearpc
 fs_uae_LDADD += libchd.a
 libchd_a_SOURCES = \
 	src/archivers/chd/astring.h \
@@ -1154,7 +1155,7 @@ endif
 
 if WITH_X86
 noinst_LIBRARIES += libpcem.a
-# AM_CPPFLAGS += -I$(s)/src/ppc/pearpc
+# AM_CPPFLAGS += -iquote$(s)/src/ppc/pearpc
 fs_uae_LDADD += libpcem.a
 libpcem_a_SOURCES = \
 src/pcem/386_common.h \
@@ -1363,7 +1364,7 @@ endif
 
 if WITH_UDIS86
 noinst_LIBRARIES += libudis86.a
-AM_CPPFLAGS += -I$(s)/libudis86/include
+AM_CPPFLAGS += -iquote$(s)/libudis86/include
 fs_uae_LDADD += libudis86.a
 libudis86_a_SOURCES = \
 	libudis86/include/udis86.h \
@@ -1383,7 +1384,7 @@ endif
 
 if WITH_LUA
 noinst_LIBRARIES += liblua.a
-AM_CPPFLAGS += -I$(s)/lua/src
+AM_CPPFLAGS += -iquote$(s)/lua/src
 fs_uae_LDADD += liblua.a
 liblua_a_SOURCES = \
 	lua/src/lapi.c \
@@ -1451,7 +1452,7 @@ endif
 
 if PROWIZARD
 noinst_LIBRARIES += libprowizard.a
-AM_CPPFLAGS += -I$(s)/prowizard/include
+AM_CPPFLAGS += -iquote$(s)/prowizard/include
 fs_uae_LDADD += libprowizard.a
 fs_uae_SOURCES += src/moduleripper.cpp
 libprowizard_a_SOURCES = \
@@ -1542,7 +1543,7 @@ endif
 
 #if WITH_SOFTFLOAT
 #noinst_LIBRARIES += libsoftfloat.a
-#AM_CPPFLAGS += -I$(s)/softfloat
+#AM_CPPFLAGS += -iquote$(s)/softfloat
 #fs_uae_LDADD += libsoftfloat.a
 #libsoftfloat_a_SOURCES = \
 #	softfloat/softfloat-uae.h \

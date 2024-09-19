@@ -18,7 +18,7 @@
 #include "picasso96_win.h"
 #endif
 
-#include <fs/emu/video.h>
+#include "fs/emu/video.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -375,7 +375,7 @@ static int uae_mask_shift(unsigned int mask)
 	return n;
 }
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 void gfx_lock (void)
 {

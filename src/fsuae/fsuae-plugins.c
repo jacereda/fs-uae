@@ -5,12 +5,12 @@
 #include "config.h"
 #endif
 
-#include <fs/base.h>
-#include <fs/log.h>
+#include "fs/base.h"
+#include "fs/log.h"
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uae/uae.h>
+#include "uae/uae.h"
 
 #include "fsemu-data.h"
 #include "fsemu-module.h"

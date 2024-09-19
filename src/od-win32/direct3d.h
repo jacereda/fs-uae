@@ -1,3 +1,6 @@
+#if !defined _WIN32
+#include_next "direct3d.h"
+#else
 
 struct extoverlay
 {
@@ -48,3 +51,5 @@ int can_D3D11(bool checkdevice);
 
 #define CURSORMAXWIDTH 64
 #define CURSORMAXHEIGHT 64
+
+#endif

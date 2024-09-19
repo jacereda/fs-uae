@@ -12,7 +12,7 @@
 #include "uae/fs.h"
 #include "../od-win32/debug_win32.h"
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 #ifndef PICASSO96
 // just to make ncr_scsi compile. it will not work, of course,

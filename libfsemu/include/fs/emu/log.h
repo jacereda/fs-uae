@@ -1,7 +1,7 @@
 #ifndef FSE_LOG_H
 #define FSE_LOG_H
 
-#include <fs/log.h>
+#include "fs/log.h"
 
 #ifdef __cplusplus
 extern "C" {

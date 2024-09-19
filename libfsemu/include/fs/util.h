@@ -5,8 +5,8 @@
 #include "config.h"
 #endif
 
-#include <fs/glib.h>
-#include <fs/log.h>
+#include "fs/glib.h"
+#include "fs/log.h"
 
 static inline char *fs_utf8_to_latin1(const char *src, int len)
 {

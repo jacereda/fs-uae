@@ -13,7 +13,7 @@
 
 #ifdef FSUAE
 // FIXME: REMOVE
-#include <fs/conf.h>
+#include "fs/conf.h"
 #endif
 
 int fsemu_option_log_level = FSEMU_LOG_LEVEL_INFO;

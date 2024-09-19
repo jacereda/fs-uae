@@ -4,11 +4,11 @@
 
 #ifdef FSUAE_LEGACY
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fs/thread.h>
+#include "fs/thread.h"
 
 #include "libfsemu.h"
 #include "video.h"

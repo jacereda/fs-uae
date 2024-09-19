@@ -2,14 +2,14 @@
 #include "config.h"
 #endif
 
-#include <fs/eventlog.h>
+#include "fs/eventlog.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <fs/base.h>
-#include <fs/filesys.h>
-#include <fs/glib.h>
-#include <fs/init.h>
-#include <fs/thread.h>
+#include "fs/base.h"
+#include "fs/filesys.h"
+#include "fs/glib.h"
+#include "fs/init.h"
+#include "fs/thread.h"
 
 #ifdef NOT_USED
 

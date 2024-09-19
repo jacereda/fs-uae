@@ -71,7 +71,7 @@ extern uae_u16 serper;
 #include "fsemu-frame.h"
 #include "fsemu-quit.h"
 #include "fsemu-time.h"
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 int g_frame_debug_logging = 0;
 
 // static int64_t frame_begin_at;

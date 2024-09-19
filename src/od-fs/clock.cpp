@@ -5,8 +5,8 @@
 #include "uae/fs.h"
 
 #include <time.h>
-#include <fs/base.h>
-#include <fs/time.h>
+#include "fs/base.h"
+#include "fs/time.h"
 
 int64_t g_uae_epoch = 0;
 

@@ -18,8 +18,8 @@
 #include <SDL.h>
 #endif
 
-#include <fs/emu.h>
-#include <fs/glib.h>
+#include "fs/emu.h"
+#include "fs/glib.h"
 
 #ifndef WINDOWS
 #undef main

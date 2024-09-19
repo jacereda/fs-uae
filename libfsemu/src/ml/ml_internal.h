@@ -1,8 +1,8 @@
 #ifndef LIBFSML_ML_INTERNAL_H_
 #define LIBFSML_ML_INTERNAL_H_
 
-#include <fs/ml.h>
-#include <fs/thread.h>
+#include "fs/ml.h"
+#include "fs/thread.h"
 
 #define FS_ML_INIT_ONCE \
     static int initialized = 0; \

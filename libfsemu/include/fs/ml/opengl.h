@@ -25,7 +25,7 @@
 #elif defined(WITH_GLEW)
 #include <GL/glew.h>
 #elif defined(WITH_GLAD)
-#include <glad/glad.h>
+#include "glad/glad.h"
 #elif defined(USE_SDL2)
 #include <SDL_opengl.h>
 #elif defined(USE_SDL)

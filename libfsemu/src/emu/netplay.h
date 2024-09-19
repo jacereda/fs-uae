@@ -1,7 +1,7 @@
 #ifndef LIBFSEMU_NETPLAY_H_
 #define LIBFSEMU_NETPLAY_H_
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 
 int fs_emu_netplay_connect();
 void fs_emu_netplay_start();

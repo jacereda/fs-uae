@@ -3,7 +3,7 @@
 #endif
 
 #define _GNU_SOURCE 1
-#include <fs/filesys.h>
+#include "fs/filesys.h"
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -24,8 +24,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#include <fs/base.h>
-#include <fs/log.h>
+#include "fs/base.h"
+#include "fs/log.h"
 
 #ifdef USE_GLIB
 #include <glib.h>

@@ -4,15 +4,15 @@
 
 #ifdef WITH_XML_SHADER
 
-#include <fs/emu.h>
+#include "fs/emu.h"
 #include "xml_shader.h"
 
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 
-#include <fs/emu.h>
-#include <fs/glib.h>
-#include <fs/i18n.h>
-#include <fs/log.h>
+#include "fs/emu.h"
+#include "fs/glib.h"
+#include "fs/i18n.h"
+#include "fs/log.h"
 
 #include <stdio.h>
 #include <stdlib.h>

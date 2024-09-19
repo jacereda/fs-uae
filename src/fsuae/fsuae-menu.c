@@ -7,10 +7,10 @@
 #include "config.h"
 #endif
 
-#include <fs/emu.h>
-#include <fs/fs.h>
-#include <fs/i18n.h>
-#include <fs/time.h>
+#include "fs/emu.h"
+#include "fs/fs.h"
+#include "fs/i18n.h"
+#include "fs/time.h"
 #include <stdlib.h>
 #include <string.h>
 #include <uae/uae.h>

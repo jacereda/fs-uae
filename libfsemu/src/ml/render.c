@@ -21,19 +21,19 @@
 #include <SDL.h>
 #endif
 
-#include <fs/conf.h>
-#include <fs/i18n.h>
-#include <fs/image.h>
+#include "fs/conf.h"
+#include "fs/i18n.h"
+#include "fs/image.h"
 
 #ifdef USE_OPENGL
-#include <fs/ml/opengl.h>
+#include "fs/ml/opengl.h"
 #endif
 
-#include <fs/ml.h>
+#include "fs/ml.h"
 //#include "fs/emu.h"
 #include "ml_internal.h"
 
-#include <fs/thread.h>
+#include "fs/thread.h"
 
 #if defined(WITH_GLEW)
 #elif defined(WITH_GLAD)

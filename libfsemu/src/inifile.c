@@ -2,9 +2,9 @@
 #include "config.h"
 #endif
 
-#include <fs/inifile.h>
-#include <fs/filesys.h>
-#include <fs/glib.h>
+#include "fs/inifile.h"
+#include "fs/filesys.h"
+#include "fs/glib.h"
 
 struct fs_ini_file {
     GHashTable *groups;

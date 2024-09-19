@@ -2821,7 +2821,7 @@ static void setbplmode(void)
 
 #ifdef FSUAE_XXX // NL
 
-#include <fs/emu/hacks.h>
+#include "fs/emu/hacks.h"
 
 STATIC_INLINE void do_flush_line (struct vidbuffer *vb, int lineno)
 {
