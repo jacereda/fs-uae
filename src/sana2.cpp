@@ -32,6 +32,7 @@
 #endif
 #include "execio.h"
 #include "debug.h"
+#include "devices.h"
 
 #ifdef SANA2
 
@@ -269,7 +270,7 @@ static struct priv_s2devstruct *getps2devstruct(TrapContext *ctx, uae_u8 *iobuf,
 	return &pdevst[idx];
 }
 
-static void *dev_thread (void *devs);
+static void * dev_thread (void *devs);
 static int start_thread (struct s2devstruct *dev)
 {
 	if (dev->thread_running)
@@ -432,7 +433,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 	if (i == MAX_OPEN_DEVICES)
 		return openfail(ctx, ioreq, IOERR_UNITBUSY);
 
-	trap_put_long(ctx, ioreq + 24, pdev - pdevst);
+	trap_put_longt(ctx, ioreq + 24, pdev - pdevst);
 	pdev->unit = unit;
 	pdev->flags = flags;
 	pdev->inuse = 1;
@@ -1503,7 +1504,7 @@ err:
 	return err;
 }
 
-static void *dev_thread (void *devs)
+static void * dev_thread (void *devs)
 {
 	struct s2devstruct *dev = (struct s2devstruct*)devs;
 
@@ -1520,7 +1521,7 @@ static void *dev_thread (void *devs)
 			uae_sem_post (&dev->sync_sem);
 			uae_sem_post (&change_sem);
 			write_log (_T("%s: dev_thread killed\n"), getdevname ());
-			return 0;
+			return NULL;
 		}
 		struct priv_s2devstruct *pdev = getps2devstruct(ctx, iobuf, request);
 		asyncreq *ar = get_async_request (dev, request, 1);
@@ -1543,7 +1544,7 @@ static void *dev_thread (void *devs)
 		trap_background_set_complete(ctx);
 		uae_sem_post (&change_sem);
 	}
-	return 0;
+	return NULL;
 }
 
 static uae_u32 REGPARAM2 dev_init_2 (TrapContext *ctx)
@@ -1687,8 +1688,8 @@ static int uaenet_int_handler2(TrapContext *ctx)
 					}
 					while (p) {
 						if (p->drop_start == 0)
-							p->drop_start = timeframes;
-						p->drop_count = timeframes;
+							p->drop_start = vsync_counter;
+						p->drop_count = vsync_counter;
 						p = p->next;
 					}
 					break;
@@ -1797,7 +1798,7 @@ static uae_u32 REGPARAM2 uaenet_int_handler(TrapContext *ctx)
 	}
 }
 
-void uaenet_vsync(void)
+static void uaenet_vsync(void)
 {
 	if (!irq_init)
 		return;
@@ -1861,6 +1862,26 @@ static void dev_reset (void)
 	}
 	irq_init = 0;
 
+}
+
+static void netdev_start_threads(void)
+{
+	if (!currprefs.sana2)
+		return;
+	if (log_net)
+		write_log(_T("netdev_start_threads()\n"));
+	uae_sem_init(&change_sem, 0, 1);
+	uae_sem_init(&pipe_sem, 0, 1);
+	uae_sem_init(&async_sem, 0, 1);
+}
+
+static void netdev_reset(int hardreset)
+{
+	uaenet_signal_state = 1;
+	netdev_start_threads();
+	if (!currprefs.sana2)
+		return;
+	dev_reset();
 }
 
 uaecptr netdev_startup(TrapContext *ctx, uaecptr resaddr)
@@ -1997,25 +2018,8 @@ void netdev_install (void)
 	dw (NSCMD_DEVICEQUERY);
 	dw (0);
 
-}
-
-void netdev_start_threads (void)
-{
-	if (!currprefs.sana2)
-		return;
-	if (log_net)
-		write_log (_T("netdev_start_threads()\n"));
-	uae_sem_init(&change_sem, 0, 1);
-	uae_sem_init(&pipe_sem, 0, 1);
-	uae_sem_init(&async_sem, 0, 1);
-}
-
-void netdev_reset (void)
-{
-	uaenet_signal_state = 1;
-	if (!currprefs.sana2)
-		return;
-	dev_reset ();
+	device_add_vsync_pre(uaenet_vsync);
+	device_add_reset(netdev_reset);
 }
 
 #endif /* SANA2 */

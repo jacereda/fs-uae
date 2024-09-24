@@ -66,7 +66,9 @@ static const double twoto32 = 4294967296.0;
 #define	FPCR_PRECISION_DOUBLE	0x00000080
 #define FPCR_PRECISION_EXTENDED	0x00000000
 
+#ifdef SOFTFLOAT_CONVERSIONS
 static struct float_status fs;
+#endif
 static uae_u32 fpu_mode_control = 0;
 static int fpu_prec;
 static int temp_prec;
@@ -578,8 +580,6 @@ static const TCHAR *fp_print(fpdata *fpd, int mode)
 	} else if(isnan(fpd->fp)) {
 		_stprintf(fsout, _T("%c%s"), n ? '-' : '+', _T("nan"));
 	} else {
-		if(n)
-			fpd->fp *= -1.0;
 #ifdef USE_LONG_DOUBLE
 		_stprintf(fsout, _T("#%Le"), fpd->fp);
 #else
@@ -701,9 +701,8 @@ static void fp_getexp(fpdata *a, fpdata *b)
     int expon;
 	fp_normal_prec();
 	frexpl(b->fp, &expon);
-    a->fp = (fptype) (expon - 1);
+	a->fp = (fptype)expon - 1;
 	fp_reset_normal_prec();
-	fp_round(a);
 }
 static void fp_getman(fpdata *a, fpdata *b)
 {
@@ -711,7 +710,6 @@ static void fp_getman(fpdata *a, fpdata *b)
 	fp_normal_prec();
 	a->fp = frexpl(b->fp, &expon) * 2.0;
 	fp_reset_normal_prec();
-	fp_round(a);
 }
 static void fp_div(fpdata *a, fpdata *b, int prec)
 {
@@ -888,7 +886,7 @@ static void fp_log2(fpdata *a, fpdata *b)
 static void fp_abs(fpdata *a, fpdata *b, int prec)
 {
 	fp_set_prec(prec);
-	a->fp = b->fp < 0.0 ? -b->fp : b->fp;
+	a->fp = fabsl(b->fp);
 	fp_reset_prec(a);
 }
 static void fp_cosh(fpdata *a, fpdata *b)
@@ -918,6 +916,16 @@ static void fp_cos(fpdata *a, fpdata *b)
 	fp_reset_normal_prec();
 	fp_round(a);
 }
+static void fp_sincos(fpdata *a, fpdata *b, fpdata *c)
+{
+	fp_normal_prec();
+	c->fp = cosl(b->fp);
+	a->fp = sinl(b->fp);
+	fp_reset_normal_prec();
+	fp_round(a);
+	fp_round(c);
+}
+
 static void fp_sub(fpdata *a, fpdata *b, int prec)
 {
 	fp_set_prec(prec);
@@ -1143,7 +1151,7 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 	strp[1] = strp[0];
 	strp++;
 	// add trailing zeros
-	i = strlen (strp);
+	i = uaestrlen(strp);
 	cp = strp + i;
 	while (i < ndigits) {
 		*cp++ = '0';
@@ -1269,9 +1277,10 @@ static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
 
 void fp_init_native(void)
 {
+#ifdef SOFTFLOAT_CONVERSIONS
 	set_floatx80_rounding_precision(80, &fs);
 	set_float_rounding_mode(float_round_to_zero, &fs);
-
+#endif
 	fpp_print = fp_print;
 	fpp_unset_snan = fp_unset_snan;
 
@@ -1343,6 +1352,7 @@ void fp_init_native(void)
 	fpp_neg = fp_neg;
 	fpp_acos = fp_acos;
 	fpp_cos = fp_cos;
+	fpp_sincos = fp_sincos;
 	fpp_getexp = fp_getexp;
 	fpp_getman = fp_getman;
 	fpp_div = fp_div;
@@ -1361,6 +1371,7 @@ void fp_init_native(void)
 
 double softfloat_tan(double v)
 {
+#if SOFTFLOAT_CONVERSIONS
 	struct float_status f = { 0 };
 	uae_u32 w1, w2;
 	fpdata fpd = { 0 };
@@ -1374,4 +1385,7 @@ double softfloat_tan(double v)
 	float64 f64 = floatx80_to_float64(fv, &fs);
 	fp_to_double(&fpd, f64 >> 32, (uae_u32)f64);
 	return fpd.fp;
+#else
+	return tanl(v);
+#endif
 }

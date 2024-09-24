@@ -8,7 +8,8 @@
 
 typedef struct mouse_serial_t
 {
-        int mousepos, mousedelay;
+        int mousepos;
+	pc_timer_t mousedelay_timer;
         int oldb;
         SERIAL *serial;
 } mouse_serial_t;
@@ -21,7 +22,7 @@ void mouse_serial_poll(int x, int y, int z, int b, void *p)
 
         if (!(serial->ier & 1))
                 return;
-        if (!x && !y && b == mouse->oldb)
+        if (!x && !y && b == mouse->oldb && !b)
                 return;
 
         mouse->oldb = b;
@@ -49,27 +50,27 @@ void mouse_serial_poll(int x, int y, int z, int b, void *p)
 }
 
 static
+void mousecallback(void *p)
+{
+    mouse_serial_t *mouse = (mouse_serial_t *)p;
+
+    if (mouse->mousepos == -1)
+    {
+        mouse->mousepos = 0;
+        serial_write_fifo(mouse->serial, 'M');
+    }
+}
+
+static
 void mouse_serial_rcr(struct SERIAL *serial, void *p)
 {
         mouse_serial_t *mouse = (mouse_serial_t *)p;
         
         mouse->mousepos = -1;
-        mouse->mousedelay = 5000 * (1 << TIMER_SHIFT);
+        mousecallback(p);
+//        timer_set_delay_u64(&mouse->mousedelay_timer, TIMER_USEC * 5000);
 }
         
-static
-void mousecallback(void *p)
-{
-        mouse_serial_t *mouse = (mouse_serial_t *)p;
-
-	mouse->mousedelay = 0;
-        if (mouse->mousepos == -1)
-        {
-                mouse->mousepos = 0;
-                serial_write_fifo(mouse->serial, 'M');
-        }
-}
-
 void *mouse_serial_init()
 {
         mouse_serial_t *mouse = (mouse_serial_t *)malloc(sizeof(mouse_serial_t));
@@ -78,10 +79,23 @@ void *mouse_serial_init()
         mouse->serial = &serial1;
         serial1.rcr_callback = mouse_serial_rcr;
         serial1.rcr_callback_p = mouse;
-        timer_add(mousecallback, &mouse->mousedelay, &mouse->mousedelay, mouse);
+        timer_add(&mouse->mousedelay_timer, mousecallback, mouse, 0);
         
         return mouse;
 }
+
+void *mouse_serial_init_draco()
+{
+    mouse_serial_t *mouse = (mouse_serial_t *)malloc(sizeof(mouse_serial_t));
+    memset(mouse, 0, sizeof(mouse_serial_t));
+
+    mouse->serial = &serial2;
+    serial2.rcr_callback = mouse_serial_rcr;
+    serial2.rcr_callback_p = mouse;
+
+    return mouse;
+}
+
 
 static
 void mouse_serial_close(void *p)

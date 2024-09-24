@@ -50,3 +50,15 @@ void isvideograb_status(void)
 {
     return;
 }
+
+uae_s64 getdurationvideograb(void)
+{
+	STUB("");
+	return 0;
+}
+
+
+void setchflagsvideograb(int chflags, bool mute)
+{
+	STUB("");
+}

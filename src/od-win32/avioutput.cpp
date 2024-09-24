@@ -10,8 +10,6 @@ Copyright(c) 2001 - 2002; §ane
 
 #include <windows.h>
 
-#include <ddraw.h>
-
 #include <mmsystem.h>
 #include <vfw.h>
 #include <msacm.h>
@@ -29,11 +27,10 @@ Copyright(c) 2001 - 2002; §ane
 #include "memory.h"
 #include "newcpu.h"
 #include "picasso96.h"
-#include "dxwrap.h"
+#include "render.h"
 #include "win32.h"
 #include "win32gfx.h"
 #include "direct3d.h"
-#include "opengl.h"
 #include "sound.h"
 #include "gfxfilter.h"
 #include "xwin.h"
@@ -43,6 +40,9 @@ Copyright(c) 2001 - 2002; §ane
 #include "threaddep/thread.h"
 #include "zfile.h"
 #include "savestate.h"
+#include "gfxboard.h"
+
+void WIN32GUI_LoadUIString(DWORD id, TCHAR *string, DWORD dwStringLen);
 
 #define MAX_AVI_SIZE (0x80000000 - 0x1000000)
 
@@ -69,6 +69,7 @@ static int videoallocated;
 static int aviout_width_out, aviout_height_out;
 static int aviout_xoffset_out, aviout_yoffset_out;
 int avioutput_width, avioutput_height, avioutput_bits;
+static int avioutput_bitmode = 24;
 static int avioutput_fps = VBLANK_HZ_PAL;
 int avioutput_framelimiter = 0, avioutput_nosoundoutput = 0;
 int avioutput_nosoundsync = 1, avioutput_originalsize = 0;
@@ -107,11 +108,12 @@ static int FirstAudio;
 static bool audio_validated;
 static DWORD dwAudioInputRemaining;
 static unsigned int StreamSizeAudio; // audio write position
-static double StreamSizeAudioExpected, StreamSizeAudioGot;
+static float StreamSizeAudioExpected, StreamSizeAudioGot;
 static PAVISTREAM AVIAudioStream = NULL; // compressed stream pointer
 static HACMSTREAM has = NULL; // stream handle that can be used to perform conversions
 static ACMSTREAMHEADER ash;
 static ACMFORMATCHOOSE acmopt;
+static TCHAR acmopt_title[MAX_PATH];
 static WAVEFORMATEXTENSIBLE wfxSrc; // source audio format
 static LPWAVEFORMATEX pwfxDst = NULL; // pointer to destination audio format
 static DWORD wfxMaxFmtSize;
@@ -357,7 +359,8 @@ static int AVIOutput_AllocateAudio (bool immediate)
 	acmopt.fdwStyle = ACMFORMATCHOOSE_STYLEF_INITTOWFXSTRUCT;
 	acmopt.pwfx = pwfxDst;
 	acmopt.cbwfx = wfxMaxFmtSize;
-	acmopt.pszTitle  = _T("Choose Audio Codec");
+	WIN32GUI_LoadUIString(IDS_CHOOSE_AUDIO_CODEC, acmopt_title, sizeof(acmopt_title) / sizeof(TCHAR));
+	acmopt.pszTitle = acmopt_title;
 
 	//acmopt.szFormatTag =; // not valid until the format is chosen
 	//acmopt.szFormat =; // not valid until the format is chosen
@@ -513,20 +516,20 @@ int AVIOutput_ChooseAudioCodec (HWND hwnd, TCHAR *s, int len)
 	return 0;
 }
 
-static int AVIOutput_VideoAllocated (void)
+static int AVIOutput_VideoAllocated(void)
 {
 	return videoallocated ? 1 : 0;
 }
 
-void AVIOutput_ReleaseVideo (void)
+void AVIOutput_ReleaseVideo(void)
 {
 	videoallocated = 0;
-	freequeue ();
-	xfree (lpbi);
+	freequeue();
+	xfree(lpbi);
 	lpbi = NULL;
 }
 
-static int AVIOutput_AllocateVideo (void)
+static int AVIOutput_AllocateVideo(void)
 {
 	struct AmigaMonitor *mon = &AMonitors[aviout_monid];
 	avioutput_width = avioutput_height = avioutput_bits = 0;
@@ -535,13 +538,13 @@ static int AVIOutput_AllocateVideo (void)
 
 	avioutput_fps = (int)(vblank_hz + 0.5);
 	if (!avioutput_fps)
-		avioutput_fps = ispal () ? 50 : 60;
+		avioutput_fps = ispal(NULL) ? 50 : 60;
 	if (avioutput_originalsize || WIN32GFX_IsPicassoScreen(mon)) {
 		int pitch;
-		if (!WIN32GFX_IsPicassoScreen(mon)) {
+		if (!gfxboard_isgfxboardscreen(0)) {
 			getfilterbuffer(0, &avioutput_width, &avioutput_height, &pitch, &avioutput_bits);
 		} else {
-			freertgbuffer(0, getrtgbuffer(0, &avioutput_width, &avioutput_height, &pitch, &avioutput_bits, NULL));
+			gfxboard_freertgbuffer(0, gfxboard_getrtgbuffer(0, &avioutput_width, &avioutput_height, &pitch, &avioutput_bits, NULL));
 		}
 	}
 
@@ -561,8 +564,8 @@ static int AVIOutput_AllocateVideo (void)
 	aviout_height_out = avioutput_height + 1;
 	aviout_height_out &= ~1;
 
-	AVIOutput_Initialize ();
-	AVIOutput_ReleaseVideo ();
+	AVIOutput_Initialize();
+	AVIOutput_ReleaseVideo();
 	if (avioutput_width == 0 || avioutput_height == 0) {
 		avioutput_width = workprefs.gfx_monitor[0].gfx_size.width;
 		avioutput_height = workprefs.gfx_monitor[0].gfx_size.height;
@@ -588,10 +591,11 @@ static int AVIOutput_AllocateVideo (void)
 		avioutput_bits = 24;
 	if (avioutput_bits > 24)
 		avioutput_bits = 24;
-	if (usealpha() && avioutput_bits == 24)
-		avioutput_bits = 32;
-	lpbi = (LPBITMAPINFOHEADER)xcalloc (uae_u8, lpbisize ());
-	lpbi->biSize = sizeof (BITMAPINFOHEADER);
+	if (avioutput_bitmode && avioutput_bits >= 24)
+		avioutput_bits = avioutput_bitmode;
+
+	lpbi = (LPBITMAPINFOHEADER)xcalloc(uae_u8, lpbisize());
+	lpbi->biSize = sizeof(BITMAPINFOHEADER);
 	lpbi->biWidth = aviout_width_out;
 	lpbi->biHeight = aviout_height_out;
 	lpbi->biPlanes = 1;
@@ -608,7 +612,7 @@ static int AVIOutput_AllocateVideo (void)
 }
 
 static int compressorallocated;
-static void AVIOutput_FreeVideoDstFormat ()
+static void AVIOutput_FreeVideoDstFormat(void)
 {
 	if (!pcompvars)
 		return;
@@ -619,7 +623,7 @@ static void AVIOutput_FreeVideoDstFormat ()
 	pcompvars->hic = NULL;
 }
 
-static int AVIOutput_GetCOMPVARSFromRegistry (COMPVARS *pcv)
+static int AVIOutput_GetCOMPVARSFromRegistry(COMPVARS *pcv)
 {
 	UAEREG *avikey;
 	int ss;
@@ -677,34 +681,37 @@ static int AVIOutput_GetVideoCodecName (COMPVARS *pcv, TCHAR *name, int len)
 	return 0;
 }
 
-int AVIOutput_GetVideoCodec (TCHAR *name, int len)
+int AVIOutput_GetVideoCodec(TCHAR *name, int len)
 {
-	AVIOutput_Initialize ();
+	AVIOutput_Initialize();
 
-	if (AVIOutput_VideoAllocated ())
-		return AVIOutput_GetVideoCodecName (pcompvars, name, len);
-	if (!AVIOutput_AllocateVideo ())
+	if (AVIOutput_VideoAllocated())
+		return AVIOutput_GetVideoCodecName(pcompvars, name, len);
+	if (!AVIOutput_AllocateVideo())
 		return 0;
-	AVIOutput_FreeVideoDstFormat ();
-	if (AVIOutput_GetCOMPVARSFromRegistry (pcompvars) > 0) {
-		if (AVIOutput_GetVideoCodecName (pcompvars, name, len)) {
+	AVIOutput_FreeVideoDstFormat();
+	if (AVIOutput_GetCOMPVARSFromRegistry(pcompvars) > 0) {
+		if (AVIOutput_GetVideoCodecName(pcompvars, name, len)) {
 			write_log(_T("Video %s\n"), name);
 			return 1;
 		}
 		write_log(_T("Failed to open video %08x\n"), pcompvars->fccType);
 	}
-	AVIOutput_ReleaseVideo ();
+	AVIOutput_ReleaseVideo();
 	return 0;
 }
 
 int AVIOutput_ChooseVideoCodec (HWND hwnd, TCHAR *s, int len)
 {
-	AVIOutput_Initialize ();
+	TCHAR tmp1[MAX_PATH];
+	char tmp2[MAX_PATH];
 
-	AVIOutput_End ();
-	if (!AVIOutput_AllocateVideo ())
+	AVIOutput_Initialize();
+
+	AVIOutput_End();
+	if (!AVIOutput_AllocateVideo())
 		return 0;
-	AVIOutput_FreeVideoDstFormat ();
+	AVIOutput_FreeVideoDstFormat();
 
 	// we really should check first to see if the user has a particular compressor installed before we set one
 	// we could set one but we will leave it up to the operating system and the set priority levels for the compressors
@@ -717,15 +724,17 @@ int AVIOutput_ChooseVideoCodec (HWND hwnd, TCHAR *s, int len)
 	pcompvars->lQ = 10000; // 10000 is maximum quality setting or ICQUALITY_DEFAULT for default
 	pcompvars->lKey = avioutput_fps; // default to one key frame per second, every (FPS) frames
 	pcompvars->dwFlags = 0;
-	if (ICCompressorChoose (hwnd, ICMF_CHOOSE_DATARATE | ICMF_CHOOSE_KEYFRAME, lpbi, NULL, pcompvars, "Choose Video Codec") == TRUE) {
+	WIN32GUI_LoadUIString(IDS_CHOOSE_VIDEO_CODEC, tmp1, sizeof(tmp1) / sizeof(TCHAR));
+	ua_copy(tmp2, sizeof(tmp2), tmp1);
+	if (ICCompressorChoose(hwnd, ICMF_CHOOSE_DATARATE | ICMF_CHOOSE_KEYFRAME, lpbi, NULL, pcompvars, tmp2) == TRUE) {
 		UAEREG *avikey;
-		int ss;
+		LRESULT ss;
 		uae_u8 *state;
 
 		compressorallocated = TRUE;
 		ss = ICGetState (pcompvars->hic, NULL, 0);
 		if (ss > 0) {
-			DWORD err;
+			LRESULT err;
 			state = xmalloc (uae_u8, ss);
 			err = ICGetState (pcompvars->hic, state, ss);
 			if (err < 0) {
@@ -739,7 +748,7 @@ int AVIOutput_ChooseVideoCodec (HWND hwnd, TCHAR *s, int len)
 			state = xcalloc (uae_u8, 1);
 		avikey = openavikey ();
 		if (avikey) {
-			regsetdata (avikey, _T("VideoConfigurationState"), state, ss);
+			regsetdata (avikey, _T("VideoConfigurationState"), state, (DWORD)ss);
 			regsetdata (avikey, _T("VideoConfigurationVars"), pcompvars, pcompvars->cbSize);
 			storesettings (avikey);
 			regclosetree (avikey);
@@ -758,7 +767,7 @@ static void AVIOutput_End2(bool);
 
 uae_s64 max_avi_size = MAX_AVI_SIZE;
 
-static void checkAVIsize(int force)
+static void checkAVIsize(bool force, bool split)
 {
 	int tmp_avioutput_video = avioutput_video;
 	int tmp_avioutput_audio = avioutput_audio;
@@ -768,13 +777,16 @@ static void checkAVIsize(int force)
 		return;
 	if (total_avi_size == 0)
 		return;
-	if (!avioutput_split_files)
-		return;
-	partcnt++;
-	_tcscpy (fn, avioutput_filename_tmp);
-	_stprintf (avioutput_filename_inuse, _T("%s_%d.avi"), fn, partcnt);
-	write_log (_T("AVI split %d at %lld bytes, %d frames\n"),
-		partcnt, total_avi_size, frame_count);
+	if (split) {
+		if (!avioutput_split_files)
+			return;
+		partcnt++;
+		_tcscpy(fn, avioutput_filename_tmp);
+		_stprintf(avioutput_filename_inuse, _T("%s_%d.avi"), fn, partcnt);
+		write_log(_T("AVI split %d at %lld bytes, %d frames\n"), partcnt, total_avi_size, frame_count);
+	} else {
+		write_log(_T("AVI restart at %lld bytes, %d frames\n"), total_avi_size, frame_count);
+	}
 	AVIOutput_End2(false);
 	total_avi_size = 0;
 	avioutput_video = tmp_avioutput_video;
@@ -783,11 +795,11 @@ static void checkAVIsize(int force)
 	_tcscpy (avioutput_filename_tmp, fn);
 }
 
-static void dorestart (void)
+static void dorestart(void)
 {
 	write_log (_T("AVIOutput: parameters changed, restarting..\n"));
+	checkAVIsize(true, avioutput_needs_restart > 0);
 	avioutput_needs_restart = 0;
-	checkAVIsize (1);
 }
 
 static void AVIOuput_AVIWriteAudio (uae_u8 *sndbuffer, int sndbufsize, int expectedsize)
@@ -800,7 +812,7 @@ static void AVIOuput_AVIWriteAudio (uae_u8 *sndbuffer, int sndbufsize, int expec
 	}
 	if (!sndbufsize)
 		return;
-	checkAVIsize (0);
+	checkAVIsize(false, true);
 	if (avioutput_needs_restart)
 		dorestart ();
 	waitqueuefull ();
@@ -813,7 +825,7 @@ typedef short          HWORD;
 typedef unsigned short UHWORD;
 typedef int            LWORD;
 typedef unsigned int   ULWORD;
-static int resampleFast(double factor, HWORD *in, HWORD *out, int inCount, int outCount, int nChans);
+static int resampleFast(float factor, HWORD *in, HWORD *out, int inCount, int outCount, int nChans);
 
 static uae_u8 *hack_resample(uae_u8 *srcbuffer, int gotSize, int wantedSize)
 {
@@ -824,7 +836,7 @@ static uae_u8 *hack_resample(uae_u8 *srcbuffer, int gotSize, int wantedSize)
 	int gotSamples = gotSize / bytesperframe;
 	int wantedSamples = wantedSize / bytesperframe;
 
-	double factor = (double)wantedSamples / gotSamples;
+	float factor = (float)wantedSamples / gotSamples;
 	outbuf = xmalloc(uae_u8, wantedSize + bytesperframe);
 	resampleFast(factor, (HWORD*)srcbuffer, (HWORD*)outbuf, gotSamples, wantedSamples, ch);
 	return outbuf;
@@ -951,18 +963,18 @@ static void AVIOutput_AVIWriteAudio_Thread_End(void)
 }
 
 
-static void AVIOuput_WAVWriteAudio (uae_u8 *sndbuffer, int sndbufsize)
+static void AVIOuput_WAVWriteAudio(uae_u8 *sndbuffer, int sndbufsize)
 {
-	fwrite (sndbuffer, 1, sndbufsize, wavfile);
+	fwrite(sndbuffer, 1, sndbufsize, wavfile);
 }
 
 static int getFromRenderTarget11(struct avientry *avie, bool renderTarget)
 {
 	int ok = 0;
-	int w, h, pitch, bits = 32;
+	int w, h, pitch, bits = 32, d;
 	void *data;
 
-	bool got = D3D11_capture(aviout_monid, &data, &w, &h, &pitch, renderTarget);
+	bool got = D3D11_capture(aviout_monid, &data, &w, &h, &d, &pitch, renderTarget);
 	if (got) {
 		int dpitch = ((aviout_width_out * avioutput_bits + 31) & ~31) / 8;
 		for (int y = 0; y < h && y < aviout_height_out; y++) {
@@ -981,7 +993,7 @@ static int getFromRenderTarget11(struct avientry *avie, bool renderTarget)
 				}
 			}
 		}
-		D3D11_capture(aviout_monid, NULL, NULL, NULL, NULL, renderTarget);
+		D3D11_capture(aviout_monid, NULL, NULL, NULL, NULL, NULL, renderTarget);
 		ok = 1;
 	}
 	return ok;
@@ -1103,12 +1115,12 @@ static int getFromBuffer(struct avientry *ae, int original)
 	mem = NULL;
 	dpitch = ((aviout_width_out * avioutput_bits + 31) & ~31) / 8;
 	if (original || WIN32GFX_IsPicassoScreen(mon)) {
-		if (!WIN32GFX_IsPicassoScreen(mon)) {
+		if (!gfxboard_isgfxboardscreen(aviout_monid)) {
 			src = getfilterbuffer(aviout_monid, &w, &h, &spitch, &d);
 			maxw = vidinfo->outbuffer->outwidth;
 			maxh = vidinfo->outbuffer->outheight;
 		} else {
-			src = mem = getrtgbuffer(aviout_monid, &w, &h, &spitch, &d, NULL);
+			src = mem = gfxboard_getrtgbuffer(aviout_monid, &w, &h, &spitch, &d, NULL);
 			maxw = w;
 			maxh = h;
 		}
@@ -1186,7 +1198,7 @@ static int getFromBuffer(struct avientry *ae, int original)
 		src += spitch;
 	}
 	if (mem)
-		freertgbuffer(aviout_monid, mem);
+		gfxboard_freertgbuffer(aviout_monid, mem);
 	return 1;
 }
 #endif
@@ -1202,7 +1214,7 @@ static void AVIOutput_WriteVideo(void)
 		return;
 	}
 
-	checkAVIsize (0);
+	checkAVIsize(false, true);
 	if (avioutput_needs_restart)
 		dorestart ();
 	waitqueuefull ();
@@ -1311,11 +1323,11 @@ static void writewavheader (uae_u32 size)
 	fwrite (&tl, 1, 4, wavfile);
 }
 
-void AVIOutput_Restart (void)
+void AVIOutput_Restart(bool split)
 {
 	if (first_frame)
 		return;
-	avioutput_needs_restart = 1;
+	avioutput_needs_restart = split ? 1 : -1;
 }
 
 static void AVIOutput_End2(bool fullrestart)
@@ -1383,7 +1395,7 @@ void AVIOutput_End(void)
 	AVIOutput_End2(true);
 }
 
-static void *AVIOutput_worker (void *arg);
+static void AVIOutput_worker (void *arg);
 
 static void AVIOutput_Begin2(bool fullstart, bool immediate)
 {
@@ -1409,12 +1421,12 @@ static void AVIOutput_Begin2(bool fullstart, bool immediate)
 	} else {
 		ext1 = _T(".avi"); ext2 = _T(".wav");
 	}
-	if (_tcslen (avioutput_filename_inuse) >= 4 && !_tcsicmp (avioutput_filename_inuse + _tcslen (avioutput_filename_inuse) - 4, ext2))
-		avioutput_filename_inuse[_tcslen (avioutput_filename_inuse) - 4] = 0;
-	if (_tcslen (avioutput_filename_inuse) >= 4 && _tcsicmp (avioutput_filename_inuse + _tcslen (avioutput_filename_inuse) - 4, ext1))
+	if (uaetcslen(avioutput_filename_inuse) >= 4 && !_tcsicmp (avioutput_filename_inuse + uaetcslen(avioutput_filename_inuse) - 4, ext2))
+		avioutput_filename_inuse[uaetcslen(avioutput_filename_inuse) - 4] = 0;
+	if (uaetcslen(avioutput_filename_inuse) >= 4 && _tcsicmp (avioutput_filename_inuse + uaetcslen(avioutput_filename_inuse) - 4, ext1))
 		_tcscat (avioutput_filename_inuse, ext1);
 	_tcscpy (avioutput_filename_tmp, avioutput_filename_inuse);
-	i = _tcslen (avioutput_filename_tmp) - 1;
+	i = uaetcslen(avioutput_filename_tmp) - 1;
 	while (i > 0 && avioutput_filename_tmp[i] != '.') i--;
 	if (i > 0)
 		avioutput_filename_tmp[i] = 0;
@@ -1499,42 +1511,55 @@ static void AVIOutput_Begin2(bool fullstart, bool immediate)
 	}
 
 	if (avioutput_video) {
-		ae = allocavientry_video();
-		if (!AVIOutput_AllocateVideo ())
-			goto error;
+		int retrycnt = 0;
+		while (retrycnt < 2) {
+			avioutput_bitmode = retrycnt ? 32 : 24;
+			if (usealpha()) {
+				avioutput_bitmode = avioutput_bitmode == 32 ? 24 : 32;
+			}
+			retrycnt++;
+			ae = allocavientry_video();
+			if (!AVIOutput_AllocateVideo())
+				goto error;
 
-		// fill in the header for the video stream
-		memset (&avistreaminfo, 0, sizeof(AVISTREAMINFO));
-		avistreaminfo.fccType = streamtypeVIDEO; // stream type
+			// fill in the header for the video stream
+			memset(&avistreaminfo, 0, sizeof(AVISTREAMINFO));
+			avistreaminfo.fccType = streamtypeVIDEO; // stream type
 
-		// unsure about this, as this is the uncompressed stream, not the compressed stream
-		//avistreaminfo.fccHandler = 0;
+			// unsure about this, as this is the uncompressed stream, not the compressed stream
+			//avistreaminfo.fccHandler = 0;
 
-		// incase the amiga changes palette
-		if (ae->lpbi->biBitCount < 24)
-			avistreaminfo.dwFlags = AVISTREAMINFO_FORMATCHANGES;
-		//avistreaminfo.dwCaps =; // Capability flags; currently unused
-		//avistreaminfo.wPriority =; // Priority of the stream
-		//avistreaminfo.wLanguage =; // Language of the stream
-		avistreaminfo.dwScale = 1;
-		avistreaminfo.dwRate = avioutput_fps; // our playback speed default (PAL 50fps), (NTSC 60fps)
-		avistreaminfo.dwStart = 0; // no delay
-		avistreaminfo.dwLength = 1; // initial length
-		//avistreaminfo.dwInitialFrames =; // audio only
-		avistreaminfo.dwSuggestedBufferSize = ae->lpbi->biSizeImage;
-		avistreaminfo.dwQuality = -1; // drivers will use the default quality setting
-		avistreaminfo.dwSampleSize = 0; // variable video data samples
+			// incase the amiga changes palette
+			if (ae->lpbi->biBitCount < 24)
+				avistreaminfo.dwFlags = AVISTREAMINFO_FORMATCHANGES;
+			//avistreaminfo.dwCaps =; // Capability flags; currently unused
+			//avistreaminfo.wPriority =; // Priority of the stream
+			//avistreaminfo.wLanguage =; // Language of the stream
+			avistreaminfo.dwScale = 1;
+			avistreaminfo.dwRate = avioutput_fps; // our playback speed default (PAL 50fps), (NTSC 60fps)
+			avistreaminfo.dwStart = 0; // no delay
+			avistreaminfo.dwLength = 1; // initial length
+			//avistreaminfo.dwInitialFrames =; // audio only
+			avistreaminfo.dwSuggestedBufferSize = ae->lpbi->biSizeImage;
+			avistreaminfo.dwQuality = -1; // drivers will use the default quality setting
+			avistreaminfo.dwSampleSize = 0; // variable video data samples
 
-		SetRect (&avistreaminfo.rcFrame, 0, 0, ae->lpbi->biWidth, ae->lpbi->biHeight); // rectangle for stream
+			SetRect(&avistreaminfo.rcFrame, 0, 0, ae->lpbi->biWidth, ae->lpbi->biHeight); // rectangle for stream
 
-		//avistreaminfo.dwEditCount =; // Number of times the stream has been edited. The stream handler maintains this count.
-		//avistreaminfo.dwFormatChangeCount =; // Number of times the stream format has changed. The stream handler maintains this count.
-		_tcscpy (avistreaminfo.szName, _T("Videostream")); // description of the stream.
+			//avistreaminfo.dwEditCount =; // Number of times the stream has been edited. The stream handler maintains this count.
+			//avistreaminfo.dwFormatChangeCount =; // Number of times the stream format has changed. The stream handler maintains this count.
+			_tcscpy(avistreaminfo.szName, _T("Videostream")); // description of the stream.
 
-		// create the stream
-		if ((err = AVIFileCreateStream (pfile, &AVIStreamInterface, &avistreaminfo)) != 0) {
-			gui_message (_T("AVIFileCreateStream() FAILED (%X)\n"), err);
-			goto error;
+			// create the stream
+			if ((err = AVIFileCreateStream(pfile, &AVIStreamInterface, &avistreaminfo)) != 0) {
+				if (retrycnt < 2) {
+					freeavientry(ae);
+					continue;
+				}
+				gui_message(_T("AVIFileCreateStream() FAILED (%08X)\n"), err);
+				goto error;
+			}
+			break;
 		}
 
 		videoOptions.fccType = streamtypeVIDEO;
@@ -1554,24 +1579,24 @@ static void AVIOutput_Begin2(bool fullstart, bool immediate)
 		videoOptions.lpParms = pcompvars->lpState;
 
 		// create a compressed stream from our uncompressed stream and a compression filter
-		if ((err = AVIMakeCompressedStream (&AVIVideoStream, AVIStreamInterface, &videoOptions, NULL)) != AVIERR_OK) {
-			gui_message (_T("AVIMakeCompressedStream() FAILED (%X)\n"), err);
+		if ((err = AVIMakeCompressedStream(&AVIVideoStream, AVIStreamInterface, &videoOptions, NULL)) != AVIERR_OK) {
+			gui_message(_T("AVIMakeCompressedStream() FAILED (%X)\n"), err);
 			goto error;
 		}
 	}
-	freeavientry (ae);
-	init_comm_pipe (&workindex, 20, 1);
-	init_comm_pipe (&queuefull, 20, 1);
+	freeavientry(ae);
+	init_comm_pipe(&workindex, 20, 1);
+	init_comm_pipe(&queuefull, 20, 1);
 	avientryindex = -1;
 	alive = -1;
 	fps_in_use = avioutput_fps;
-	uae_start_thread (_T("aviworker"), AVIOutput_worker, NULL, NULL);
-	write_log (_T("AVIOutput enabled: monitor=%d video=%d audio=%d path='%s'\n"), aviout_monid, avioutput_video, avioutput_audio, avioutput_filename_inuse);
+	uae_start_thread(_T("aviworker"), AVIOutput_worker, NULL, NULL);
+	write_log(_T("AVIOutput enabled: monitor=%d video=%d audio=%d path='%s'\n"), aviout_monid, avioutput_video, avioutput_audio, avioutput_filename_inuse);
 	return;
 
 error:
-	freeavientry (ae);
-	AVIOutput_End ();
+	freeavientry(ae);
+	AVIOutput_End();
 }
 
 void AVIOutput_Begin(bool immediate)
@@ -1621,7 +1646,7 @@ void AVIOutput_Initialize (void)
 }
 
 
-static void *AVIOutput_worker (void *arg)
+static void AVIOutput_worker (void *arg)
 {
 	bool quit = false;
 	write_log (_T("AVIOutput worker thread started\n"));
@@ -1660,7 +1685,6 @@ static void *AVIOutput_worker (void *arg)
 	AVIOutput_AVIWriteAudio_Thread_End();
 	write_log (_T("AVIOutput worker thread killed. quit=%d\n"), quit);
 	alive = 0;
-	return 0;
 }
 
 void AVIOutput_Toggle (int mode, bool immediate)
@@ -1800,14 +1824,14 @@ bool frame_drawn(int monid)
 			bytesperframe = wfxSrc.Format.nChannels * 2;
 			StreamSizeAudioGot += avi_sndbuffered / bytesperframe;
 			unsigned int lastexpected = (unsigned int)StreamSizeAudioExpected;
-			StreamSizeAudioExpected += ((double)wfxSrc.Format.nSamplesPerSec) / fps_in_use;
+			StreamSizeAudioExpected += ((float)wfxSrc.Format.nSamplesPerSec) / fps_in_use;
 			if (avioutput_video) {
-				int idiff = StreamSizeAudioGot - StreamSizeAudioExpected;
-				if ((timeframes % 5) == 0)
+				int idiff = (int)(StreamSizeAudioGot - StreamSizeAudioExpected);
+				if ((vsync_counter % 5) == 0)
 					write_log(_T("%.1f %.1f %d\n"), StreamSizeAudioExpected, StreamSizeAudioGot, idiff);
 				if (idiff) {
 					StreamSizeAudioGot = StreamSizeAudioExpected;
-					AVIOuput_AVIWriteAudio(avi_sndbuffer, avi_sndbuffered, (StreamSizeAudioExpected - lastexpected) * bytesperframe);
+					AVIOuput_AVIWriteAudio(avi_sndbuffer, avi_sndbuffered, (int)(StreamSizeAudioExpected - lastexpected) * bytesperframe);
 				} else {
 					AVIOuput_AVIWriteAudio(avi_sndbuffer, avi_sndbuffered, 0);
 				}
@@ -1868,18 +1892,18 @@ STATIC_INLINE HWORD WordToHword(LWORD v, int scl)
 	return out;
 }
 
-static int SrcLinear(HWORD X[], HWORD Y[], double factor, ULWORD *Time, UHWORD Nx)
+static int SrcLinear(HWORD X[], HWORD Y[], float factor, ULWORD *Time, UHWORD Nx)
 {
 	HWORD iconst;
 	HWORD *Xp, *Ystart;
 	LWORD v, x1, x2;
 
-	double dt;                  /* Step through input signal */
+	float dt;                  /* Step through input signal */
 	ULWORD dtb;                  /* Fixed-point version of Dt */
 	ULWORD endTime;              /* When Time reaches EndTime, return to user */
 
-	dt = 1.0 / factor;            /* Output sampling period */
-	dtb = dt*(1 << Np) + 0.5;     /* Fixed-point representation */
+	dt = 1.0f / factor;            /* Output sampling period */
+	dtb = (ULWORD)(dt*(1 << Np) + 0.5);     /* Fixed-point representation */
 
 	Ystart = Y;
 	endTime = *Time + (1 << Np)*(LWORD)Nx;
@@ -1894,14 +1918,14 @@ static int SrcLinear(HWORD X[], HWORD Y[], double factor, ULWORD *Time, UHWORD N
 		*Y++ = WordToHword(v, Np);   /* Deposit output */
 		*Time += dtb;               /* Move to next sample by time increment */
 	}
-	return (Y - Ystart);            /* Return number of output samples */
+	return (int)(Y - Ystart);            /* Return number of output samples */
 }
 
 #define IBUFFSIZE 4096                         /* Input buffer size */
 #define OBUFFSIZE 8192                         /* Output buffer size */
 
 static int resampleFast(  /* number of output samples returned */
-	double factor,              /* factor = Sndout/Sndin */
+	float factor,              /* factor = Sndout/Sndin */
 	HWORD *in,                   /* input and output file descriptors */
 	HWORD *out,
 	int inCount,                /* number of input samples to convert */

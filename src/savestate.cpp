@@ -67,6 +67,7 @@
 #include "a2091.h"
 #include "devices.h"
 #include "fsdb.h"
+#include "gfxboard.h"
 
 #ifdef FSUAE // NL
 #include "uae/fs.h"
@@ -205,11 +206,9 @@ struct staterecord
 
 static struct staterecord **staterecords;
 
-static void state_incompatible_warn (void)
+bool is_savestate_incompatible(void)
 {
-	static int warned;
 	int dowarn = 0;
-	int i;
 
 #ifdef BSDSOCKET
 	if (currprefs.socket_emu)
@@ -228,17 +227,25 @@ static void state_incompatible_warn (void)
 		dowarn = 1;
 #endif
 #ifdef FILESYS
-	for(i = 0; i < currprefs.mountitems; i++) {
+	for(int i = 0; i < currprefs.mountitems; i++) {
 		struct mountedinfo mi;
 		int type = get_filesys_unitconfig (&currprefs, i, &mi);
 		if (mi.ismounted && type != FILESYS_VIRTUAL && type != FILESYS_HARDFILE && type != FILESYS_HARDFILE_RDB)
 			dowarn = 1;
 	}
-#endif
-	if (!warned && dowarn) {
-		warned = 1;
-		notify_user (NUMSG_STATEHD);
+	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
+		dowarn = 1;
 	}
+	if (currprefs.rtgboards[1].rtgmem_size > 0) {
+		dowarn = 1;
+	}
+#endif
+#ifdef WITH_PPC
+	if (currprefs.ppc_model[0]) {
+		dowarn = 1;
+	}
+#endif
+	return dowarn != 0;
 }
 
 #endif
@@ -247,29 +254,39 @@ static void state_incompatible_warn (void)
 * format independent of host machine's endianness */
 
 static uae_u8 *storepos;
-void save_store_pos_func (uae_u8 **dstp)
+void save_store_pos_func(uae_u8 **dstp)
 {
 	storepos = *dstp;
 	*dstp += 4;
 }
-void save_store_size_func (uae_u8 **dstp)
+void save_store_size_func(uae_u8 **dstp)
 {
 	uae_u8 *p = storepos;
-	save_u32_func (&p, *dstp - storepos);
+	save_u32t_func(&p, *dstp - storepos);
 }
-void restore_store_pos_func (uae_u8 **srcp)
+void restore_store_pos_func(uae_u8 **srcp)
 {
 	storepos = *srcp;
 	*srcp += 4;
 }
-void restore_store_size_func (uae_u8 **srcp)
+void restore_store_size_func(uae_u8 **srcp)
 {
 	uae_u8 *p = storepos;
 	uae_u32 len = restore_u32_func (&p);
 	*srcp = storepos + len;
 }
 
-void save_u32_func (uae_u8 **dstp, uae_u32 v)
+void save_u32t_func(uae_u8** dstp, size_t vv)
+{
+	uae_u32 v = (uae_u32)vv;
+	uae_u8* dst = *dstp;
+	*dst++ = (uae_u8)(v >> 24);
+	*dst++ = (uae_u8)(v >> 16);
+	*dst++ = (uae_u8)(v >> 8);
+	*dst++ = (uae_u8)(v >> 0);
+	*dstp = dst;
+}
+void save_u32_func(uae_u8 **dstp, uae_u32 v)
 {
 	uae_u8 *dst = *dstp;
 	*dst++ = (uae_u8)(v >> 24);
@@ -278,19 +295,19 @@ void save_u32_func (uae_u8 **dstp, uae_u32 v)
 	*dst++ = (uae_u8)(v >> 0);
 	*dstp = dst;
 }
-void save_u64_func (uae_u8 **dstp, uae_u64 v)
+void save_u64_func(uae_u8 **dstp, uae_u64 v)
 {
 	save_u32_func (dstp, (uae_u32)(v >> 32));
 	save_u32_func (dstp, (uae_u32)v);
 }
-void save_u16_func (uae_u8 **dstp, uae_u16 v)
+void save_u16_func(uae_u8 **dstp, uae_u16 v)
 {
 	uae_u8 *dst = *dstp;
 	*dst++ = (uae_u8)(v >> 8);
 	*dst++ = (uae_u8)(v >> 0);
 	*dstp = dst;
 }
-void save_u8_func (uae_u8 **dstp, uae_u8 v)
+void save_u8_func(uae_u8 **dstp, uae_u8 v)
 {
 	uae_u8 *dst = *dstp;
 	*dst++ = v;
@@ -376,7 +393,7 @@ TCHAR *restore_string_func (uae_u8 **dstp)
 	char *top, *to;
 	TCHAR *s;
 
-	len = strlen ((char*)dst) + 1;
+	len = uaestrlen((char*)dst) + 1;
 	top = to = xmalloc (char, len);
 	do {
 		v = *dst++;
@@ -500,13 +517,12 @@ TCHAR *restore_path_full_func(uae_u8 **dstp)
 
 /* read and write IFF-style hunks */
 
-static void save_chunk (struct zfile *f, uae_u8 *chunk, unsigned int len, const TCHAR *name, int compress)
+static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const TCHAR *name, int compress)
 {
 	uae_u8 tmp[8], *dst;
-	uae_u8 zero[4]= { 0, 0, 0, 0 };
 	uae_u32 flags;
-	unsigned int pos;
-	unsigned int chunklen, len2;
+	size_t pos;
+	size_t chunklen, len2;
 	char *s;
 
 	if (!chunk)
@@ -521,30 +537,30 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, unsigned int len, const 
 	s = ua (name);
 	zfile_fwrite (s, 1, 4, f);
 	xfree (s);
-	pos = zfile_ftell (f);
+	pos = zfile_ftell32(f);
 	/* chunk size */
 	dst = &tmp[0];
 	chunklen = len + 4 + 4 + 4;
-	save_u32 (chunklen);
+	save_u32t(chunklen);
 	zfile_fwrite (&tmp[0], 1, 4, f);
 	/* chunk flags */
 	flags = 0;
 	dst = &tmp[0];
-	save_u32 (flags | compress);
+	save_u32(flags | compress);
 	zfile_fwrite (&tmp[0], 1, 4, f);
 	/* chunk data */
 	if (compress) {
-		int tmplen = len;
+		size_t tmplen = len;
 		size_t opos;
 		dst = &tmp[0];
-		save_u32 (len);
-		opos = zfile_ftell (f);
-		zfile_fwrite (&tmp[0], 1, 4, f);
-		len = zfile_zcompress (f, chunk, len);
+		save_u32t(len);
+		opos = zfile_ftell32(f);
+		zfile_fwrite(&tmp[0], 1, 4, f);
+		len = zfile_zcompress(f, chunk, len);
 		if (len > 0) {
 			zfile_fseek (f, pos, SEEK_SET);
 			dst = &tmp[0];
-			save_u32 (len + 4 + 4 + 4 + 4);
+			save_u32t(len + 4 + 4 + 4 + 4);
 			zfile_fwrite (&tmp[0], 1, 4, f);
 			zfile_fseek (f, 0, SEEK_END);
 		} else {
@@ -560,8 +576,10 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, unsigned int len, const 
 		zfile_fwrite (chunk, 1, len, f);
 	/* alignment */
 	len2 = 4 - (len & 3);
-	if (len2)
-		zfile_fwrite (zero, 1, len2, f);
+	if (len2) {
+		uae_u8 zero[4] = { 0, 0, 0, 0 };
+		zfile_fwrite(zero, 1, len2, f);
+	}
 
 	write_log (_T("Chunk '%s' chunk size %u (%u)\n"), name, chunklen, len);
 }
@@ -591,7 +609,7 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, unsigned int *len, u
 		len2 = 0;
 	*len = len2;
 	if (len2 == 0) {
-		*filepos = zfile_ftell (f);
+		*filepos = zfile_ftell32(f);
 		return 0;
 	}
 
@@ -606,11 +624,11 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, unsigned int *len, u
 	if (flags & 1) {
 		zfile_fread (tmp, 1, 4, f);
 		src = tmp;
-		*totallen = restore_u32 ();
-		*filepos = zfile_ftell (f) - 4 - 4 - 4;
+		*totallen = restore_u32();
+		*filepos = zfile_ftell32(f) - 4 - 4 - 4;
 		len2 -= 4;
 	} else {
-		*filepos = zfile_ftell (f) - 4 - 4;
+		*filepos = zfile_ftell32(f) - 4 - 4;
 	}
 	/* chunk data.  RAM contents will be loaded during the reset phase,
 	   no need to malloc multiple megabytes here.  */
@@ -723,7 +741,7 @@ void restore_state (const TCHAR *filename)
 	if (!f)
 		goto error;
 	zfile_fseek (f, 0, SEEK_END);
-	filesize = zfile_ftell (f);
+	filesize = zfile_ftell32(f);
 	zfile_fseek (f, 0, SEEK_SET);
 	savestate_state = STATE_RESTORE;
 	savestate_init ();
@@ -739,6 +757,7 @@ void restore_state (const TCHAR *filename)
 	restore_header (chunk);
 	xfree (chunk);
 	devices_restore_start();
+	clear_events();
 	z2num = z3num = 0;
 	for (;;) {
 		name[0] = 0;
@@ -827,6 +846,8 @@ void restore_state (const TCHAR *filename)
 			end = restore_custom_extra (chunk);
 		else if (!_tcscmp (name, _T("CHPD")))
 			end = restore_custom_event_delay (chunk);
+		else if (!_tcscmp (name, _T("CHSL")))
+			end = restore_custom_slots (chunk);
 		else if (!_tcscmp (name, _T("AUD0")))
 			end = restore_audio (0, chunk);
 		else if (!_tcscmp (name, _T("AUD1")))
@@ -917,14 +938,22 @@ void restore_state (const TCHAR *filename)
 			end = restore_gayle_ide (chunk);
 		else if (!_tcsncmp (name, _T("CDU"), 3))
 			end = restore_cd (name[3] - '0', chunk);
+		else if (!_tcsncmp(name, _T("ALG "), 4))
+			end = restore_alg(chunk);
 #ifdef A2065
 		else if (!_tcsncmp (name, _T("2065"), 4))
 			end = restore_a2065 (chunk);
 #endif
-		else if (!_tcsncmp (name, _T("EXPI"), 4))
-			end = restore_expansion_info(chunk);
+#if 0
+		else if (!_tcsncmp(name, _T("EXPI"), 4))
+			end = restore_expansion_info_old(chunk);
+#endif
+		else if (!_tcsncmp (name, _T("EXPB"), 4))
+			end = restore_expansion_boards(chunk);
+#ifdef DEBUGGER
 		else if (!_tcsncmp (name, _T("DMWP"), 4))
 			end = restore_debug_memwatch (chunk);
+#endif
 		else if (!_tcsncmp(name, _T("PIC0"), 4))
 			end = chunk + len;
 
@@ -959,42 +988,50 @@ error:
 		zfile_fclose (f);
 }
 
-void savestate_restore_finish (void)
+void savestate_restore_final(void)
 {
-	if (!isrestore ())
-		return;
-#ifdef FSUAE
-	printf("savestate_restore_finish\n");
-#endif
-	zfile_fclose (savestate_file);
+	restore_akiko_final();
+	restore_cdtv_final();
+}
+
+bool savestate_restore_finish(void)
+{
+	if (!isrestore())
+		return false;
+	zfile_fclose(savestate_file);
 	savestate_file = 0;
-	restore_cpu_finish ();
-	restore_audio_finish ();
-	restore_disk_finish ();
-	restore_blitter_finish ();
+	restore_cpu_finish();
+	restore_audio_finish();
+	restore_disk_finish();
+	restore_blitter_finish();
+	restore_expansion_finish();
 #ifdef CD32
-	restore_akiko_finish ();
+	restore_akiko_finish();
 #endif
+	restore_custom_finish();
 #ifdef CDTV
-	restore_cdtv_finish ();
+	restore_cdtv_finish();
 #endif
 #ifdef PICASSO96
-	restore_p96_finish ();
+	restore_p96_finish();
 #endif
 #ifdef A2065
-	restore_a2065_finish ();
+	restore_a2065_finish();
 #endif
-	restore_cia_finish ();
+	restore_cia_finish();
 #ifdef ACTION_REPLAY
 	restore_ar_finish();
 #endif
-	restore_debug_memwatch_finish ();
+#ifdef DEBUGGER
+	restore_debug_memwatch_finish();
+#endif
 	savestate_state = 0;
 	init_hz_normal();
 	audio_activate();
 #ifdef FSUAE
-    uae_callback(uae_on_restore_state_finished, savestate_fname);
+	uae_callback(uae_on_restore_state_finished, savestate_fname);
 #endif
+	return true;
 }
 
 /* 1=compressed,2=not compressed,3=ram dump,4=audio dump */
@@ -1021,7 +1058,7 @@ void savestate_initsave (const TCHAR *filename, int mode, int nodialogs, bool sa
 static void save_rams (struct zfile *f, int comp)
 {
 	uae_u8 *dst;
-	int len;
+	size_t len;
 
 	dst = save_cram (&len);
 	save_chunk (f, dst, len, _T("CRAM"), comp);
@@ -1060,7 +1097,8 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	TCHAR tmp[100];
 	uae_u8 *dst;
 	TCHAR name[5];
-	int i, len;
+	int i;
+	size_t len;
 
 	write_log (_T("STATESAVE (%s):\n"), f ? zfile_getname (f) : _T("<internal>"));
 	dst = header;
@@ -1138,19 +1176,23 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	dst = save_blitter_new (&len, 0);
 	save_chunk (f, dst, len, _T("BLTX"), 0);
 	xfree (dst);
-	if (new_blitter == false) {
-		dst = save_blitter (&len, 0);
-		save_chunk (f, dst, len, _T("BLIT"), 0);
-		xfree (dst);
-	}
+	dst = save_blitter (&len, 0, new_blitter);
+	save_chunk (f, dst, len, _T("BLIT"), 0);
+	xfree (dst);
+
+	dst = save_custom_slots(&len, 0);
+	save_chunk(f, dst, len, _T("CHSL"), 0);
+	xfree(dst);
 
 	dst = save_input (&len, 0);
 	save_chunk (f, dst, len, _T("CINP"), 0);
 	xfree (dst);
 
-	dst = save_custom_agacolors (&len, 0);
-	save_chunk (f, dst, len, _T("AGAC"), 0);
-	xfree (dst);
+	dst = save_custom_agacolors(&len, 0);
+	if (dst) {
+		save_chunk(f, dst, len, _T("AGAC"), 0);
+		xfree(dst);
+	}
 
 	_tcscpy (name, _T("SPRx"));
 	for (i = 0; i < 8; i++) {
@@ -1181,8 +1223,20 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	xfree (dst);
 
 #ifdef AUTOCONFIG
-	dst = save_expansion_info(&len, 0);
+	// new
+	i = 0;
+	for (;;) {
+		dst = save_expansion_boards(&len, 0, i);
+		if (!dst)
+			break;
+		save_chunk(f, dst, len, _T("EXPB"), 0);
+		i++;
+	}
+#if 0
+	// old
+	dst = save_expansion_info_old(&len, 0);
 	save_chunk(f, dst, len, _T("EXPI"), 0);
+#endif
 	dst = save_expansion(&len, 0);
 	save_chunk(f, dst, len, _T("EXPA"), 0);
 #endif
@@ -1209,6 +1263,9 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	save_chunk (f, dst, len, _T("CD32"), 0);
 	xfree (dst);
 #endif
+	dst = save_alg(&len);
+	save_chunk(f, dst, len, _T("ALG "), 0);
+	xfree(dst);
 #ifdef CDTV
 	dst = save_cdtv (&len, NULL);
 	save_chunk (f, dst, len, _T("CDTV"), 0);
@@ -1289,11 +1346,13 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 		}
 	}
 
+#ifdef DEBUGGER
 	dst = save_debug_memwatch (&len, NULL);
 	if (dst) {
 		save_chunk (f, dst, len, _T("DMWP"), 0);
 		xfree(dst);
 	}
+#endif
 
 	dst = save_screenshot(0, &len);
 	if (dst) {
@@ -1331,7 +1390,13 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	int comp = savestate_docompress;
 
 	if (!savestate_specialdump && !savestate_nodialogs) {
-		state_incompatible_warn ();
+		if (is_savestate_incompatible()) {
+			static int warned;
+			if (!warned) {
+				warned = 1;
+				notify_user(NUMSG_STATEHD);
+			}
+		}
 		if (!save_filesys_cando ()) {
 			gui_message (_T("Filesystem active. Try again later."));
 			return -1;
@@ -1347,12 +1412,12 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 		size_t pos;
 		if (savestate_specialdump == 2)
 			write_wavheader (f, 0, 22050);
-		pos = zfile_ftell (f);
+		pos = zfile_ftell32(f);
 		save_rams (f, -1);
 		if (savestate_specialdump == 2) {
-			int len, len2, i;
+			size_t len, len2, i;
 			uae_u8 *tmp;
-			len = zfile_ftell (f) - pos;
+			len = zfile_ftell32(f) - pos;
 			tmp = xmalloc (uae_u8, len);
 			zfile_fseek(f, pos, SEEK_SET);
 			len2 = zfile_fread (tmp, 1, len, f);
@@ -1382,7 +1447,7 @@ void savestate_quick (int slot, int save)
 #ifdef FSUAE
 	printf("savestate_quick slot=%d save=%d\n", slot, save);
 #endif
-	int i, len = _tcslen (savestate_fname);
+	int i, len = uaetcslen(savestate_fname);
 	i = len - 1;
 	while (i >= 0 && savestate_fname[i] != '_')
 		i--;
@@ -1421,7 +1486,7 @@ void savestate_quick (int slot, int save)
 #endif
 }
 
-bool savestate_check (void)
+bool savestate_check(void)
 {
 	if (vpos == 0 && !savestate_state) {
 		if (hsync_counter == 0 && input_play == INPREC_PLAY_NORMAL)
@@ -1434,6 +1499,10 @@ bool savestate_check (void)
 	} else if (savestate_state == STATE_DOREWIND) {
 		savestate_state = STATE_REWIND;
 		return true;
+	} else if (savestate_state == STATE_SAVE) {
+		savestate_initsave(savestate_fname, 1, true, true);
+		save_state(savestate_fname, STATE_SAVE_DESCRIPTION);
+		return false;
 	}
 	return false;
 }
@@ -1495,11 +1564,12 @@ void savestate_listrewind (void)
 
 void savestate_rewind (void)
 {
-	int len, i, dummy;
+	int len, i;
 	uae_u8 *p, *p2;
 	struct staterecord *st;
 	int pos;
 	bool rewind = false;
+	size_t dummy;
 
 	if (hsync_counter % currprefs.statecapturerate <= 25 && rewindmode <= -2) {
 		pos = replaycounter - 2;
@@ -1559,10 +1629,10 @@ void savestate_rewind (void)
 		p = restore_p96 (p);
 #endif
 	len = restore_u32_func (&p);
-	memcpy (chipmem_bank.baseaddr, p, currprefs.chipmem_size > len ? len : currprefs.chipmem_size);
+	memcpy (chipmem_bank.baseaddr, p, currprefs.chipmem.size > len ? len : currprefs.chipmem.size);
 	p += len;
 	len = restore_u32_func (&p);
-	memcpy (save_bram (&dummy), p, currprefs.bogomem_size > len ? len : currprefs.bogomem_size);
+	memcpy (save_bram (&dummy), p, currprefs.bogomem.size > len ? len : currprefs.bogomem.size);
 	p += len;
 #ifdef AUTOCONFIG
 	len = restore_u32_func (&p);
@@ -1620,7 +1690,7 @@ void savestate_rewind (void)
 
 #define BS 10000
 
-STATIC_INLINE int bufcheck (struct staterecord *sr, uae_u8 *p, int len)
+STATIC_INLINE int bufcheck(struct staterecord *sr, uae_u8 *p, size_t len)
 {
 	if (p - sr->data + BS + len >= sr->len)
 		return 1;
@@ -1640,18 +1710,19 @@ void savestate_memorysave (void)
 void savestate_capture (int force)
 {
 	uae_u8 *p, *p2, *p3, *dst;
-	int i, len, tlen, retrycnt;
+	size_t len, tlen;
+	int i, retrycnt;
 	struct staterecord *st;
 	bool firstcapture = false;
 
-#ifdef FILESYS
-	if (nr_units ())
-		return;
-#endif
 	if (!staterecords)
 		return;
 	if (!input_record)
 		return;
+#ifdef FILESYS
+	if (nr_units())
+		return;
+#endif
 	if (currprefs.statecapturerate && hsync_counter == 0 && input_record == INPREC_RECORD_START && savestate_first_capture > 0) {
 		// first capture
 		force = true;
@@ -1792,7 +1863,7 @@ retry2:
 	for (i = 0; i < 8; i++) {
 		if (bufcheck (st, p, 0))
 			goto retry;
-		save_custom_sprite (i, &len, p);
+		save_custom_sprite(i, &len, p);
 		tlen += len;
 		p += len;
 	}
@@ -1805,25 +1876,25 @@ retry2:
 		p += len;
 	}
 
-	if (bufcheck (st, p, len))
+	if (bufcheck(st, p, len))
 		goto retry;
 	save_cia (0, &len, p);
 	tlen += len;
 	p += len;
 
-	if (bufcheck (st, p, len))
+	if (bufcheck(st, p, len))
 		goto retry;
 	save_cia (1, &len, p);
 	tlen += len;
 	p += len;
 
-	if (bufcheck (st, p, len))
+	if (bufcheck(st, p, len))
 		goto retry;
 	save_keyboard (&len, p);
 	tlen += len;
 	p += len;
 
-	if (bufcheck (st, p, len))
+	if (bufcheck(st, p, len))
 		goto retry;
 	save_inputstate (&len, p);
 	tlen += len;
@@ -1850,33 +1921,33 @@ retry2:
 	}
 #endif
 
-	dst = save_cram (&len);
-	if (bufcheck (st, p, len))
+	dst = save_cram(&len);
+	if (bufcheck(st, p, len))
 		goto retry;
-	save_u32_func (&p, len);
-	memcpy (p, dst, len);
+	save_u32t_func(&p, len);
+	memcpy(p, dst, len);
 	tlen += len + 4;
 	p += len;
-	dst = save_bram (&len);
-	if (bufcheck (st, p, len))
+	dst = save_bram(&len);
+	if (bufcheck(st, p, len))
 		goto retry;
-	save_u32_func (&p, len);
-	memcpy (p, dst, len);
+	save_u32t_func(&p, len);
+	memcpy(p, dst, len);
 	tlen += len + 4;
 	p += len;
 #ifdef AUTOCONFIG
-	dst = save_fram (&len, 0);
-	if (bufcheck (st, p, len))
+	dst = save_fram(&len, 0);
+	if (bufcheck(st, p, len))
 		goto retry;
-	save_u32_func (&p, len);
-	memcpy (p, dst, len);
+	save_u32t_func(&p, len);
+	memcpy(p, dst, len);
 	tlen += len + 4;
 	p += len;
-	dst = save_zram (&len, 0);
-	if (bufcheck (st, p, len))
+	dst = save_zram(&len, 0);
+	if (bufcheck(st, p, len))
 		goto retry;
-	save_u32_func (&p, len);
-	memcpy (p, dst, len);
+	save_u32t_func(&p, len);
+	memcpy(p, dst, len);
 	tlen += len + 4;
 	p += len;
 #endif
@@ -1980,7 +2051,7 @@ retry2:
 			p += len;
 		}
 	}
-	save_u32_func (&p, tlen);
+	save_u32t_func(&p, tlen);
 	st->end = p;
 	st->inuse = 1;
 	st->inprecoffset = inprec_getposition ();
@@ -2007,7 +2078,7 @@ retry2:
 #endif
 		for (i = 0; i < 4; i++) {
 			bool wp = true;
-			DISK_validate_filename (&currprefs, currprefs.floppyslots[i].df, NULL, false, &wp, NULL, NULL);
+			DISK_validate_filename (&currprefs, currprefs.floppyslots[i].df, i, NULL, false, &wp, NULL, NULL);
 			inprec_recorddiskchange (i, currprefs.floppyslots[i].df, wp);
 		}
 #ifdef FSUAE
@@ -2057,13 +2128,13 @@ void statefile_save_recording (const TCHAR *filename)
 {
 	if (!staterecord_statefile)
 		return;
-	struct zfile *zf = zfile_fopen (filename, _T("wb"), 0);
+	struct zfile *zf = zfile_fopen(filename, _T("wb"), 0);
 	if (zf) {
-		int len = zfile_size (staterecord_statefile);
-		uae_u8 *data = zfile_getdata (staterecord_statefile, 0, len, NULL);
-		zfile_fwrite (data, len, 1, zf);
+		int len = zfile_size32(staterecord_statefile);
+		uae_u8 *data = zfile_getdata(staterecord_statefile, 0, len, NULL);
+		zfile_fwrite(data, len, 1, zf);
 		xfree (data);
-		zfile_fclose (zf);
+		zfile_fclose(zf);
 		write_log (_T("input statefile '%s' saved\n"), filename);
 	}
 }

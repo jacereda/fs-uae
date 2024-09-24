@@ -48,7 +48,7 @@ typedef wchar_t * LPCWSTR;
 #define WINUAEBETA _T("")
 #endif
 
-#define WINUAEDATE MAKEBD(2019, 5, 16)
+#define WINUAEDATE MAKEBD(2024, 6, 1)
 
 //#define WINUAEEXTRA _T("AmiKit Preview")
 //#define WINUAEEXTRA _T("Amiga Forever Edition")
@@ -80,9 +80,7 @@ extern int getcapslock (void);
 
 void releasecapture (struct AmigaMonitor*);
 int WIN32_RegisterClasses (void);
-int WIN32_InitHtmlHelp (void);
 int WIN32_InitLibraries (void);
-int WIN32_CleanupLibraries (void);
 void WIN32_HandleRegistryStuff (void);
 extern void setup_brkhandler (void);
 extern void remove_brkhandler (void);
@@ -98,7 +96,11 @@ extern void minimizewindow(int monid);
 extern uae_u32 OSDEP_minimize_uae(void);
 extern void updatemouseclip(struct AmigaMonitor*);
 extern void updatewinrect(struct AmigaMonitor*, bool);
-
+#if !defined FSUAE
+int getdpiformonitor(HMONITOR mon);
+int getdpiforwindow(HWND hwnd);
+#endif
+void InitializeDarkMode(void);
 extern bool resumepaused (int priority);
 extern bool setpaused (int priority);
 extern void unsetminimized (int monid);
@@ -112,8 +114,8 @@ extern int pause_emulation;
 extern int sound_available;
 extern TCHAR VersionStr[256];
 extern TCHAR BetaStr[64];
-extern int os_admin, os_64bit, os_vista, os_win7, os_win8, os_win10, cpu_number, os_touch;
-extern BOOL os_dwm_enabled;
+extern int os_admin, os_64bit, os_win8, os_win10, cpu_number, os_touch;
+extern BOOL os_dwm_enabled, dpi_aware_v2;
 extern OSVERSIONINFO osVersion;
 extern int paraport_mask;
 extern int gui_active;
@@ -121,12 +123,14 @@ extern int quickstart, configurationcache, saveimageoriginalpath, relativepaths,
 
 extern HKEY hWinUAEKey;
 extern HINSTANCE hInst;
+extern HMODULE userdll;
+extern HMODULE kerneldll;
 extern int af_path_2005;
-extern TCHAR start_path_new1[MAX_DPATH], start_path_new2[MAX_DPATH];
+extern TCHAR start_path_new1[MAX_DPATH], start_path_new2[MAX_DPATH], start_path_custom[MAX_DPATH];
 extern TCHAR bootlogpath[MAX_DPATH];
 extern TCHAR logpath[MAX_DPATH];
 extern bool winuaelog_temporary_enable;
-enum pathtype { PATH_TYPE_DEFAULT, PATH_TYPE_WINUAE, PATH_TYPE_NEWWINUAE, PATH_TYPE_NEWAF, PATH_TYPE_AMIGAFOREVERDATA, PATH_TYPE_END };
+enum pathtype { PATH_TYPE_DEFAULT, PATH_TYPE_WINUAE, PATH_TYPE_NEWWINUAE, PATH_TYPE_NEWAF, PATH_TYPE_AMIGAFOREVERDATA, PATH_TYPE_CUSTOM, PATH_TYPE_END };
 void setpathmode (pathtype pt);
 
 extern int sleep_millis (int ms);
@@ -170,7 +174,7 @@ void exit_gui (int);
 void fetch_path (const TCHAR *name, TCHAR *out, int size);
 void set_path (const TCHAR *name, TCHAR *path);
 void set_path (const TCHAR *name, TCHAR *path, pathtype);
-void read_rom_list (void);
+void read_rom_list(bool);
 void associate_file_extensions (void);
 
 #define WIN32_PLUGINDIR _T("plugins\\")
@@ -188,7 +192,7 @@ extern void rawinput_alloc(void);
 struct winuae_lang
 {
     WORD id;
-    TCHAR *name;
+    const TCHAR *name;
 };
 extern const struct winuae_lang langs[];
 extern HMODULE language_load (WORD language);
@@ -196,8 +200,8 @@ extern unsigned int fpucontrol;
 extern void fpux_save (int *v);
 extern void fpux_restore (int *v);
 
-extern void logging_open (int,int);
-extern void logging_cleanup (void);
+extern bool logging_open(int,int);
+extern void logging_cleanup(void);
 
 extern LONG WINAPI WIN32_ExceptionFilter (struct _EXCEPTION_POINTERS *pExceptionPointers, DWORD ec);
 
@@ -224,14 +228,14 @@ extern struct sound_device *record_devices[MAX_SOUND_DEVICES];
 
 struct contextcommand
 {
-	TCHAR *shellcommand;
-	TCHAR *command;
+	const TCHAR *shellcommand;
+	const TCHAR *command;
 	int icon;
 };
 struct assext {
     TCHAR *ext;
-    TCHAR *cmd;
-    TCHAR *desc;
+    const TCHAR *cmd;
+    const TCHAR *desc;
     int icon;
 	struct contextcommand *cc;
     int enabled;
@@ -246,6 +250,9 @@ void associate_file_extensions (void);
 DWORD GetFileAttributesSafe (const TCHAR *name);
 BOOL SetFileAttributesSafe (const TCHAR *name, DWORD attr);
 
-void HtmlHelp(HWND a, LPCWSTR b, UINT c, const TCHAR *d);
+#if !defined FSUAE
+typedef BOOL(CALLBACK* ADJUSTWINDOWRECTEXFORDPI)(LPRECT, DWORD, BOOL, DWORD, UINT);
+extern ADJUSTWINDOWRECTEXFORDPI pAdjustWindowRectExForDpi;
+#endif
 
 #endif

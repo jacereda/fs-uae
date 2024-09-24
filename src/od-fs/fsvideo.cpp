@@ -743,7 +743,7 @@ void show_screen(int monid, int mode)
 	}
 }
 
-int lockscr(struct vidbuffer *vb, bool fullupdate, bool first)
+int lockscr(struct vidbuffer *vb, bool fullupdate, bool first, bool skip)
 {
 #ifdef FSUAE_XXX
 	if (first) {
@@ -786,7 +786,7 @@ int lockscr(struct vidbuffer *vb, bool fullupdate, bool first)
 			ret = 1;
 		} else {
 			ret = 0;
-			vb->bufmem = D3D_locktexture(vb->monitor_id, &vb->rowbytes, NULL, fullupdate);
+			vb->bufmem = D3D_locktexture(vb->monitor_id, &vb->rowbytes, NULL, NULL, skip ? -1 : (fullupdate ? 1 : 0));
 			if (vb->bufmem) {
 				if (first)
 					init_row_map();
@@ -886,7 +886,7 @@ static uae_u8 *gfx_lock_picasso2(int monid, bool fullupdate)
 #endif
 }
 
-uae_u8 *gfx_lock_picasso(int monid, bool fullupdate, bool doclear)
+uae_u8 *gfx_lock_picasso(int monid, bool fullupdate/*, bool doclear*/)
 {
 #ifdef FSUAE
 #ifdef DEBUG_PICASSO96
@@ -908,6 +908,7 @@ uae_u8 *gfx_lock_picasso(int monid, bool fullupdate, bool doclear)
 		gfx_unlock();
 	} else {
 		mon->rtg_locked = true;
+#if 0
 		if (doclear) {
 			uae_u8 *p2 = p;
 			for (int h = 0; h < vidinfo->height; h++) {
@@ -915,6 +916,7 @@ uae_u8 *gfx_lock_picasso(int monid, bool fullupdate, bool doclear)
 				p2 += vidinfo->rowbytes;
 			}
 		}
+#endif
 	}
 #ifdef FSUAE
 #ifdef DEBUG_PICASSO96
@@ -1634,7 +1636,7 @@ int graphics_init(bool mousecapture)
 	struct vidbuf_description *avidinfo = &adisplays[0].gfxvidinfo;
 
 	// FIXME: perhaps modify so custom_limits defaults to -1, -1, -1, -1
-	set_custom_limits (-1, -1, -1, -1);
+	set_custom_limits (-1, -1, -1, -1, false);
 	// set_custom_limits (100, 100, 100, 100);
 
 	if (fsemu) {
@@ -1916,8 +1918,9 @@ oops:
 	return ret;
 }
 
-bool target_graphics_buffer_update(int monid)
+bool target_graphics_buffer_update(int monid, bool force)
 {
+	// XXX force ignored
 #ifdef FSUAE
 	if (fsemu) {
 		//
@@ -2130,7 +2133,7 @@ bool toggle_rtg (int monid, int mode)
 		return false;
 }
 
-void close_rtg(int monid)
+void close_rtg(int monid, bool reset)
 {
 	STUB("");
 }

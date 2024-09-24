@@ -29,11 +29,11 @@ void inprec_setposition (int offset, int replaycounter)
 {
 }
 
-void inprec_playdebug_cpu (int mode)
+void inprec_playdebug_cpu (int mode, uae_u16 data)
 {
 }
 
-void inprec_recorddebug_cpu (int mode)
+void inprec_recorddebug_cpu (int mode, uae_u16 data)
 {
 }
 

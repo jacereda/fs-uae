@@ -16,11 +16,16 @@
 
 #define DRIVESOUND
 #define GFXFILTER
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
+#define __arm__
+#define MSVC_LONG_DOUBLE
+#else
 #define X86_MSVC_ASSEMBLY
-#define OPTIMIZED_FLAGS
+//#define OPTIMIZED_FLAGS
 #define MSVC_LONG_DOUBLE
 #ifndef __i386__
 #define __i386__
+#endif
 #endif
 #define WINDOWS
 #define ZLIB_WINAPI
@@ -28,12 +33,19 @@
 
 #ifndef UAE_MINI
 
+#if !defined(_M_ARM64) && !defined(_M_ARM64EC)
+#define JIT /* JIT compiler support */
+#define USE_JIT_FPU
+#endif
+
 #define DEBUGGER
+//#define GDBSERVER
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-#define JIT /* JIT compiler support */
-#define USE_JIT_FPU
+//#define NOFLAGS_SUPPORT_GENCPU
+#define NOFLAGS_SUPPORT_GENCOMP
+//#define HAVE_GET_WORD_UNSWAPPED
 #define NATMEM_OFFSET natmem_offset
 #define USE_NORMAL_CALLING_CONVENTION 0
 #define USE_X86_FPUCW 1
@@ -46,7 +58,6 @@
 #define CD32 /* CD32 emulation */
 #define CDTV /* CDTV emulation */
 #define D3D /* D3D display filter support */
-//#define OPENGL /* OpenGL display filter support */
 #define PARALLEL_PORT /* parallel port emulation */
 #define PARALLEL_DIRECT /* direct parallel port emulation */
 #define SERIAL_PORT /* serial port emulation */
@@ -107,6 +118,11 @@
 #define WITH_PCI
 #define WITH_X86
 #define WITH_THREADED_CPU
+#define WITH_SOFTFLOAT
+#define FLOPPYBRIDGE
+#define WITH_MIDIEMU
+#define WITH_DSP
+#define WITH_DRACO
 
 
 #else

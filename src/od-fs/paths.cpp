@@ -211,6 +211,11 @@ void fetch_luapath (TCHAR *out, int size)
 	fetch_path (_T("LuaPath"), out, size);
 }
 
+void fetch_nvrampath(TCHAR *out, int size)
+{
+	fetch_path(_T("NVRAMPath"), out, size);
+}
+
 void fetch_screenshotpath (TCHAR *out, int size)
 {
 	fetch_path("ScreenshotPath", out, size);
@@ -249,6 +254,12 @@ void fetch_rompath(TCHAR *out, int size)
 	}
 	uae_tcslcpy(out, currprefs.path_rom.path[k], size);
 }
+
+void fetch_videopath(TCHAR* out, int size)
+{
+	fetch_path(_T("VideoPath"), out, size);
+}
+
 
 extern "C" {
 

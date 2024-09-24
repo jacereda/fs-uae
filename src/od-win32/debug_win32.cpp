@@ -43,9 +43,6 @@ static HWND hedit = 0;
 extern int consoleopen;
 BOOL debuggerinitializing = FALSE;
 
-extern uae_u32 get_fpsr (void);
-extern void set_fpsr (uae_u32 x);
-
 static TCHAR linebreak[] = {'\r', '\n', '\0'};
 
 #define MAXLINES 250
@@ -81,7 +78,7 @@ static struct debuggerpage dbgpage[MAXPAGES];
 static int currpage, pages;
 static int pagetype;
 
-TCHAR *pname[] = { _T("OUT1"), _T("OUT2"), _T("MEM1"), _T("MEM2"), _T("DASM1"), _T("DASM2"), _T("BRKPTS"), _T("MISC"), _T("CUSTOM") };
+const TCHAR *pname[] = { _T("OUT1"), _T("OUT2"), _T("MEM1"), _T("MEM2"), _T("DASM1"), _T("DASM2"), _T("BRKPTS"), _T("MISC"), _T("CUSTOM") };
 static int pstatuscolor[MAXPAGES];
 
 static int dbgwnd_minx = 800, dbgwnd_miny = 600;
@@ -106,7 +103,7 @@ static void OutputCurrHistNode(HWND hWnd)
 		GetWindowText(hWnd, buf, txtlen + 1);
 		if (_tcscmp(buf, currhist->command)) {
 			SetWindowText(hWnd, currhist->command);
-			txtlen = _tcslen(currhist->command);
+			txtlen = uaetcslen(currhist->command);
 			SendMessage(hWnd, EM_SETSEL, (WPARAM)txtlen, (LPARAM)txtlen);
 			SendMessage(hWnd, EM_SETSEL, -1, -1);
 		}
@@ -189,7 +186,7 @@ int GetInput (TCHAR *out, int maxlen)
 	if (chars == 0)
 		return 0;
 	WriteOutput(linebreak + 1, 2);
-	WriteOutput(out, _tcslen(out));
+	WriteOutput(out, uaetcslen(out));
 	WriteOutput(linebreak + 1, 2);
 	AddToHistory(out);
 	SetWindowText(hInput, _T(""));
@@ -199,11 +196,12 @@ int GetInput (TCHAR *out, int maxlen)
 static int CheckLineLimit(HWND hWnd, const TCHAR *out)
 {
 	TCHAR *tmp, *p;
-	int lines_have, lines_new = 0, lastchr, txtlen, visible;
+	int lines_new = 0, txtlen, visible;
+	LRESULT lines_have, lastchr;
 
 	tmp = (TCHAR *)out;
 	lines_have = SendMessage(hWnd, EM_GETLINECOUNT, 0, 0);
-	while (_tcslen(tmp) > 0 && (p = _tcschr(tmp, '\n')) > 0) {
+	while (tmp[0] != '\0' && (p = _tcschr(tmp, '\n'))) {
 		lines_new++;
 		tmp = p + 1;
 	}
@@ -228,7 +226,8 @@ static int CheckLineLimit(HWND hWnd, const TCHAR *out)
 
 void WriteOutput(const TCHAR *out, int len)
 {
-	int txtlen, pos = 0, count, index, leave = 0;
+	int pos = 0, leave = 0;
+	LRESULT count, index, txtlen;
 	TCHAR *buf = 0, *p, *tmp;
 
 	if (!hOutput || !_tcscmp(out, _T(">")) || len == 0)
@@ -239,13 +238,13 @@ void WriteOutput(const TCHAR *out, int len)
 	for(;;) {
 		p = _tcschr(tmp, '\n');
 		if (p) {
-			pos = p - tmp + 1;
+			pos = addrdiff(p, tmp) + 1;
 			if (pos > (MAX_LINEWIDTH + 1))
 				pos = MAX_LINEWIDTH + 1;
 			buf = xcalloc(TCHAR, pos + 2);
 			_tcsncpy(buf, tmp, pos - 1);
 			_tcscat(buf, linebreak);
-		} else if (_tcslen(tmp) == 0) {
+		} else if (tmp[0] == '\0') {
 			leave = 1;
 		} else {
 			count = SendMessage(hOutput, EM_GETLINECOUNT, 0, 0);
@@ -275,7 +274,7 @@ static HWND ulbs_hwnd;
 static int ulbs_pos;
 static void UpdateListboxString(HWND hWnd, int pos, TCHAR *out, int mark)
 {
-	int count;
+	LRESULT count;
 	TCHAR text[MAX_LINEWIDTH + 1], *p;
 	COLORREF cr;
 
@@ -325,14 +324,15 @@ static void ULBST(const TCHAR *format, ...)
 
 static int GetLBOutputLines(HWND hWnd)
 {
-	int lines = 0, clientsize, itemsize;
+	int lines = 0;
+	LRESULT itemsize, clientsize;
 	RECT rc;
 
 	GetClientRect(hWnd, &rc);
 	clientsize = rc.bottom - rc.top;
 	itemsize = SendMessage(hWnd, LB_GETITEMHEIGHT, 0, 0);
 	while (clientsize > itemsize) {
-		lines ++;
+		lines++;
 		clientsize -= itemsize;
 	}
 	return lines;
@@ -362,7 +362,8 @@ static uae_u32 gw(uae_u8 *p, int off)
 }
 static void ShowCustomSmall(HWND hwnd)
 {
-	int len, i, j, cnt;
+	int i, j, cnt;
+	size_t len;
 	uae_u8 *p1, *p2, *p3, *p4;
 	TCHAR out[MAX_LINEWIDTH + 1];
 
@@ -412,7 +413,8 @@ static void ShowMisc(void)
 {
 	int line = 0;
 	HWND hMisc;
-	int len, i;
+	int i;
+	size_t len;
 	uae_u8 *p, *p2;
 
 	hMisc = GetDlgItem(hDbgWnd, IDC_DBG_MISC);
@@ -460,7 +462,8 @@ static void ShowMisc(void)
 
 static void ShowCustom(void)
 {
-	int len, i, j, end;
+	int i, j, end;
+	size_t len;
 	uae_u8 *p1, *p2, *p3, *p4;
 
 	ULBSINIT(GetDlgItem(hDbgWnd, IDC_DBG_CUSTOM));
@@ -506,7 +509,8 @@ static void ShowCustom(void)
 static void ShowBreakpoints(void)
 {
 	HWND hBrkpts;
-	int i, lines_old, got;
+	int i, got;
+	LRESULT lines_old;
 	TCHAR outbp[MAX_LINEWIDTH + 1], outw[50];
 
 	hBrkpts = GetDlgItem(hDbgWnd, IDC_DBG_BRKPTS);
@@ -519,7 +523,7 @@ static void ShowBreakpoints(void)
 	for (i = 0; i < BREAKPOINT_TOTAL; i++) {
 		if (!bpnodes[i].enabled)
 			continue;
-		m68k_disasm_2(outbp, sizeof outbp / sizeof (TCHAR), bpnodes[i].value1, NULL, 1, NULL, NULL, 0xffffffff, 0);
+		m68k_disasm_2(outbp, sizeof outbp / sizeof (TCHAR), bpnodes[i].value1, NULL, 0, NULL, 1, NULL, NULL, 0xffffffff, 0);
 		ULBS(outbp);
 		got = 1;
 	}
@@ -545,7 +549,8 @@ static void ShowBreakpoints(void)
 static void ShowMem(int offset)
 {
 	uae_u32 addr;
-	int i, lines_old, lines_new;
+	int i, lines_new;
+	LRESULT lines_old;
 	TCHAR out[MAX_LINEWIDTH + 1];
 	HWND hMemory;
 
@@ -572,10 +577,10 @@ static int GetPrevAddr(uae_u32 addr, uae_u32 *prevaddr)
 	uae_u32 dasmaddr, next;
 
 	*prevaddr = addr;
-	dasmaddr = addr - 20;
+	dasmaddr = addr - 22;
 	while (dasmaddr < addr) {
 		next = dasmaddr + 2;
-		m68k_disasm_2(NULL, 0, dasmaddr, &next, 1, NULL, NULL, 0xffffffff, 0);
+		m68k_disasm_2(NULL, 0, dasmaddr, NULL, 0, &next, 1, NULL, NULL, 0xffffffff, 0);
 		if (next == addr) {
 			*prevaddr = dasmaddr;
 			return 1;
@@ -588,7 +593,8 @@ static int GetPrevAddr(uae_u32 addr, uae_u32 *prevaddr)
 static void ShowDasm(int direction)
 {
 	uae_u32 addr = 0, prev;
-	int i, lines_old, lines_new;
+	int i, lines_new;
+	LRESULT lines_old;
 	TCHAR out[MAX_LINEWIDTH + 1];
 	HWND hDasm;
 
@@ -607,7 +613,7 @@ static void ShowDasm(int direction)
 	else
 		addr = dbgpage[currpage].dasmaddr;
 	if (direction > 0) {
-		m68k_disasm_2(NULL, 0, addr, &addr, 1, NULL, NULL, 0xffffffff, 0);
+		m68k_disasm_2(NULL, 0, addr, NULL, 0, &addr, 1, NULL, NULL, 0xffffffff, 0);
 		if (!addr || addr < dbgpage[currpage].dasmaddr)
 			addr = dbgpage[currpage].dasmaddr;
 	}
@@ -621,7 +627,7 @@ static void ShowDasm(int direction)
 	lines_old = SendMessage(hDasm, LB_GETCOUNT, 0, 0);
 	lines_new = GetLBOutputLines(hDasm);
 	for (i = 0; i < lines_new; i++) {
-		m68k_disasm_2(out, sizeof out / sizeof (TCHAR), addr, &addr, 1, NULL, NULL, 0xffffffff, 0);
+		m68k_disasm_2(out, sizeof out / sizeof (TCHAR), addr, NULL, 0, &addr, 1, NULL, NULL, 0xffffffff, 0);
 		if (addr > dbgpage[currpage].dasmaddr)
 			UpdateListboxString(hDasm, i, out, FALSE);
 		else
@@ -735,7 +741,7 @@ static int GetTextSize(HWND hWnd, TCHAR *text, int width)
 	if (!width)
 		return tm.tmHeight + tm.tmExternalLeading;
 	else if (text)
-		return tm.tmMaxCharWidth * _tcslen(text);
+		return tm.tmMaxCharWidth * uaetcslen(text);
 	return 0;
 }
 
@@ -821,7 +827,7 @@ static LRESULT CALLBACK MemInputProc (HWND hWnd, UINT message, WPARAM wParam, LP
 		case 0x16:		//ctrl+v
 			break;
 		default:
-			if (!debugger_active || !_tcschr(allowed, wParam))
+			if (!debugger_active || !_tcschr(allowed, (TCHAR)wParam))
 				return 0;
 			break;
 		}
@@ -940,7 +946,7 @@ static void CopyListboxText(HWND hwnd, BOOL all)
 	if (!OpenClipboard(hwnd))
 		return;
 	EmptyClipboard();
-	if ((count = SendMessage(hwnd, LB_GETCOUNT, 0, 0)) < 1)
+	if ((count = (int)SendMessage(hwnd, LB_GETCOUNT, 0, 0)) < 1)
 		return;
 	if (all) {
 		start = 0;
@@ -952,7 +958,7 @@ static void CopyListboxText(HWND hwnd, BOOL all)
 		end = start + 1;
 	}
 	for (i = start; i < end; i++)
-		size += (SendMessage(hwnd, LB_GETTEXTLEN, i, 0) + 2);
+		size += (int)(SendMessage(hwnd, LB_GETTEXTLEN, i, 0) + 2);
 	size++;
 	hdata = GlobalAlloc(GMEM_MOVEABLE, size * sizeof (TCHAR));
 	if (hdata) {
@@ -960,7 +966,7 @@ static void CopyListboxText(HWND hwnd, BOOL all)
 		lptstr = (LPWSTR)GlobalLock(hdata);
 		lptstr[size - 1] = '\0';
 		for (i = start; i < end; i++) {
-			int len = SendMessage(hwnd, LB_GETTEXTLEN, i, 0);
+			int len = (int)SendMessage(hwnd, LB_GETTEXTLEN, i, 0);
 			SendMessage(hwnd, LB_GETTEXT, i, (LPARAM)lptstr);
 			lptstr[len] = '\r';
 			lptstr[len + 1] = '\n';
@@ -1010,10 +1016,12 @@ static void ListboxEndEdit(HWND hwnd, BOOL acceptinput)
 	GetWindowText(hedit, txt, MAX_LINEWIDTH + 1);
 	p = txt;
 	ignore_ws(&p);
-	if ((GetWindowTextLength(hedit) == 0) || (_tcslen(p) == 0))
+	if ((GetWindowTextLength(hedit) == 0) || (p[0] == '\0'))
 		acceptinput = FALSE;
-	while (PeekMessage(&msg, hedit, 0, 0, PM_REMOVE))
-		;
+	while (PeekMessage(&msg, hedit, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 	DestroyWindow(hedit);
 	hedit = NULL;
 	if (acceptinput) {
@@ -1033,7 +1041,7 @@ static void ListboxEndEdit(HWND hwnd, BOOL acceptinput)
 			double value;
 			errno = 0;
 			value = _tcstod(txt, &stopstr);
-			if (_tcslen(stopstr) == 0 && errno == 0)
+			if (stopstr[0] == '\0' && errno == 0)
 				regs.fp[index].fp = _tcstod(txt, &stopstr);
 		}
 		else {
@@ -1140,7 +1148,7 @@ static LRESULT CALLBACK ListboxEditProc(HWND hWnd, UINT message, WPARAM wParam, 
 			ListboxEndEdit(hparent, FALSE);
 			return 0;
 		default:
-			if (!_tcschr(allowed, wParam))
+			if (!_tcschr(allowed, (TCHAR)wParam))
 				return 0;
 			break;
 		}
@@ -1241,7 +1249,7 @@ static void ListboxEdit(HWND hwnd, int x, int y)
 	else if (id == IDC_DBG_FPREG)
 		length = 20;
 	else
-		length = _tcslen(txt + offset);
+		length = uaetcslen(txt + offset);
 	_tcsncpy(tmp, txt, offset);
 	tmp[offset] = '\0';
 	ri.left += GetTextSize(hwnd, tmp, TRUE);
@@ -1370,9 +1378,9 @@ static LRESULT CALLBACK ListboxProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		height = rc.bottom - rc.top;
 		width = rc.right - rc.left;
 		bottom = rc.bottom;
-		itemheight = SendMessage(hWnd, LB_GETITEMHEIGHT, 0, 0);
+		itemheight = (int)SendMessage(hWnd, LB_GETITEMHEIGHT, 0, 0);
 		rc.bottom = itemheight;
-		count = SendMessage(hWnd, LB_GETCOUNT, 0, 0);
+		count = (int)SendMessage(hWnd, LB_GETCOUNT, 0, 0);
 		compdc = CreateCompatibleDC(hdc);
 		compbmp = CreateCompatibleBitmap(hdc, width, height);
 		oldbmp = (HBITMAP)SelectObject(compdc, compbmp);
@@ -1385,7 +1393,7 @@ static LRESULT CALLBACK ListboxProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		dis.itemState = 0;
 		dis.hwndItem = hWnd;
 		dis.hDC = compdc;
-		top = SendMessage(hWnd, LB_GETTOPINDEX, 0, 0);
+		top = (int)SendMessage(hWnd, LB_GETTOPINDEX, 0, 0);
 		for (i = top; i < count && rc.top < height; i++) {
 			dis.itemID = i;
 			dis.rcItem = rc;
@@ -1546,7 +1554,7 @@ static BOOL CALLBACK childenumproc (HWND hwnd, LPARAM lParam)
 	adjust = height_adjust / count;
 	remainder = height_adjust % count;
 	if (randidx < 0) {
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		randidx = rand() % count;
 	}
 	while (id3y[j] >= 0) {
@@ -1768,7 +1776,7 @@ static INT_PTR CALLBACK DebuggerProc (HWND hDlg, UINT message, WPARAM wParam, LP
 			HMONITOR hmon = MonitorFromWindow(hDlg, MONITOR_DEFAULTTONEAREST);
 			if (hmon && GetMonitorInfo(hmon, &mi)) {
 				xoffset = mi.rcWork.left - mi.rcMonitor.left;
-				yoffset = mi.rcWork.top - mi.rcWork.top;
+				yoffset = mi.rcWork.top - mi.rcMonitor.top;
 			}
 			if (GetWindowPlacement (hDlg, &wp)) {
 				r = &wp.rcNormalPosition;
@@ -1925,7 +1933,7 @@ static INT_PTR CALLBACK DebuggerProc (HWND hDlg, UINT message, WPARAM wParam, LP
 			SetBkMode(hdc, TRANSPARENT);
 			if (wParam == IDC_DBG_STATUS) {
 				SetTextColor(hdc, GetSysColor(pstatuscolor[pdis->itemID]));
-				DrawText(hdc, pname[pdis->itemID], _tcslen(pname[pdis->itemID]), &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+				DrawText(hdc, pname[pdis->itemID], uaetcslen(pname[pdis->itemID]), &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 				return TRUE;
 			}
 			else {
@@ -1942,7 +1950,7 @@ static INT_PTR CALLBACK DebuggerProc (HWND hDlg, UINT message, WPARAM wParam, LP
 					FillRect(hdc, &rc, GetSysColorBrush(COLOR_WINDOW));
 					SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
 				}
-				SetTextColor(hdc, pdis->itemData);
+				SetTextColor(hdc, (COLORREF)pdis->itemData);
 				if (wParam == IDC_DBG_DASM || wParam == IDC_DBG_DASM2) {
 					TCHAR addrstr[11] = { '0', 'x', '\0'}, *btemp;
 					int i, j, size = rc.bottom - rc.top;
@@ -1968,7 +1976,7 @@ static INT_PTR CALLBACK DebuggerProc (HWND hDlg, UINT message, WPARAM wParam, LP
 							if (btemp)
 								_tcsncpy(addrstr + 2, btemp + 4, 8);
 							else {
-								int pos = 34 + _tcslen(ucbranch[i]) + 3;
+								int pos = 34 + uaetcslen(ucbranch[i]) + 3;
 								if (text[pos] == '$')	//absolute addressing
 									_tcsncpy(addrstr + 2, text + pos + 1, 8);
 								else if (text[pos] == '(' && _istdigit(text[pos + 2])) { //address register indirect
@@ -2016,10 +2024,10 @@ static INT_PTR CALLBACK DebuggerProc (HWND hDlg, UINT message, WPARAM wParam, LP
 						SetBkColor(hdc, GetSysColor(COLOR_HIGHLIGHT));
 						SetTextColor(hdc, GetSysColor(COLOR_HIGHLIGHTTEXT));
 					}
-					TextOut(hdc, rc.left, rc.top, text, _tcslen(text));
+					TextOut(hdc, rc.left, rc.top, text, uaetcslen(text));
 					i = 0;
 					while (markinstr[i])  {
-						if (!_tcsncmp(text + 34, markinstr[i], _tcslen(markinstr[i]))) {
+						if (!_tcsncmp(text + 34, markinstr[i], uaetcslen(markinstr[i]))) {
 							MoveToEx(hdc, rc.left, rc.bottom - 1, NULL);
 							LineTo(hdc, rc.right, rc.bottom - 1);
 							break;
@@ -2030,12 +2038,12 @@ static INT_PTR CALLBACK DebuggerProc (HWND hDlg, UINT message, WPARAM wParam, LP
 						DrawFocusRect(hdc, &rc);
 				}
 				else if (wParam == IDC_DBG_MEM || wParam == IDC_DBG_MEM2) {
-					TextOut(hdc, rc.left, rc.top, text, _tcslen(text));
+					TextOut(hdc, rc.left, rc.top, text, uaetcslen(text));
 					if ((pdis->itemState) & (ODS_SELECTED))
 						DrawFocusRect(hdc, &rc);
 				}
 				else
-					TextOut(hdc, rc.left, rc.top, text, _tcslen(text));
+					TextOut(hdc, rc.left, rc.top, text, uaetcslen(text));
 				return TRUE;
 			}
 			break;
@@ -2057,12 +2065,22 @@ int open_debug_window(void)
 	dbgaccel = LoadAccelerators(hUIDLL ? hUIDLL : hInst, MAKEINTRESOURCE (IDR_DBGACCEL));
 	nr = getresource(IDD_DEBUGGER);
 	if (nr) {
-		hDbgWnd = CreateDialogIndirect (nr->inst, nr->resource, NULL, DebuggerProc);
-		freescaleresource(nr);
+		typedef DPI_AWARENESS_CONTEXT(CALLBACK *SETTHREADDPIAWARENESSCONTEXT)(DPI_AWARENESS_CONTEXT);
+		SETTHREADDPIAWARENESSCONTEXT pSetThreadDpiAwarenessContext = (SETTHREADDPIAWARENESSCONTEXT)GetProcAddress(userdll, "SetThreadDpiAwarenessContext");
+		DPI_AWARENESS_CONTEXT ac = DPI_AWARENESS_CONTEXT_UNAWARE;
+		if (pSetThreadDpiAwarenessContext) {
+			ac = pSetThreadDpiAwarenessContext(ac);
+		}
+		hDbgWnd = CreateDialogIndirect (nr->inst, nr->sourceresource, NULL, DebuggerProc);
+		if (pSetThreadDpiAwarenessContext) {
+			pSetThreadDpiAwarenessContext(ac);
+		}
 	}
+	freescaleresource(nr);
 	debuggerinitializing = FALSE;
 	if (!hDbgWnd)
 		return 0;
+	rawinput_release();
 	InitPages();
 	ShowPage(0, TRUE);
 	if (!regqueryint (NULL, _T("DebuggerMaximized"), &maximized))
@@ -2077,6 +2095,7 @@ int open_debug_window(void)
 void close_debug_window(void)
 {
 	DestroyWindow(hDbgWnd);
+	rawinput_alloc();
 }
 
 int console_get_gui (TCHAR *out, int maxlen)
@@ -2103,7 +2122,7 @@ int console_get_gui (TCHAR *out, int maxlen)
 				console_out(internalcmd);
 				console_out(_T("\n"));
 				_tcsncpy(out, internalcmd, maxlen);
-				return _tcslen(out);
+				return uaetcslen(out);
 			}
 			else
 				return GetInput(out, maxlen);
@@ -2152,6 +2171,8 @@ void update_debug_info(void)
 	UpdateListboxString(hwnd, 0, out, TRUE);
 	_stprintf(out, _T("ISP: %08X"), regs.isp);
 	UpdateListboxString(hwnd, 1, out, TRUE);
+	_stprintf(out, _T("SR:  %04X"), regs.sr);
+	UpdateListboxString(hwnd, 2, out, TRUE);
 
 	ShowMiscCPU(GetDlgItem(hDbgWnd, IDC_DBG_MISCCPU));
 

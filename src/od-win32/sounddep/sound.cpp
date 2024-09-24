@@ -22,7 +22,7 @@
 #include "threaddep/thread.h"
 #include "avioutput.h"
 #include "gui.h"
-#include "dxwrap.h"
+#include "render.h"
 #include "win32.h"
 #include "savestate.h"
 #include "driveclick.h"
@@ -132,8 +132,8 @@ struct sound_dp
 	int xextrasamples;
 #endif
 
-	double avg_correct;
-	double cnt_correct;
+	float avg_correct;
+	float cnt_correct;
 };
 
 #define SND_STATUSCNT 10
@@ -157,6 +157,7 @@ static int statuscnt;
 uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
 uae_u16 *paula_sndbufpt;
 int paula_sndbufsize;
+int active_sound_stereo;
 
 static uae_sem_t sound_sem, sound_init_sem;
 
@@ -183,7 +184,7 @@ float sound_sync_multiplier = 1.0;
 float scaled_sample_evtime_orig;
 extern float sampler_evtime;
 
-void update_sound (double clk)
+void update_sound (float clk)
 {
 	if (!have_sound)
 		return;
@@ -192,7 +193,7 @@ void update_sound (double clk)
 	sampler_evtime = clk * CYCLE_UNIT * sound_sync_multiplier;
 }
 
-extern int vsynctimebase_orig;
+extern frame_time_t vsynctimebase_orig;
 
 #ifndef AVIOUTPUT
 static int avioutput_audio;
@@ -201,7 +202,7 @@ static int avioutput_audio;
 #define ADJUST_LIMIT 6
 #define ADJUST_LIMIT2 1
 
-void sound_setadjust (double v)
+void sound_setadjust (float v)
 {
 	float mult;
 
@@ -210,23 +211,23 @@ void sound_setadjust (double v)
 	if (v > ADJUST_LIMIT)
 		v = ADJUST_LIMIT;
 
-	mult = (1000.0 + v);
+	mult = (1000.0f + v);
 	if (avioutput_audio && avioutput_enabled && avioutput_nosoundsync)
-		mult = 1000.0;
+		mult = 1000.0f;
 	if (isvsync_chipset () || (avioutput_audio && avioutput_enabled && !currprefs.cachesize)) {
 		vsynctimebase = vsynctimebase_orig;
-		scaled_sample_evtime = scaled_sample_evtime_orig * mult / 1000.0;
+		scaled_sample_evtime = scaled_sample_evtime_orig * mult / 1000.0f;
 	} else if (currprefs.cachesize || currprefs.m68k_speed != 0) {
-		vsynctimebase = (int)(((double)vsynctimebase_orig) * mult / 1000.0);
+		vsynctimebase = (int)(vsynctimebase_orig * mult / 1000.0f);
 		scaled_sample_evtime = scaled_sample_evtime_orig;
 	} else {
-		vsynctimebase = (int)(((double)vsynctimebase_orig) * mult / 1000.0);
+		vsynctimebase = (int)(vsynctimebase_orig * mult / 1000.0f);
 		scaled_sample_evtime = scaled_sample_evtime_orig;
 	}
 }
 
 
-static void docorrection (struct sound_dp *s, int sndbuf, double sync, int granulaty)
+static void docorrection (struct sound_dp *s, int sndbuf, float sync, int granulaty)
 {
 	static int tfprev;
 
@@ -237,11 +238,11 @@ static void docorrection (struct sound_dp *s, int sndbuf, double sync, int granu
 		granulaty = 10;
 
 	if (tfprev != timeframes) {
-		double skipmode, avgskipmode;
-		double avg = s->avg_correct / s->cnt_correct;
+		float skipmode, avgskipmode;
+		float avg = s->avg_correct / s->cnt_correct;
 
-		skipmode = sync / 100.0;
-		avgskipmode = avg / (10000.0 / granulaty);
+		skipmode = sync / 100.0f;
+		avgskipmode = avg / (10000.0f / granulaty);
 
 		if ((0 || sound_debug) && (tfprev % 10) == 0) {
 			write_log (_T("%+05d S=%7.1f AVG=%7.1f (IMM=%7.1f + AVG=%7.1f = %7.1f)\n"), sndbuf, sync, avg, skipmode, avgskipmode, skipmode + avgskipmode);
@@ -259,12 +260,12 @@ static void docorrection (struct sound_dp *s, int sndbuf, double sync, int granu
 }
 
 
-static double sync_sound (double m)
+static float sync_sound (float m)
 {
-	double skipmode;
+	float skipmode;
 	if (isvsync ()) {
 
-		skipmode = pow (m < 0 ? -m : m, EXPVS) / 2;
+		skipmode = (float)pow(m < 0 ? -m : m, EXPVS) / 2.0f;
 		if (m < 0)
 			skipmode = -skipmode;
 		if (skipmode < -ADJUST_VSSIZE)
@@ -274,7 +275,7 @@ static double sync_sound (double m)
 
 	} else if (1) {
 
-		skipmode = pow (m < 0 ? -m : m, EXP) / 2;
+		skipmode = (float)pow(m < 0 ? -m : m, EXP) / 2.0f;
 		if (m < 0)
 			skipmode = -skipmode;
 		if (skipmode < -ADJUST_SIZE)
@@ -496,18 +497,6 @@ static int restore_ds (struct sound_data *sd, DWORD hr)
 	return 1;
 }
 
-static LARGE_INTEGER qpfc, qpf;
-static void storeqpf (void)
-{
-	QueryPerformanceCounter (&qpfc);
-}
-static double getqpf (void)
-{
-	LARGE_INTEGER qpfc2;
-	QueryPerformanceCounter (&qpfc2);
-	return (qpfc2.QuadPart - qpfc.QuadPart) / (qpf.QuadPart / 1000.0);
-}
-
 static void close_audio_ds (struct sound_data *sd)
 {
 	struct sound_dp *s = sd->data;
@@ -532,10 +521,13 @@ void set_volume_sound_device (struct sound_data *sd, int volume, int mute)
 {
 	struct sound_dp *s = sd->data;
 	HRESULT hr;
+	if (!s) {
+		return;
+	}
 	if (sd->devicetype == SOUND_DEVICE_AL) {
-		float vol = 0.0;
-		if (volume < 100 && !mute)
-			vol = (100 - volume) / 100.0;
+		float vol = 0.0f;
+		if (volume < 100.0f && !mute)
+			vol = (100.0f - volume) / 100.0f;
 		alSourcef (s->al_Source, AL_GAIN, vol);
 	} else if (sd->devicetype == SOUND_DEVICE_DS) {
 		LONG vol = DSBVOLUME_MIN;
@@ -571,7 +563,7 @@ void set_volume_sound_device (struct sound_data *sd, int volume, int mute)
 		if (FAILED (hr))
 			write_log (_T("AudioVolume->SetMasterVolume(1.0) failed: %08Xs\n"), hr);
 		if (volume < 100 && !mute) {
-			sd->softvolume = (100 - volume) * 32768 / 100.0;
+			sd->softvolume = (int)((100.0f - volume) * 32768.0f / 100.0f);
 			if (sd->softvolume >= 32768)
 				sd->softvolume = -1;
 		}
@@ -581,10 +573,10 @@ void set_volume_sound_device (struct sound_data *sd, int volume, int mute)
 
 }
 
-void set_volume (int volume, int mute)
+void set_volume(int volume, int mute)
 {
-	set_volume_sound_device (sdp, volume, mute);
-	setvolume_ahi (volume);
+	set_volume_sound_device(sdp, volume, mute);
+	setvolume_ahi(volume);
 	config_changed = 1;
 }
 
@@ -821,7 +813,7 @@ fixfreq:
 				continue;
 			}
 			if (freq != di->defaultSampleRate && err == paInvalidSampleRate && !defaultrate) {
-				freq = di->defaultSampleRate;
+				freq = (int)di->defaultSampleRate;
 				sd->freq = freq;
 				defaultrate = 1;
 				continue;
@@ -1111,6 +1103,8 @@ public:
 			return S_OK;
 		if (flow != eConsole && flow != eMultimedia)
 			return S_OK;
+		if (!s)
+			return S_OK;
 		if (s->devicetype == SOUND_DEVICE_WASAPI_EXCLUSIVE) {
 			write_log(_T("WASAPI EX OnDefaultDeviceChanged '%s'\n"), pwstrDeviceId);
 			return S_OK;
@@ -1139,6 +1133,8 @@ public:
 	}
 	HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState)
 	{
+		if (!s)
+			return S_OK;
 		if (s->devicetype == SOUND_DEVICE_WASAPI_EXCLUSIVE || s->devicetype == SOUND_DEVICE_WASAPI) {
 			;// write_log(_T("WASAPI OnDeviceStateChanged '%s' %08x\n"), pwstrDeviceId, dwNewState);
 		}
@@ -1146,6 +1142,8 @@ public:
 	}
 	HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key)
 	{
+		if (!s)
+			return S_OK;
 		if (s->devicetype == SOUND_DEVICE_WASAPI_EXCLUSIVE || s->devicetype == SOUND_DEVICE_WASAPI) {
 			;// write_log(_T("WASAPI OnPropertyValueChanged '%s'\n"), pwstrDeviceId);
 		}
@@ -1309,6 +1307,11 @@ static int open_audio_wasapi (struct sound_data *sd, int index, int exclusive)
 	AUDCLNT_SHAREMODE sharemode;
 	REFERENCE_TIME phnsMinimumDevicePeriod, hnsDefaultDevicePeriod;
 	int v;
+	int loop;
+	REFERENCE_TIME hnsRequestedDuration;
+	UINT32 DefaultPeriodInFrames = 0, FundamentalPeriodInFrames = 0, MinPeriodInFrames = 0, MaxPeriodInFrames = 0;
+	UINT32  RequestedDuration;
+	UINT32 DefaultDevicePeriod;
 
 retry:
 	sd->devicetype = exclusive ? SOUND_DEVICE_WASAPI_EXCLUSIVE : SOUND_DEVICE_WASAPI;
@@ -1383,13 +1386,17 @@ retry:
 	rncnt = 0;
 	for (;;) {
 
-		if (sd->channels == 6) {
-			rn[0] = KSAUDIO_SPEAKER_5POINT1;
-			rn[1] = KSAUDIO_SPEAKER_5POINT1_SURROUND;
+		if (sd->channels == 8) {
+			rn[0] = KSAUDIO_SPEAKER_7POINT1_SURROUND;
+			rn[1] = KSAUDIO_SPEAKER_7POINT1;
+			rn[2] = 0;
+		} else if (sd->channels == 6) {
+			rn[0] = KSAUDIO_SPEAKER_5POINT1_SURROUND;
+			rn[1] = KSAUDIO_SPEAKER_5POINT1;
 			rn[2] = 0;
 		} else if (sd->channels == 4) {
-			rn[0] = KSAUDIO_SPEAKER_QUAD;
-			rn[1] = KSAUDIO_SPEAKER_QUAD_SURROUND;
+			rn[0] = KSAUDIO_SPEAKER_QUAD_SURROUND;
+			rn[1] = KSAUDIO_SPEAKER_QUAD;
 			rn[2] = KSAUDIO_SPEAKER_SURROUND;
 			rn[3] = 0;
 		} else if (sd->channels == 2) {
@@ -1458,20 +1465,19 @@ retry:
 		sd->freq = pwfx_saved->nSamplesPerSec;
 	}
 
-	UINT32 DefaultDevicePeriod = (UINT32)( // frames =
+	DefaultDevicePeriod = (UINT32)( // frames =
 		1.0 * hnsDefaultDevicePeriod * // hns *
 		wavfmt.Format.nSamplesPerSec / // (frames / s) /
 		1000 / // (ms / s) /
 		10000 // (hns / s) /
 		+ 0.5); // rounding
-	UINT32  RequestedDuration = (UINT32)( // frames =
+	RequestedDuration = (UINT32)( // frames =
 		1.0 * phnsMinimumDevicePeriod * // hns *
 		wavfmt.Format.nSamplesPerSec / // (frames / s) /
 		1000 / // (ms / s) /
 		10000 // (hns / s) /
 		+ 0.5); // rounding
 
-	UINT32 DefaultPeriodInFrames = 0, FundamentalPeriodInFrames = 0, MinPeriodInFrames = 0, MaxPeriodInFrames = 0;
 	if (s->AudioClientVersion >= 3 && sharemode == AUDCLNT_SHAREMODE_SHARED) {
 		UINT32 CurrentPeriodInFrames;
 		WAVEFORMATEX *outwfx;
@@ -1503,7 +1509,7 @@ retry:
 	s->snd_configsize = sd->sndbufsize * sd->samplesize;
 
 	s->bufferFrameCount = sd->sndbufsize;
-	REFERENCE_TIME hnsRequestedDuration = // hns =
+	hnsRequestedDuration = // hns =
 		(REFERENCE_TIME)(
 		10000.0 * // (hns / ms) *
 		1000 * // (ms / s) *
@@ -1519,7 +1525,7 @@ retry:
 		write_log(_T("WASAPI: IsOffloadCapable() returned %d %08x\n"), cap, hr);
 	}
 
-	int loop = 0;
+	loop = 0;
 	for (;;) {
 		loop++;
 
@@ -1954,24 +1960,24 @@ static int open_sound (void)
 	size &= ~63;
 
 	sdp->softvolume = -1;
-	num = enumerate_sound_devices ();
+	num = enumerate_sound_devices();
 	if (currprefs.win32_soundcard >= num)
 		currprefs.win32_soundcard = changed_prefs.win32_soundcard = 0;
 	if (num == 0)
 		return 0;
-	ch = get_audio_nativechannels (currprefs.sound_stereo);
+	ch = get_audio_nativechannels(active_sound_stereo);
 	ret = open_sound_device (sdp, currprefs.win32_soundcard, size, currprefs.sound_freq, ch);
 	if (!ret)
 		return 0;
 	currprefs.sound_freq = changed_prefs.sound_freq = sdp->freq;
 	if (ch != sdp->channels)
-		currprefs.sound_stereo = changed_prefs.sound_stereo = get_audio_stereomode (sdp->channels);
+		active_sound_stereo = get_audio_stereomode (sdp->channels);
 
 	set_volume (currprefs.sound_volume_master, sdp->mute);
-	if (get_audio_amigachannels (currprefs.sound_stereo) == 4)
+	if (get_audio_amigachannels(active_sound_stereo) == 4)
 		sample_handler = sample16ss_handler;
 	else
-		sample_handler = get_audio_ismono (currprefs.sound_stereo) ? sample16_handler : sample16s_handler;
+		sample_handler = get_audio_ismono(active_sound_stereo) ? sample16_handler : sample16s_handler;
 
 	sdp->obtainedfreq = currprefs.sound_freq;
 
@@ -2197,7 +2203,7 @@ static void finish_sound_buffer_al (struct sound_data *sd, uae_u16 *sndbuffer)
 		alcheck (sd, 7);
 		v -= s->al_offset;
 
-		docorrection (s, 100 * v / sd->sndbufsize, v / sd->samplesize, 100);
+		docorrection (s, (int)(100.0f * v / sd->sndbufsize), v / (float)sd->samplesize, 100);
 
 #if 0
 		gui_data.sndbuf = 100 * v / sd->sndbufsize;
@@ -2327,7 +2333,7 @@ static void finish_sound_buffer_wasapi_push(struct sound_data *sd, uae_u16 *sndb
 		oldpadding = numFramesPadding;
 	}
 
-	docorrection (s, (s->wasapigoodsize - avail) * 1000 / s->wasapigoodsize, s->wasapigoodsize - avail, 100);
+	docorrection (s, (s->wasapigoodsize - avail) * 1000 / s->wasapigoodsize, (float)(s->wasapigoodsize - avail), 100);
 
 	hr = s->pRenderClient->GetBuffer (sd->sndbufframes, &pData);
 	wasapi_check_state(sd, hr);
@@ -2556,17 +2562,17 @@ static void finish_sound_buffer_ds (struct sound_data *sd, uae_u16 *sndbuffer)
 	s->lpDSBsecondary->Unlock (b1, s1, b2, s2);
 
 	if (sd == sdp) {
-		double vdiff, m, skipmode;
+		float vdiff, m, skipmode;
 
-		vdiff = (diff - s->snd_writeoffset) / sd->samplesize;
-		m = 100.0 * vdiff / (s->max_sndbufsize / sd->samplesize);
+		vdiff = (diff - s->snd_writeoffset) / (float)sd->samplesize;
+		m = 100.0f * vdiff / (s->max_sndbufsize / sd->samplesize);
 		skipmode = sync_sound (m);
 
 		if (tfprev != timeframes) {
-			gui_data.sndbuf = vdiff * 1000 / (s->snd_maxoffset - s->snd_writeoffset);
+			gui_data.sndbuf = (int)(vdiff * 1000.0f / (s->snd_maxoffset - s->snd_writeoffset));
 			s->avg_correct += vdiff;
 			s->cnt_correct++;
-			double adj = (s->avg_correct / s->cnt_correct) / 50.0;
+			float adj = (s->avg_correct / s->cnt_correct) / 50.0f;
 			if ((0 || sound_debug) && !(tfprev % 10))
 				write_log (_T("%d,%d,%d,%d d%5d vd%5.0f s%+02.1f %.0f %+02.1f\n"),
 				sd->sndbufsize / sd->samplesize, s->snd_configsize / sd->samplesize, s->max_sndbufsize / sd->samplesize,
@@ -2576,7 +2582,7 @@ static void finish_sound_buffer_ds (struct sound_data *sd, uae_u16 *sndbuffer)
 				skipmode = ADJUST_LIMIT2;
 			if (skipmode < -ADJUST_LIMIT2)
 				skipmode = -ADJUST_LIMIT2;
-			sound_setadjust (skipmode + adj);
+			sound_setadjust(skipmode + adj);
 		}
 	}
 
@@ -2669,10 +2675,10 @@ bool audio_is_event_frame_possible(int ms)
 		return false;
 	if (type == SOUND_DEVICE_WASAPI || type == SOUND_DEVICE_WASAPI_EXCLUSIVE || type == SOUND_DEVICE_PA) {
 		struct sound_dp *s = sdp->data;
-		int bufsize = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+		int bufsize = (int)((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer);
 		bufsize /= sdp->samplesize;
 		int todo = s->bufferFrameCount - bufsize;
-		int samplesperframe = sdp->obtainedfreq / vblank_hz;
+		int samplesperframe = (int)(sdp->obtainedfreq / vblank_hz);
 		return samplesperframe >= todo - samplesperframe;
 	}
 	return false;
@@ -2703,7 +2709,7 @@ int audio_pull_buffer(void)
 		struct sound_dp *s = sdp->data;
 		if (s->pullbufferlen > 0) {
 			cnt++;
-			int size = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+			int size = (int)((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer);
 			if (size > sdp->sndbufsize * 2 / 3)
 				cnt++;
 		}
@@ -2778,7 +2784,7 @@ static void handle_reset(void)
 void finish_sound_buffer (void)
 {
 	static unsigned long tframe;
-	int bufsize = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+	int bufsize = (int)((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer);
 
 	if (sdp->reset) {
 		handle_reset();
@@ -2791,9 +2797,9 @@ void finish_sound_buffer (void)
 		return;
 	}
 	if (currprefs.sound_stereo_swap_paula) {
-		if (get_audio_nativechannels (currprefs.sound_stereo) == 2 || get_audio_nativechannels (currprefs.sound_stereo) == 4)
+		if (get_audio_nativechannels(active_sound_stereo) == 2 || get_audio_nativechannels(active_sound_stereo) == 4)
 			channelswap((uae_s16*)paula_sndbuffer, bufsize / 2);
-		else if (get_audio_nativechannels (currprefs.sound_stereo) == 6)
+		else if (get_audio_nativechannels(active_sound_stereo) >= 6)
 			channelswap6((uae_s16*)paula_sndbuffer, bufsize / 2);
 	}
 #ifdef DRIVESOUND
@@ -3116,14 +3122,14 @@ int enumerate_sound_devices (void)
 {
 	if (!num_sound_devices) {
 		HMODULE l = NULL;
-		if (os_vista && (sounddrivermask & SOUNDDRIVER_WASAPI)) {
+		if (sounddrivermask & SOUNDDRIVER_WASAPI) {
 			wasapi_enum(sound_devices);
 		}
-		if ((1 || force_directsound || !os_vista) && (sounddrivermask & SOUNDDRIVER_DS)) {
+		if ((1 || force_directsound) && (sounddrivermask & SOUNDDRIVER_DS)) {
 			write_log(_T("Enumerating DirectSound devices..\n"));
 			DirectSoundEnumerate ((LPDSENUMCALLBACK)DSEnumProc, sound_devices);
+			DirectSoundCaptureEnumerate((LPDSENUMCALLBACK)DSEnumProc, record_devices);
 		}
-		DirectSoundCaptureEnumerate ((LPDSENUMCALLBACK)DSEnumProc, record_devices);
 #if USE_XAUDIO
 		if (sounddrivermask & SOUNDDRIVE_XAUDIO2)
 			xaudioenumerate (sound_devices);
@@ -3235,7 +3241,7 @@ static int setget_master_volume_vista (int setvolume, int *volume, int *mute)
 				float vol;
 				if (SUCCEEDED (endpointVolume->GetMasterVolumeLevelScalar (&vol))) {
 					ok++;
-					*volume = vol * 65535.0;
+					*volume = (int)(vol * 65535.0f);
 				}
 				if (SUCCEEDED (endpointVolume->GetMute (mute))) {
 					ok++;
@@ -3335,19 +3341,13 @@ static int setget_master_volume_xp (int setvolume, int *volume, int *mute)
 
 static int set_master_volume (int volume, int mute)
 {
-	if (os_vista)
-		return setget_master_volume_vista (1, &volume, &mute);
-	else
-		return setget_master_volume_xp (1, &volume, &mute);
+	return setget_master_volume_vista (1, &volume, &mute);
 }
 static int get_master_volume (int *volume, int *mute)
 {
 	*volume = 0;
 	*mute = 0;
-	if (os_vista)
-		return setget_master_volume_vista (0, volume, mute);
-	else
-		return setget_master_volume_xp (0, volume, mute);
+	return setget_master_volume_vista (0, volume, mute);
 }
 
 void sound_mute (int newmute)

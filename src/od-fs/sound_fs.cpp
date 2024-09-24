@@ -98,7 +98,7 @@ void amiga_set_audio_frequency_adjust(double adjust)
     update_sound(g_clk);
 }
 
-void update_sound (double clk)
+void update_sound (float clk)
 {
 	if (!have_sound)
 		return;
@@ -191,6 +191,8 @@ void update_sound (double freq, int longframe, int linetoggle) {
 uae_u16 paula_sndbuffer[44100];
 uae_u16 *paula_sndbufpt;
 int paula_sndbufsize;
+int active_sound_stereo = 1;
+
 
 static void clearbuffer(void)
 {

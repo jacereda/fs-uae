@@ -260,7 +260,6 @@ libuae_a_SOURCES = \
 	src/blkdev_cdimage.cpp \
 	src/bsdsocket.cpp \
 	src/calc.cpp \
-	src/casablanca.cpp \
 	src/cd32_fmv.cpp \
 	src/cd32_fmv_genlock.cpp \
 	src/cdrom.cpp \
@@ -279,12 +278,16 @@ libuae_a_SOURCES = \
 	src/debugmem.cpp \
 	src/def_icons.cpp \
 	src/devices.cpp \
+	src/disasm.cpp \
 	src/disk.cpp \
 	src/diskutil.cpp \
 	src/dlopen.cpp \
 	src/dongle.cpp \
+	src/draco.cpp \
 	src/drawing.cpp \
 	src/driveclick.cpp \
+	src/dsp3210/dsp_glue.cpp \
+	src/dsp3210/DSP3210_emulation.cpp \
 	src/enforcer.cpp \
 	src/ethernet.cpp \
 	src/events.cpp \
@@ -293,6 +296,7 @@ libuae_a_SOURCES = \
 	src/fdi2raw.cpp \
 	src/filesys.cpp \
 	src/flashrom.cpp \
+	src/floppybridge/floppybridge_lib.cpp \
 	src/fpp.cpp \
 	src/fpp_native.cpp \
 	src/fpp_softfloat.cpp \
@@ -546,6 +550,7 @@ libuae_a_SOURCES = \
 	src/od-fs/threading.cpp \
 	src/od-fs/uae_host.cpp \
 	src/od-fs/uaemisc.cpp \
+	src/od-fs/unicode.cpp \
 	src/od-fs/videograb_fs.cpp \
 	src/od-fs/vpar.cpp \
 	src/od-fs/vpar.h \
@@ -569,6 +574,7 @@ libuae_a_SOURCES = \
 	src/od-win32/win32.h \
 	src/od-win32/win32gfx.h \
 	src/od-win32/win32_uaenet.cpp \
+	src/od-win32/winuae_msvc15/keyboard_at_draco.cpp \
 	src/patch.cpp \
 	src/pcem/codegen.h \
 	src/pcem/codegen_x86-64.h \
@@ -617,7 +623,6 @@ libuae_a_SOURCES = \
 	src/qemuvga/vga.h \
 	src/qemuvga/vga_int.h \
 	src/qemuvga/vga_template.h \
-	src/random.cpp \
 	src/readcpu.cpp \
 	src/rommgr.cpp \
 	src/rtc.cpp \
@@ -644,6 +649,7 @@ libuae_a_SOURCES = \
 	src/support/socket.cpp \
 	src/support/time.cpp \
 	src/test_card.cpp \
+	src/tinyxml2.cpp \
 	src/traps.cpp \
 	src/uaeexe.cpp \
 	src/uaelib.cpp \
@@ -654,6 +660,9 @@ libuae_a_SOURCES = \
 	src/x86.cpp \
 	src/zfile.cpp \
 	src/zfile_archive.cpp
+
+#	src/random.cpp
+
 nodist_libuae_a_SOURCES = \
 	gen/blit.h \
 	gen/blitfunc.cpp \
@@ -1159,6 +1168,7 @@ noinst_LIBRARIES += libpcem.a
 fs_uae_LDADD += libpcem.a
 libpcem_a_SOURCES = \
 src/pcem/386_common.h \
+src/pcem/386_common.cpp \
 src/pcem/386.cpp \
 src/pcem/386_dynarec.cpp \
 src/pcem/386.h \
@@ -1200,7 +1210,7 @@ src/pcem/nvr_tc8521.h \
 src/pcem/paths.h \
 src/pcem/pcemglue.cpp \
 src/pcem/pcemglue.h \
-src/pcem/pcemnvr.cpp \
+src/pcem/nvr.cpp \
 src/pcem/pcemrtc.cpp \
 src/pcem/pci.h \
 src/pcem/pic.cpp \
@@ -1236,6 +1246,30 @@ src/pcem/t3100e.h \
 src/pcem/timer.cpp \
 src/pcem/timer.h \
 src/pcem/video.h \
+src/pcem/vid_bt482_ramdac.cpp \
+src/pcem/vid_cl5429.cpp \
+src/pcem/vid_et4000.cpp \
+src/pcem/vid_et4000w32.cpp \
+src/pcem/vid_inmos.cpp \
+src/pcem/vid_ncr.cpp \
+src/pcem/vid_s3.cpp \
+src/pcem/vid_sc1502x_ramdac.cpp \
+src/pcem/vid_sdac_ramdac.cpp \
+src/pcem/vid_svga.cpp \
+src/pcem/vid_permedia2.cpp \
+src/pcem/vid_voodoo.cpp \
+src/pcem/vid_voodoo_banshee.cpp \
+src/pcem/vid_voodoo_banshee_blitter.cpp \
+src/pcem/vid_voodoo_blitter.cpp \
+src/pcem/vid_voodoo_display.cpp \
+src/pcem/vid_voodoo_fb.cpp \
+src/pcem/vid_voodoo_fifo.cpp \
+src/pcem/vid_voodoo_reg.cpp \
+src/pcem/vid_voodoo_render.cpp \
+src/pcem/vid_voodoo_setup.cpp \
+src/pcem/vid_voodoo_texture.cpp \
+src/pcem/vid_s3_virge.cpp \
+src/pcem/vid_svga_render.cpp \
 src/pcem/x86_flags.h \
 src/pcem/x86.h \
 src/pcem/x86_ops_arith.h \
@@ -1276,6 +1310,7 @@ src/pcem/x86_ops_string.h \
 src/pcem/x86_ops_xchg.h \
 src/pcem/x86seg.cpp \
 src/pcem/x87.cpp \
+src/pcem/x87_timings.cpp \
 src/pcem/x87.h \
 src/pcem/x87_ops_arith.h \
 src/pcem/x87_ops.h \

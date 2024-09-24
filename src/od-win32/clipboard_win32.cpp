@@ -48,9 +48,8 @@ static char *clipboard_to_host_text;
 
 #endif // FSUAE
 
-#define DEBUG_CLIP 0
-
 int clipboard_debug;
+int clipboard_log;
 
 static HWND chwnd;
 static HDC hdc;
@@ -107,9 +106,9 @@ static uae_u32 to_amiga_start_cb(TrapContext *ctx, void *ud)
 	if (clipboard_debug) {
 		debugwrite(ctx, _T("clipboard_p2a"), clipboard_data, to_amiga_size);
 	}
-#if DEBUG_CLIP > 0
-	write_log(_T("clipboard: to_amiga %08x %d\n"), clipboard_data, to_amiga_size);
-#endif
+	if (clipboard_log) {
+		write_log(_T("clipboard: to_amiga %08x %d\n"), clipboard_data, to_amiga_size);
+	}
 	trap_put_long(ctx, clipboard_data, to_amiga_size);
 	uae_Signal(trap_get_long(ctx, clipboard_data + 8), 1 << 13);
 	to_amiga_phase = 2;
@@ -136,8 +135,8 @@ static uae_char *pctoamiga (const uae_char *txt)
 	uae_char *txt2;
 	int i, j;
 
-	len = strlen (txt) + 1;
-	txt2 = xmalloc (uae_char, len);
+	len = uaestrlen(txt) + 1;
+	txt2 = xmalloc(uae_char, len);
 	j = 0;
 	for (i = 0; i < len; i++) {
 		uae_char c = txt[i];
@@ -169,10 +168,15 @@ static void to_keyboard(const TCHAR *pctxt)
 
 static TCHAR *amigatopc (const char *txt)
 {
-	int pc = 0;
-	int cnt = 0;
-	size_t len = strlen (txt) + 1;
-	for (int i = 0; i < len; i++) {
+	int i, j, cnt;
+	int len, pc;
+	char *txt2;
+	TCHAR *s;
+
+	pc = 0;
+	cnt = 0;
+	len = uaestrlen(txt) + 1;
+	for (i = 0; i < len; i++) {
 		uae_char c = txt[i];
 		if (c == 13)
 			pc = 1;
@@ -181,9 +185,9 @@ static TCHAR *amigatopc (const char *txt)
 	}
 	if (pc)
 		return my_strdup_ansi (txt);
-	char *txt2 = xcalloc (char, len + cnt);
-	int j = 0;
-	for (int i = 0; i < len; i++) {
+	txt2 = xcalloc (char, len + cnt);
+	j = 0;
+	for (i = 0; i < len; i++) {
 		uae_char c = txt[i];
 		if (c == 0 && i + 1 < len)
 			continue;
@@ -200,7 +204,7 @@ static TCHAR *amigatopc (const char *txt)
 		}
 		txt2[j++] = c;
 	}
-	TCHAR *s = my_strdup_ansi (txt2);
+	s = my_strdup_ansi (txt2);
 	xfree (txt2);
 	return s;
 }
@@ -215,7 +219,7 @@ static void to_iff_text(TrapContext *ctx, const TCHAR *pctxt)
 
 	s = ua (pctxt);
 	txt = pctoamiga (s);
-	txtlen = strlen (txt);
+	txtlen = uaestrlen(txt);
 	xfree (to_amiga);
 	size = txtlen + sizeof b + (txtlen & 1) - 8;
 	b[4] = size >> 24;
@@ -317,9 +321,9 @@ static void to_iff_ilbm(TrapContext *ctx, HBITMAP hbmp)
 		xfree (bmp.bmBits);
 		return;
 	}
-#if DEBUG_CLIP > 0
-	write_log (_T("BMP2IFF: W=%d H=%d bpp=%d\n"), w, h, bpp);
-#endif
+	if (clipboard_log) {
+		write_log (_T("BMP2IFF: W=%d H=%d bpp=%d\n"), w, h, bpp);
+	}
 	iffbpp = bpp > 8 ? 24 : bpp;
 	cnt = 0;
 	for (y = 0; y < h && cnt < 256; y++) {
@@ -343,9 +347,9 @@ static void to_iff_ilbm(TrapContext *ctx, HBITMAP hbmp)
 			i >>= 1;
 			iffbpp++;
 		}
-#if DEBUG_CLIP > 0
-		write_log (_T("BMP2IFF: Colors=%d BPP=%d\n"), cnt, iffbpp);
-#endif
+		if (clipboard_log) {
+			write_log (_T("BMP2IFF: Colors=%d BPP=%d\n"), cnt, iffbpp);
+		}
 	}
 
 	bodysize = (((w + 15) & ~15) / 8) * h * iffbpp;
@@ -422,7 +426,7 @@ static void to_iff_ilbm(TrapContext *ctx, HBITMAP hbmp)
 		for (y = 0; y < h; y++) {
 			uae_u8 *s = (uae_u8*)(((uae_u8*)bmp.bmBits) + y * bmpw);
 			int b;
-			for (b = 0; b < 8; b++) {
+			for (b = 0; b < iffbpp; b++) {
 				int mask2 = 1 << b;
 				for (x = 0; x < w; x++) {
 					int off = x / 8;
@@ -454,7 +458,7 @@ static void to_iff_ilbm(TrapContext *ctx, HBITMAP hbmp)
 		}
 	}
 
-	tsize = p - iff - 8;
+	tsize = addrdiff(p, iff) - 8;
 	p = iff + 4;
 	p[0] = tsize >> 24;
 	p[1] = tsize >> 16;
@@ -590,9 +594,9 @@ static void from_iff_ilbm(uae_u8 *saddr, uae_u32 len)
 			uae_u8 *caddr = NULL, *dptr;
 			body = 1;
 
-#if DEBUG_CLIP > 0
-			write_log (_T("W=%d H=%d planes=%d mask=%d comp=%d CAMG=%08x\n"), w, h, planes, masking, compr, camg);
-#endif
+			if (clipboard_log) {
+				write_log (_T("W=%d H=%d planes=%d mask=%d comp=%d CAMG=%08x\n"), w, h, planes, masking, compr, camg);
+			}
 
 			ham = 0; ehb = 0;
 			if ((camg & 0x0800) && planes > 4)
@@ -608,8 +612,10 @@ static void from_iff_ilbm(uae_u8 *saddr, uae_u32 len)
 			bmpw = (w * (bmpdepth / 8) + 3) & ~3;
 
 			bmsize = sizeof (BITMAPINFO);
-			if (bmpdepth <= 8)
-				bmsize += (1 << planes) * sizeof (RGBQUAD);
+			if (bmpdepth <= 8) {
+				int psize = (1 << planes);
+				bmsize += psize * sizeof (RGBQUAD);
+			}
 			bmih = (BITMAPINFO*)xcalloc (uae_u8, bmsize);
 			bmih->bmiHeader.biSize = sizeof (bmih->bmiHeader);
 			bmih->bmiHeader.biWidth = w;
@@ -793,15 +799,15 @@ static void clipboard_read(TrapContext *ctx, HWND hwnd, bool keyboardinject)
 	if (clip_disabled || !hwnd)
 		return;
 	if (to_amiga) {
-#if DEBUG_CLIP > 0
-		write_log (_T("clipboard: read windows clipboard but ignored because previous clip transfer still active\n"));
-#endif
+		if (clipboard_log) {
+			write_log (_T("clipboard: read windows clipboard but ignored because previous clip transfer still active\n"));
+		}
 		return;
 	}
 	clipboard_change = 0;
-#if DEBUG_CLIP > 0
-	write_log (_T("clipboard: read windows clipboard\n"));
-#endif
+	if (clipboard_log) {
+		write_log (_T("clipboard: read windows clipboard\n"));
+	}
 	if (!filesys_heartbeat())
 		return;
 #ifdef FSUAE
@@ -842,9 +848,9 @@ static void clipboard_read(TrapContext *ctx, HWND hwnd, bool keyboardinject)
 			TCHAR *lptstr = (TCHAR*)GlobalLock (hglb); 
 #endif
 			if (lptstr != NULL) {
-#if DEBUG_CLIP > 0
-				write_log (_T("clipboard: CF_UNICODETEXT '%s'\n"), lptstr);
-#endif
+				if (clipboard_log) {
+					write_log (_T("clipboard: CF_UNICODETEXT '%s'\n"), lptstr);
+				}
 				if (keyboardinject) {
 					to_keyboard(lptstr);
 				} else {
@@ -863,9 +869,9 @@ static void clipboard_read(TrapContext *ctx, HWND hwnd, bool keyboardinject)
 #else
 		HBITMAP hbmp = (HBITMAP)GetClipboardData (CF_BITMAP);
 		if (hbmp != NULL) {
-#if DEBUG_CLIP > 0
-			write_log (_T("clipboard: CF_BITMAP\n"));
-#endif
+			if (clipboard_log) {
+				write_log (_T("clipboard: CF_BITMAP\n"));
+			}
 			to_iff_ilbm(ctx, hbmp);
 		}
 #endif
@@ -893,9 +899,9 @@ static void clipboard_free_delayed (void)
 
 void clipboard_changed (HWND hwnd)
 {
-#if DEBUG_CLIP > 0
-	write_log (_T("clipboard: windows clipboard changed message\n"));
-#endif
+	if (clipboard_log) {
+		write_log (_T("clipboard: windows clipboard changed message\n"));
+	}
 	if (!initialized)
 		return;
 	if (!clipboard_data)
@@ -923,9 +929,9 @@ static int clipboard_put_bmp_real (HBITMAP hbmp)
 	ret = TRUE;
 	CloseClipboard ();
 	clipopen--;
-#if DEBUG_CLIP > 0
-	write_log (_T("clipboard: BMP written to windows clipboard\n"));
-#endif
+	if (clipboard_log) {
+		write_log (_T("clipboard: BMP written to windows clipboard\n"));
+	}
 	return ret;
 }
 #endif
@@ -959,9 +965,9 @@ static int clipboard_put_text_real (const TCHAR *txt)
 	}
 	CloseClipboard ();
 	clipopen--;
-#if DEBUG_CLIP > 0
-	write_log (_T("clipboard: text written to windows clipboard\n"));
-#endif
+	if (clipboard_log) {
+		write_log (_T("clipboard: text written to windows clipboard\n"));
+	}
 	return ret;
 #endif
 }
@@ -1026,9 +1032,9 @@ void amiga_clipboard_got_data(TrapContext *ctx, uaecptr data, uae_u32 size, uae_
 		write_log (_T("clipboard: got_data() before initialized!?\n"));
 		return;
 	}
-#if DEBUG_CLIP > 0
-	write_log (_T("clipboard: <-amiga, %08x, %08x %d %d\n"), clipboard_data, data, size, actual);
-#endif
+	if (clipboard_log) {
+		write_log (_T("clipboard: <-amiga, %08x, %08x %d %d\n"), clipboard_data, data, size, actual);
+	}
 	from_iff(ctx, data, actual);
 }
 
@@ -1043,21 +1049,25 @@ int amiga_clipboard_want_data(TrapContext *ctx)
 	size = trap_get_long(ctx, clipboard_data);
 	if (!initialized) {
 		write_log (_T("clipboard: want_data() before initialized!? (%08x %08x %d)\n"), clipboard_data, addr, size);
+		xfree(to_amiga);
 		to_amiga = NULL;
+		to_amiga_size = 0;
 		return 0;
 	}
 	if (size != to_amiga_size) {
 		write_log (_T("clipboard: size %d <> %d mismatch!?\n"), size, to_amiga_size);
+		xfree(to_amiga);
 		to_amiga = NULL;
+		to_amiga_size = 0;
 		return 0;
 	}
 	if (addr && size) {
 		trap_put_bytes(ctx, to_amiga, addr, size);
 	}
-	xfree (to_amiga);
-#if DEBUG_CLIP > 0
-	write_log (_T("clipboard: ->amiga, %08x, %08x %d (%d) bytes\n"), clipboard_data, addr, size, to_amiga_size);
-#endif
+	if (clipboard_log) {
+		write_log (_T("clipboard: ->amiga, %08x, %08x %d (%d) bytes\n"), clipboard_data, addr, size, to_amiga_size);
+	}
+	xfree(to_amiga);
 	to_amiga = NULL;
 	to_amiga_size = 0;
 	return 1;
@@ -1091,9 +1101,9 @@ static uae_u32 clipboard_vsync_cb(TrapContext *ctx, void *ud)
 	uaecptr task = trap_get_long(ctx, clipboard_data + 8);
 	if (task && native2amiga_isfree()) {
 		uae_Signal(task, 1 << 13);
-#if DEBUG_CLIP > 0
-		write_log(_T("clipboard: signal %08x\n"), clipboard_data);
-#endif
+		if (clipboard_log) {
+			write_log(_T("clipboard: signal %08x\n"), clipboard_data);
+		}
 	}
 	return 0;
 }
@@ -1116,7 +1126,6 @@ void clipboard_vsync(void)
 
 	if (vdelay2 > 0) {
 		vdelay2--;
-		//write_log(_T("vdelay2 = %d\n"), vdelay2);
 	}
 
 	if (to_amiga_phase == 1 && vdelay2 <= 0) {
@@ -1136,7 +1145,9 @@ void clipboard_vsync(void)
 
 void clipboard_reset(void)
 {
-	write_log (_T("clipboard: reset (%08x)\n"), clipboard_data);
+	if (clipboard_log) {
+		write_log(_T("clipboard: reset (%08x)\n"), clipboard_data);
+	}
 	clipboard_unsafeperiod();
 	clipboard_free_delayed ();
 	clipboard_data = 0;

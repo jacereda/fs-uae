@@ -804,6 +804,8 @@ REQ_FEATURE([FSEMU], [fsemu], [fsemu],
             [new FSEMU backend (experimental)])
 OPT_FEATURE([GFXBOARD], [gfxboard], [gfxboard],
             [GFX hardware boards])
+OPT_FEATURE([FLOPPYBRIDGE], [floppybridge], [floppybridge],
+            [real floppy disk support])
 
 AC_ARG_ENABLE([jit], [AS_HELP_STRING([--disable-jit], [JIT compiler])])
 AS_IF([test "x$enable_jit" != xno], [

@@ -29,6 +29,7 @@
 #define WIN32_NATMEM_TEST 0
 
 uae_u32 max_z3fastmem;
+uae_u32 max_physmem;
 
 /* BARRIER is used in case Amiga memory is access across memory banks,
  * for example move.l $1fffffff,d0 when $10000000-$1fffffff is mapped and
@@ -175,15 +176,10 @@ bool preinit_shm (void)
 #else
 	max_allowed_mman = 512 + 256;
 #endif
-#if 1
 	if (os_64bit) {
-//#ifdef WIN64
-//		max_allowed_mman = 3072;
-//#else
-		max_allowed_mman = 2048;
-//#endif
+		// Higher than 2G to support G-REX PCI VRAM
+		max_allowed_mman = 2560;
 	}
-#endif
 	if (maxmem > max_allowed_mman)
 		max_allowed_mman = maxmem;
 
@@ -244,12 +240,12 @@ bool preinit_shm (void)
 				max_allowed_mman = 256;
 		}
 	} else if (maxmem > 0) {
-		size64 = maxmem * 1024 * 1024;
+		size64 = (uae_u64)maxmem * 1024 * 1024;
 	}
 	if (size64 < 8 * 1024 * 1024)
 		size64 = 8 * 1024 * 1024;
-	if (max_allowed_mman * 1024 * 1024 > size64)
-		max_allowed_mman = size64 / (1024 * 1024);
+	if ((uae_u64)max_allowed_mman * 1024 * 1024 > size64)
+		max_allowed_mman = (uae_u32)(size64 / (1024 * 1024));
 
 	uae_u32 natmem_size = (max_allowed_mman + 1) * 1024 * 1024;
 	if (natmem_size < 17 * 1024 * 1024)
@@ -259,8 +255,8 @@ bool preinit_shm (void)
 	natmem_size = WIN32_NATMEM_TEST * 1024 * 1024;
 #endif
 
-	if (natmem_size > 0x80000000) {
-		natmem_size = 0x80000000;
+	if (natmem_size > 0xc0000000) {
+		natmem_size = 0xc0000000;
 	}
 
 	write_log (_T("MMAN: Total physical RAM %llu MB, all RAM %llu MB\n"),
@@ -296,18 +292,6 @@ bool preinit_shm (void)
 	}
 	if (!natmem_reserved) {
 		DWORD vaflags = MEM_RESERVE | MEM_WRITE_WATCH;
-#ifdef _WIN32
-#ifdef FSUAE
-		OSVERSIONINFO osVersion;
-		osVersion.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-		bool os_vista = (osVersion.dwMajorVersion == 6 &&
-						 osVersion.dwMinorVersion == 0);
-#endif
-#ifndef _WIN64
-		if (!os_vista)
-			vaflags |= MEM_TOP_DOWN;
-#endif
-#endif
 		for (;;) {
 #ifdef FSUAE
 			natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
@@ -341,6 +325,7 @@ bool preinit_shm (void)
 	} else {
 		max_z3fastmem = natmem_size;
 	}
+	max_physmem = natmem_size;
 	write_log (_T("MMAN: Reserved %p-%p (0x%08x %dM)\n"),
 			   natmem_reserved, (uae_u8 *) natmem_reserved + natmem_reserved_size,
 			   natmem_reserved_size, natmem_reserved_size / (1024 * 1024));
@@ -425,7 +410,7 @@ static int doinit_shm (void)
 
 	if (p->cpu_model >= 68020)
 		totalsize = 0x10000000;
-	totalsize += (p->z3chipmem_size + align) & ~align;
+	totalsize += (p->z3chipmem.size + align) & ~align;
 	totalsize_z3 = totalsize;
 
 	start_rtg = 0;
@@ -439,7 +424,7 @@ static int doinit_shm (void)
 	}
 #endif
 	// 1G Z3chip?
-	if ((Z3BASE_UAE + p->z3chipmem_size > Z3BASE_REAL) ||
+	if ((Z3BASE_UAE + p->z3chipmem.size > Z3BASE_REAL) ||
 		// real wrapped around
 		(expamem_z3_highram_real == 0xffffffff) ||
 		// Real highram > 0x80000000 && UAE highram <= 0x80000000 && Automatic
@@ -687,7 +672,7 @@ bool init_shm (void)
 		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
 			changed = true;
 	}
-	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem_size)
+	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem.size)
 		return true;
 
 	for (int i = 0; i < MAX_RAM_BOARDS;i++) {
@@ -698,7 +683,7 @@ bool init_shm (void)
 		ortgmem_size[i] = changed_prefs.rtgboards[i].rtgmem_size;
 		ortgmem_type[i] = changed_prefs.rtgboards[i].rtgmem_type;
 	}
-	oz3chipmem_size = changed_prefs.z3chipmem_size;
+	oz3chipmem_size = changed_prefs.z3chipmem.size;
 
 	if (doinit_shm () < 0)
 		return false;
@@ -714,7 +699,7 @@ void free_shm (void)
 {
 	resetmem (true);
 	clear_shm ();
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		ortgmem_type[i] = -1;
 	}
 }
@@ -817,8 +802,12 @@ bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 	if (!_tcscmp(ab->label, _T("*"))) {
 		start = ab->start;
 		got = true;
-		if (expansion_get_autoconfig_by_address(&currprefs, ab->start) && !expansion_get_autoconfig_by_address(&currprefs, ab->start + size))
-			barrier = true;
+		if (expansion_get_autoconfig_by_address(&currprefs, ab->start, 0)) {
+			struct autoconfig_info *aci = expansion_get_autoconfig_by_address(&currprefs, ab->start + size, 0);
+			if (!aci || aci->indirect) {
+				barrier = true;
+			}
+		}
 	} else if (!_tcscmp(ab->label, _T("*B"))) {
 		start = ab->start;
 		got = true;
@@ -826,9 +815,9 @@ bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 	} else if (!_tcscmp(ab->label, _T("chip"))) {
 		start = 0;
 		got = true;
-		if (!expansion_get_autoconfig_by_address(&currprefs, 0x00200000) && currprefs.chipmem_size == 2 * 1024 * 1024)
+		if (!expansion_get_autoconfig_by_address(&currprefs, 0x00200000, 0) && currprefs.chipmem.size == 2 * 1024 * 1024)
 			barrier = true;
-		if (currprefs.chipmem_size != 2 * 1024 * 1024)
+		if (currprefs.chipmem.size != 2 * 1024 * 1024)
 			barrier = true;
 	} else if (!_tcscmp(ab->label, _T("kick"))) {
 		start = 0xf80000;
@@ -901,7 +890,7 @@ bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 	} else if (!_tcscmp(ab->label, _T("bogo"))) {
 		start = 0x00C00000;
 		got = true;
-		if (currprefs.bogomem_size <= 0x100000)
+		if (currprefs.bogomem.size <= 0x100000)
 			barrier = true;
 	} else if (!_tcscmp(ab->label, _T("custmem1"))) {
 		start = currprefs.custom_memory_addrs[0];
@@ -1059,7 +1048,15 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 	return result;
 }
 
-void unprotect_maprom (void)
+// remove possible barrier at the start of this memory region
+// void uae_mman_unmap(addrbank *ab, struct uae_mman_data *md)
+// {
+// 	if (canbang && (ab->flags & ABFLAG_ALLOCINDIRECT)) {
+// 		virtualfreewithlock(ab->start + natmem_offset, ab->reserved_size, MEM_DECOMMIT);
+// 	}
+// }
+
+void unprotect_maprom(void)
 {
 	bool protect = false;
 	for (int i = 0; i < MAX_SHMID; i++) {
@@ -1080,7 +1077,7 @@ void unprotect_maprom (void)
 	}
 }
 
-void protect_roms (bool protect)
+void protect_roms(bool protect)
 {
 	if (protect) {
 		// protect only if JIT enabled, always allow unprotect
@@ -1104,6 +1101,56 @@ void protect_roms (bool protect)
 			write_log(_T("ROM VP %08lX - %08lX %x (%dk) %s\n"),
 				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->rosize,
 				shm->rosize, shm->rosize >> 10, protect ? _T("WPROT") : _T("UNPROT"));
+		}
+	}
+}
+
+// Mark indirect regions (indirect VRAM) as non-accessible when JIT direct is active.
+// Beginning of region might have barrier region which is not marked as non-accessible,
+// allowing JIT direct to think it is directly accessible VRAM.
+void mman_set_barriers(bool disable)
+{
+	addrbank *abprev = NULL;
+	int maxbank = currprefs.address_space_24 ? MEMORY_BANKS_24 : MEMORY_BANKS;
+	for (int i = 0; i < maxbank; i++) {
+		uaecptr addr = i * 0x10000;
+		addrbank *ab = &get_mem_bank(addr);
+		if (ab == abprev) {
+			continue;
+		}
+		int size = 0x10000;
+		for (int j = i + 1; j < maxbank; j++) {
+			uaecptr addr2 = j * 0x10000;
+			addrbank *ab2 = &get_mem_bank(addr2);
+			if (ab2 != ab) {
+				break;
+			}
+			size += 0x10000;
+		}
+		abprev = ab;
+		if (ab && ab->baseaddr == NULL && (ab->flags & ABFLAG_ALLOCINDIRECT)) {
+			DWORD old;
+			if (disable || !currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
+				if (!ab->protectmode) {
+					ab->protectmode = PAGE_READWRITE;
+				}
+				if (!VirtualProtect(addr + natmem_offset, size, ab->protectmode, &old)) {
+					size = 0x1000;
+					VirtualProtect(addr + natmem_offset, size, ab->protectmode, &old);
+				}
+				write_log("%08x-%08x = access restored (%08x)\n", addr, size, ab->protectmode);
+			} else {
+				if (VirtualProtect(addr + natmem_offset, size, PAGE_NOACCESS, &old)) {
+					ab->protectmode = old;
+					write_log("%08x-%08x = set to no access\n", addr, addr + size);
+				} else {
+					size = 0x1000;
+					if (VirtualProtect(addr + natmem_offset, size, PAGE_NOACCESS, &old)) {
+						ab->protectmode = old;
+						write_log("%08x-%08x = set to no access\n", addr, addr + size);
+					}
+				}
+			}
 		}
 	}
 }

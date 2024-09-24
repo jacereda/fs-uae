@@ -1327,9 +1327,11 @@ static void configure_logging(const char *logstr)
     if (uae_all || strstr(logstr, "uae_disk")) {
         disk_debug_logging = 2;
     }
+#if 0
     if (uae_all || strstr(logstr, "uae_rand")) {
         g_random_debug_logging = 2;
     }
+#endif
     if (uae_all || strstr(logstr, "uae_input")) {
         inputdevice_logging = 0xffff;
     }

@@ -21,7 +21,7 @@ static HKEY gr (UAEREG *root)
 		return hWinUAEKey;
 	return root->fkey;
 }
-static TCHAR *gs (UAEREG *root)
+static const TCHAR *gs (UAEREG *root)
 {
 	if (!root)
 		return ROOT_TREE;
@@ -29,7 +29,8 @@ static TCHAR *gs (UAEREG *root)
 }
 static TCHAR *gsn (UAEREG *root, const TCHAR *name)
 {
-	TCHAR *r, *s;
+	const TCHAR *r;
+	TCHAR *s;
 	if (!root)
 		return my_strdup (name);
 	r = gs (root);
@@ -47,7 +48,7 @@ int regsetstr (UAEREG *root, const TCHAR *name, const TCHAR *str)
 		HKEY rk = gr (root);
 		if (!rk)
 			return 0;
-		return RegSetValueEx (rk, name, 0, REG_SZ, (CONST BYTE *)str, (_tcslen (str) + 1) * sizeof (TCHAR)) == ERROR_SUCCESS;
+		return RegSetValueEx (rk, name, 0, REG_SZ, (CONST BYTE *)str, (uaetcslen(str) + 1) * sizeof (TCHAR)) == ERROR_SUCCESS;
 	}
 }
 
@@ -137,7 +138,7 @@ int regquerystr (UAEREG *root, const TCHAR *name, TCHAR *str, int *size)
 			if (_tcslen(tmp) >= *size)
 				tmp[(*size) - 1] = 0;
 			_tcscpy (str, tmp);
-			*size = _tcslen(str);
+			*size = uaetcslen(str);
 			ret = 1;
 		}
 		xfree (tmp);
@@ -194,7 +195,7 @@ int regquerydatasize (UAEREG *root, const TCHAR *name, int *size)
 		int csize = 65536;
 		TCHAR *tmp = xmalloc (TCHAR, csize);
 		if (regquerystr (root, name, tmp, &csize)) {
-			*size = _tcslen (tmp) / 2;
+			*size = uaetcslen (tmp) / 2;
 			ret = 1;
 		}
 		xfree (tmp);
@@ -379,10 +380,13 @@ UAEREG *regcreatetree (UAEREG *root, const TCHAR *name)
 
 void regclosetree (UAEREG *key)
 {
+	if (inimode) {
+		if (inidata->modified) {
+			ini_save(inidata, inipath);
+		}
+	}
 	if (!key)
 		return;
-	if (inimode)
-		ini_save(inidata, inipath);
 	if (key->fkey)
 		RegCloseKey (key->fkey);
 	xfree (key->inipath);

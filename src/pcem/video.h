@@ -1,42 +1,35 @@
-#ifdef FSUAE
-#ifdef _WIN32
-// Avoid conflict with windows BITMAP definition
-#include <Windows.h>
-#define BITMAP PCEM_BITMAP
-#endif
-#endif // NL
 
 typedef struct
 {
         int w, h;
         uint8_t *dat;
         uint8_t *line[0];
-} BITMAP;
+} PCBITMAP;
 
-extern BITMAP *screen;
+extern PCBITMAP *screen;
 
-BITMAP *create_bitmap(int w, int h);
+PCBITMAP *create_bitmap(int w, int h);
 
 #ifndef PCEMGLUE
 
 typedef struct
 {
         uint8_t r, g, b;
-} RGB;
+} PCRGB;
         
-typedef RGB PALETTE[256];
+typedef PCRGB PALETTE[256];
 
 #endif
 
 #define makecol(r, g, b)    ((b) | ((g) << 8) | ((r) << 16))
 #define makecol32(r, g, b)  ((b) | ((g) << 8) | ((r) << 16))
 
-extern BITMAP *buffer32;
+extern PCBITMAP *buffer32;
 
 int video_card_available(int card);
 char *video_card_getname(int card);
-struct device_t *video_card_getdevice(int card);
-int video_card_has_config(int card);
+struct device_t *video_card_getdevice(int card, int romset);
+int video_card_has_config(int card, int romset);
 int video_card_getid(char *s);
 int video_old_to_new(int card);
 int video_new_to_old(int card);
@@ -94,7 +87,21 @@ extern int vid_resize;
 
 void video_wait_for_blit();
 void video_wait_for_buffer();
-void loadfont(char *s, int format);
+
+typedef enum
+{
+	FONT_MDA,	/* MDA 8x14 */
+	FONT_PC200,	/* MDA 8x14 and CGA 8x8, four fonts */
+	FONT_CGA,	/* CGA 8x8, two fonts */
+	FONT_WY700,	/* Wy700 16x16, two fonts */
+	FONT_MDSI,	/* MDSI Genius 8x12 */
+	FONT_T3100E,	/* Toshiba T3100e, four fonts */
+	FONT_KSC5601,	/* Korean KSC-5601 */
+	FONT_SIGMA400,	/* Sigma Color 400, 8x8 and 8x16 */
+ 	FONT_IM1024,	/* Image Manager 1024 */
+} fontformat_t;
+
+void loadfont(char *s, fontformat_t format);
 
 void initvideo();
 void video_init();
@@ -102,9 +109,9 @@ void closevideo();
 
 void video_updatetiming();
 
-void hline(BITMAP *b, int x1, int y, int x2, int col);
+void hline(PCBITMAP *b, int x1, int y, int x2, int col);
 
-void destroy_bitmap(BITMAP *b);
+void destroy_bitmap(PCBITMAP *b);
 
 extern uint32_t cgapal[16];
 

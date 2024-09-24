@@ -137,7 +137,7 @@ static const TCHAR *getdevname (int type)
 	}
 }
 
-static void *dev_thread(void *devs);
+static void * dev_thread(void *devs);
 static int start_thread(struct devstruct *dev)
 {
 	if (dev->thread_running)
@@ -230,7 +230,7 @@ static uae_u32 REGPARAM2 dev_open_2(TrapContext *ctx, int type)
 		pdev->unit = unit;
 		pdev->flags = flags;
 		pdev->inuse = 1;
-		trap_put_long(ctx, ioreq + 24, pdev - pdevst);
+		trap_put_longt(ctx, ioreq + 24, pdev - pdevst);
 		start_thread (dev);
 	} else {
 		for (i = 0; i < MAX_OPEN_DEVICES; i++) {
@@ -239,7 +239,7 @@ static uae_u32 REGPARAM2 dev_open_2(TrapContext *ctx, int type)
 		}
 		if (i == MAX_OPEN_DEVICES)
 			return openfail(ctx, ioreq, IOERR_OPENFAIL);
-		trap_put_long(ctx, ioreq + 24, pdev - pdevst);
+		trap_put_longt(ctx, ioreq + 24, pdev - pdevst);
 	}
 	dev->opencnt++;
 
@@ -448,7 +448,7 @@ static int command_read(TrapContext *ctx, struct devstruct *dev, uaecptr data, u
 	offset /= blocksize;
 	while (length > 0) {
 		uae_u8 buffer[4096];
-		if (!sys_command_read (dev->unitnum, buffer, offset, 1))
+		if (!sys_command_read (dev->unitnum, buffer, (int)offset, 1))
 			return 20;
 		trap_memcpyha_safe(ctx, data, buffer, blocksize);
 		data += blocksize;
@@ -467,7 +467,7 @@ static int command_write(TrapContext *ctx, struct devstruct *dev, uaecptr data, 
 		uae_u8 buffer[4096];
 		int err;
 		trap_memcpyah_safe(ctx, buffer, data, blocksize);
-		err = sys_command_write (dev->unitnum, buffer, offset, 1);
+		err = sys_command_write (dev->unitnum, buffer, (int)offset, 1);
 		if (!err)
 			return 20;
 		if (err < 0)
@@ -488,7 +488,7 @@ static int command_cd_read(TrapContext *ctx, struct devstruct *dev, uaecptr data
 	*io_actual = 0;
 	startoffset = offset % blocksize;
 	offset -= startoffset;
-	sector = offset / blocksize;
+	sector = (uae_u32)(offset / blocksize);
 	while (length > 0) {
 		uae_u8 temp[4096];
 		if (blocksize != 2048) {
@@ -1104,7 +1104,7 @@ static uae_u32 REGPARAM2 dev_beginio(TrapContext *ctx)
 	}
 }
 
-static void *dev_thread (void *devs)
+static void * dev_thread (void *devs)
 {
 	struct devstruct *dev = (struct devstruct*)devs;
 
@@ -1120,7 +1120,7 @@ static void *dev_thread (void *devs)
 			dev->thread_running = 0;
 			uae_sem_post (&dev->sync_sem);
 			uae_sem_post (&change_sem);
-			return 0;
+			return NULL;
 		} else if (dev_do_io(ctx, dev, iobuf, request) == 0) {
 			put_byte_host(iobuf + 30, get_byte_host(iobuf + 30) & ~1);
 			trap_put_bytes(ctx, iobuf + 8, request + 8, 48 - 8);
@@ -1134,7 +1134,7 @@ static void *dev_thread (void *devs)
 		trap_background_set_complete(ctx);
 		uae_sem_post (&change_sem);
 	}
-	return 0;
+	return NULL;
 }
 
 static uae_u32 REGPARAM2 dev_init_2(TrapContext *ctx, int type)
@@ -1283,7 +1283,7 @@ static void dev_reset (void)
 				dev->aunit = unitnum;
 				unitnum++;
 			}
-			write_log (_T("%s:%d = %s:'%s'\n"), UAEDEV_SCSI, dev->aunit, dev->di.backend, dev->di.label);
+			write_log (_T("%s:%d = %s:'%s',%d\n"), UAEDEV_SCSI, dev->aunit, dev->di.backend, dev->di.label, dev->di.type);
 		}
 		dev->di.label[0] = 0;
 	}
@@ -1542,7 +1542,7 @@ void scsidev_reset (void)
 
 #ifdef SAVESTATE
 
-uae_u8 *save_scsidev (int num, int *len, uae_u8 *dstptr)
+uae_u8 *save_scsidev (int num, size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 	struct priv_devstruct *pdev;

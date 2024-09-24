@@ -16,9 +16,13 @@
 #include "win32gui.h"
 #include "zfile.h"
 #include "ini.h"
+#include "memory.h"
+#include "autoconf.h"
+#include "rommgr.h"
+#include "fsdb.h"
 
 #define hfd_log write_log
-#define hdf_log2
+#define hfd_log2
 //#define hdf_log2 write_log
 
 #ifdef WINDDK
@@ -168,25 +172,17 @@ static int getsignfromhandle (HANDLE h, DWORD *sign, DWORD *pstyle)
 
 	ok = 0; 
 	outsize = sizeof (DRIVE_LAYOUT_INFORMATION_EX) + sizeof (PARTITION_INFORMATION_EX) * 32;
-	dli = (DRIVE_LAYOUT_INFORMATION_EX*)xmalloc (uae_u8, outsize);
+	dli = (DRIVE_LAYOUT_INFORMATION_EX*)xmalloc(uae_u8, outsize);
 	if (DeviceIoControl (h, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0, dli, outsize, &written, NULL)) {
-		*sign = dli->Mbr.Signature;
+		if (dli->PartitionStyle == PARTITION_STYLE_MBR) {
+			*sign = dli->Mbr.Signature;
+		}
 		*pstyle = dli->PartitionStyle;
 		ok = 1;
 	} else {
-		hdf_log2 (_T("IOCTL_DISK_GET_DRIVE_LAYOUT_EX() returned %08x\n"), GetLastError ());
+		hfd_log(_T("IOCTL_DISK_GET_DRIVE_LAYOUT_EX() returned %08x\n"), GetLastError());
 	}
-	if (!ok) {
-		if (DeviceIoControl (h, IOCTL_DISK_GET_DRIVE_LAYOUT, NULL, 0, dli, outsize, &written, NULL)) {
-			DRIVE_LAYOUT_INFORMATION *dli2 = (DRIVE_LAYOUT_INFORMATION*)dli;
-			*sign = dli2->Signature;
-			*pstyle = PARTITION_STYLE_MBR;
-			ok = 1;
-		} else {
-			hdf_log2 (_T("IOCTL_DISK_GET_DRIVE_LAYOUT() returned %08x\n"), GetLastError ());
-		}
-	}
-	hdf_log2 (_T("getsignfromhandle(signature=%08X,pstyle=%d)\n"), *sign, *pstyle);
+	hfd_log2(_T("getsignfromhandle(signature=%08X,pstyle=%d)\n"), *sign, *pstyle);
 	xfree (dli);
 	return ok;
 }
@@ -195,15 +191,16 @@ static int ismounted (const TCHAR *name, HANDLE hd)
 {
 	HANDLE h;
 	TCHAR volname[MAX_DPATH];
-	int mounted;
+	int mounted, ret;
 	DWORD sign, pstyle;
 
-	hdf_log2 (_T("\n"));
-	hdf_log2 (_T("Name='%s'\n"), name);
-	if (!getsignfromhandle (hd, &sign, &pstyle))
+	hfd_log2(_T("\n"));
+	hfd_log2(_T("Name='%s'\n"), name);
+	ret = getsignfromhandle(hd, &sign, &pstyle);
+	if (!ret)
 		return 0;
 	if (pstyle == PARTITION_STYLE_GPT)
-		return 1;
+		return 2;
 	if (pstyle == PARTITION_STYLE_RAW)
 		return 0;
 	mounted = 0;
@@ -214,30 +211,30 @@ static int ismounted (const TCHAR *name, HANDLE hd)
 			volname[_tcslen (volname) - 1] = 0;
 		d = CreateFile (volname, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
 			NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		hdf_log2 (_T("volname='%s' %08x\n"), volname, d);
+		hfd_log2(_T("volname='%s' %08x\n"), volname, d);
 		if (d != INVALID_HANDLE_VALUE) {
 			DWORD isntfs, outsize, written;
 			isntfs = 0;
 			if (DeviceIoControl (d, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &written, NULL)) {
 				VOLUME_DISK_EXTENTS *vde;
 				NTFS_VOLUME_DATA_BUFFER ntfs;
-				hdf_log2 (_T("FSCTL_IS_VOLUME_MOUNTED returned is mounted\n"));
+				hfd_log(_T("FSCTL_IS_VOLUME_MOUNTED returned is mounted\n"));
 				if (DeviceIoControl (d, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &ntfs, sizeof ntfs, &written, NULL)) {
 					isntfs = 1;
 				}
-				hdf_log2 (_T("FSCTL_GET_NTFS_VOLUME_DATA returned %d\n"), isntfs);
-				outsize = sizeof (VOLUME_DISK_EXTENTS) + sizeof (DISK_EXTENT) * 32;
-				vde = (VOLUME_DISK_EXTENTS*)xmalloc (uae_u8, outsize);
-				if (DeviceIoControl (d, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, 0, vde, outsize, &written, NULL)) {
-					int i;
-					hdf_log2 (_T("IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS returned %d extents\n"), vde->NumberOfDiskExtents);
-					for (i = 0; i < vde->NumberOfDiskExtents; i++) {
+				hfd_log(_T("FSCTL_GET_NTFS_VOLUME_DATA returned %d\n"), isntfs);
+				const int maxextends = 30;
+				outsize = sizeof (VOLUME_DISK_EXTENTS) + sizeof (DISK_EXTENT) * (maxextends + 1);
+				vde = (VOLUME_DISK_EXTENTS*)xcalloc(uae_u8, outsize);
+				if (vde && DeviceIoControl(d, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, 0, vde, outsize, &written, NULL)) {
+					hfd_log(_T("IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS returned %d extents\n"), vde->NumberOfDiskExtents);
+					for (int i = 0; i < vde->NumberOfDiskExtents && i < maxextends; i++) {
 						TCHAR pdrv[MAX_DPATH];
 						HANDLE ph;
 						_stprintf (pdrv, _T("\\\\.\\PhysicalDrive%d"), vde->Extents[i].DiskNumber);
 						ph = CreateFile (pdrv, 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
 							NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-						hdf_log2 (_T("PhysicalDrive%d: Extent %d Start=%I64X Len=%I64X\n"), i,
+						hfd_log(_T("PhysicalDrive%d: Extent %d Start=%I64X Len=%I64X\n"), i,
 							vde->Extents[i].DiskNumber, vde->Extents[i].StartingOffset.QuadPart, vde->Extents[i].ExtentLength.QuadPart);
 						if (ph != INVALID_HANDLE_VALUE) {
 							DWORD sign2;
@@ -249,20 +246,20 @@ static int ismounted (const TCHAR *name, HANDLE hd)
 						}
 					}
 				} else {
-					hdf_log2 (_T("IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS returned %08x\n"), GetLastError ());
+					hfd_log(_T("IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS returned %08x\n"), GetLastError());
 				}
 			} else {
-				hdf_log2 (_T("FSCTL_IS_VOLUME_MOUNTED returned not mounted\n"));
+				hfd_log(_T("FSCTL_IS_VOLUME_MOUNTED returned not mounted\n"));
 			}
 			CloseHandle (d);
 		} else {
-			hdf_log2 (_T("'%s': %d\n"), volname, GetLastError ());
+			hfd_log(_T("'%s': %08x\n"), volname, GetLastError());
 		}
 		if (!FindNextVolume (h, volname, sizeof volname / sizeof (TCHAR)))
 			break;
 	}
 	FindVolumeClose (h);
-	hdf_log2 (_T("\n"));
+	hfd_log2(_T("\n"));
 	return mounted;
 }
 
@@ -274,11 +271,11 @@ static void tochs(uae_u8 *data, uae_s64 offset, int *cp, int *hp, int *sp)
 	s = (data[6 * 2 + 0] << 8) | (data[6 * 2 + 1] << 0);
 	if (offset >= 0) {
 		offset /= 512;
-		c = offset / (h * s);
+		c = (int)(offset / (h * s));
 		offset -= c * h * s;
-		h = offset / s;
+		h = (int)(offset / s);
 		offset -= h * s;
-		s = offset + 1;
+		s = (int)offset + 1;
 	}
 	*cp = c;
 	*hp = h;
@@ -406,6 +403,9 @@ static int safetycheck (HANDLE h, const TCHAR *name, uae_u64 offset, uae_u8 *buf
 			write_log (_T("hd ignored, NTFS partitions\n"));
 			return 0;
 		}
+		if (mounted > 1) {
+			return 3;
+		}
 		return -6;
 		//if (harddrive_dangerous == 0x1234dead)
 		//	return -6;
@@ -421,7 +421,7 @@ static int safetycheck (HANDLE h, const TCHAR *name, uae_u64 offset, uae_u8 *buf
 
 static void trim (TCHAR *s)
 {
-	while(_tcslen(s) > 0 && s[_tcslen(s) - 1] == ' ')
+	while(s[0] != '\0' && s[_tcslen(s) - 1] == ' ')
 		s[_tcslen(s) - 1] = 0;
 }
 
@@ -435,22 +435,23 @@ int isharddrive (const TCHAR *name)
 	return -1;
 }
 
-static TCHAR *hdz[] = { _T("hdz"), _T("zip"), _T("rar"), _T("7z"), NULL };
-
-static int progressdialogreturn;
-static int progressdialogactive;
+static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), _T("rar"), _T("7z"), NULL };
 
 static INT_PTR CALLBACK ProgressDialogProc (HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	bool handled;
+	INT_PTR vv = commonproc2(hDlg, msg, wParam, lParam, &handled);
+	if (handled) {
+		return vv;
+	}
+
 	switch(msg)
 	{
 	case WM_DESTROY:
-		PostQuitMessage (0);
-		progressdialogactive = 0;
+		PostQuitMessage(0);
 		return TRUE;
 	case WM_CLOSE:
-		if (progressdialogreturn < 0)
-			progressdialogreturn = 0;
+		CustomDialogClose(hDlg, 0);
 		return TRUE;
 	case WM_INITDIALOG:
 		return TRUE;
@@ -458,7 +459,7 @@ static INT_PTR CALLBACK ProgressDialogProc (HWND hDlg, UINT msg, WPARAM wParam, 
 		switch (LOWORD(wParam))
 		{
 		case IDCANCEL:
-			progressdialogreturn = 0;
+			CustomDialogClose(hDlg, 0);
 			return TRUE;
 		}
 		break;
@@ -696,7 +697,7 @@ static TCHAR *bintotextline(TCHAR *out, uae_u8 *data, int size)
 	return out + _tcslen(out);
 }
 
-static int chsdialogactive, chs_secs, chs_cyls, chs_heads;
+static int chs_secs, chs_cyls, chs_heads;
 static TCHAR *parse_identity(uae_u8 *data, struct ini_data *ini, TCHAR *s)
 {
 	uae_u16 v;
@@ -888,7 +889,7 @@ static bool hd_get_meta_hack_realtek(HWND hDlg, HANDLE h, uae_u8 *data, uae_u8 *
 	int state = 0;
 
 	memset(cmd, 0, 6); // TEST UNIT READY
-	TCHAR *infotxt;
+	const TCHAR *infotxt;
 	if (do_scsi_in(h, cmd, 6, data, 0, true) < 0) {
 		state = 1;
 		infotxt = _T("Realtek hack, insert card.");
@@ -896,20 +897,19 @@ static bool hd_get_meta_hack_realtek(HWND hDlg, HANDLE h, uae_u8 *data, uae_u8 *
 		infotxt = _T("Realtek hack, remove and insert the card.");
 	}
 
-	progressdialogreturn = -1;
-	progressdialogactive = 1;
-	HWND hwnd = CustomCreateDialog(IDD_PROGRESSBAR, hDlg, ProgressDialogProc);
-	if (hwnd == NULL)
+	SAVECDS;
+	HWND hwnd = CustomCreateDialog(IDD_PROGRESSBAR, hDlg, ProgressDialogProc, &cdstate);
+	if (hwnd == NULL) {
+		RESTORECDS;
 		return false;
+	}
 	HWND hwndprogress = GetDlgItem (hwnd, IDC_PROGRESSBAR);
 	ShowWindow(hwndprogress, SW_HIDE);
 	HWND hwndprogresstxt = GetDlgItem (hwnd, IDC_PROGRESSBAR_TEXT);
 	ShowWindow(hwnd, SW_SHOW);
 
 	int tcnt = 0;
-	for (;;) {
-		if (progressdialogreturn >= 0)
-			break;
+	while(cdstate.active) {
 		MSG msg;
 		SendMessage (hwndprogresstxt, WM_SETTEXT, 0, (LPARAM)infotxt);
 		while (PeekMessage (&msg, hwnd, 0, 0, PM_REMOVE)) {
@@ -936,7 +936,7 @@ static bool hd_get_meta_hack_realtek(HWND hDlg, HANDLE h, uae_u8 *data, uae_u8 *
 		}
 	}
 
-	if (progressdialogactive) {
+	if (cdstate.active) {
 		DestroyWindow (hwnd);
 		MSG msg;
 		while (PeekMessage (&msg, 0, 0, 0, PM_REMOVE)) {
@@ -944,6 +944,7 @@ static bool hd_get_meta_hack_realtek(HWND hDlg, HANDLE h, uae_u8 *data, uae_u8 *
 			DispatchMessage (&msg);
 		}
 	}
+	RESTORECDS;
 
 	memset(data, 0, 512);
 	memcpy(cmd, realtek_read, sizeof(realtek_read));
@@ -1031,7 +1032,7 @@ static bool readidentity(HANDLE h, struct uae_driveinfo *udi, struct hardfiledat
 
 			memset(cmd, 0, sizeof(cmd));
 			memset(data, 0, 512);
-			cmd[0] = 0x85; // SAT ATA PASSTHROUGH (16)
+			cmd[0] = 0x85; // SAT ATA PASSTHROUGH (16) (12 conflicts with MMC BLANK command)
 			cmd[1] = 4 << 1; // PIO data-in
 			cmd[2] = 0x08 | 0x04 | 0x02; // dir = from device, 512 byte block, sector count = block cnt
 			cmd[6] = 1; // block count
@@ -1352,14 +1353,19 @@ static bool hd_get_meta_satl(HWND hDlg, HANDLE h, uae_u8 *data, TCHAR *text, str
 
 static INT_PTR CALLBACK CHSDialogProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	bool handled;
+	INT_PTR vv = commonproc2(hDlg, msg, wParam, lParam, &handled);
+	if (handled) {
+		return vv;
+	}
+
 	switch (msg)
 	{
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return TRUE;
 	case WM_CLOSE:
-		chsdialogactive = 0;
-		DestroyWindow(hDlg);
+		CustomDialogClose(hDlg, 0);
 		return TRUE;
 	case WM_INITDIALOG:
 		SetDlgItemInt(hDlg, IDC_CHS_SECTORS, chs_secs, FALSE);
@@ -1379,12 +1385,10 @@ static INT_PTR CALLBACK CHSDialogProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM
 			chs_heads = GetDlgItemInt(hDlg, IDC_CHS_HEADS, NULL, FALSE);
 			break;
 		case IDOK:
-			chsdialogactive = -1;
-			DestroyWindow(hDlg);
+			CustomDialogClose(hDlg, 1);
 			return TRUE;
 		case IDCANCEL:
-			chsdialogactive = 0;
-			DestroyWindow(hDlg);
+			CustomDialogClose(hDlg, 0);
 			return TRUE;
 		}
 		break;
@@ -1399,6 +1403,10 @@ static int gethdfchs(HWND hDlg, struct uae_driveinfo *udi, HANDLE h, int *cylsp,
 	int cyls = 0, heads = 0, secs = 0;
 	uae_u8 *data = (uae_u8*)VirtualAlloc(NULL, 65536, MEM_COMMIT, PAGE_READWRITE);
 	DWORD err = 0;
+	HFONT font;
+	HWND hwnd;
+
+	SAVECDS;
 
 	memset(data, 0, 512);
 	memset(cmd, 0, sizeof(cmd));
@@ -1425,16 +1433,15 @@ static int gethdfchs(HWND hDlg, struct uae_driveinfo *udi, HANDLE h, int *cylsp,
 		parse_identity(udi->identity, NULL, NULL);
 	}
 
-	chsdialogactive = 1;
-	HWND hwnd = CustomCreateDialog(IDD_CHSQUERY, hDlg, CHSDialogProc);
+	hwnd = CustomCreateDialog(IDD_CHSQUERY, hDlg, CHSDialogProc, &cdstate);
 	if (hwnd == NULL) {
 		err = -15;
 		goto end;
 	}
-	HFONT font = CreateFont(getscaledfontsize(-1), 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("Lucida Console"));
+	font = CreateFont(getscaledfontsize(-1, hDlg), 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("Lucida Console"));
 	if (font)
 		SendMessage(GetDlgItem(hwnd, IDD_CHSQUERY), WM_SETFONT, WPARAM(font), FALSE);
-	while (chsdialogactive == 1) {
+	while (cdstate.active) {
 		MSG msg;
 		int ret;
 		WaitMessage();
@@ -1447,8 +1454,10 @@ static int gethdfchs(HWND hDlg, struct uae_driveinfo *udi, HANDLE h, int *cylsp,
 			}
 		}
 	}
-	DeleteObject(font);
-	if (chsdialogactive == 0) {
+	if (font) {
+		DeleteObject(font);
+	}
+	if (cdstate.status == 0) {
 		err = -100;
 		goto end;
 	}
@@ -1459,11 +1468,12 @@ static int gethdfchs(HWND hDlg, struct uae_driveinfo *udi, HANDLE h, int *cylsp,
 		err = -13;
 		goto end;
 	}
-	if (secs >= 256 || heads >= 16 || cyls > 2048) {
+	if (secs >= 256 || heads > 16 || cyls > 2048) {
 		err = -14;
 		goto end;
 	}
 end:
+	RESTORECDS;
 	VirtualFree(data, 0, MEM_RELEASE);
 	if (cylsp)
 		*cylsp = cyls;
@@ -1475,19 +1485,23 @@ end:
 }
 
 
-static int stringboxdialogactive;
 static TCHAR geometry_file[MAX_DPATH];
 static struct ini_data *hdini;
 static INT_PTR CALLBACK StringBoxDialogProc (HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	bool handled;
+	INT_PTR vv = commonproc2(hDlg, msg, wParam, lParam, &handled);
+	if (handled) {
+		return vv;
+	}
+
 	switch(msg)
 	{
 	case WM_DESTROY:
 		PostQuitMessage (0);
 		return TRUE;
 	case WM_CLOSE:
-		stringboxdialogactive = 0;
-		DestroyWindow (hDlg);
+		CustomDialogClose(hDlg, 0);
 		return TRUE;
 	case WM_INITDIALOG:
 		ShowWindow(GetDlgItem (hDlg, IDC_SAVEBOOTBLOCK), SW_SHOW);
@@ -1506,12 +1520,11 @@ static INT_PTR CALLBACK StringBoxDialogProc (HWND hDlg, UINT msg, WPARAM wParam,
 			break;
 		}
 		case IDOK:
-			stringboxdialogactive = -1;
+			CustomDialogClose(hDlg, 1);
 			DestroyWindow (hDlg);
 			return TRUE;
 		case IDCANCEL:
-			stringboxdialogactive = 0;
-			DestroyWindow (hDlg);
+			CustomDialogClose(hDlg, 0);
 			return TRUE;
 		}
 		break;
@@ -1530,6 +1543,8 @@ void hd_get_meta(HWND hDlg, int idx, TCHAR *geometryfile)
 	TCHAR *text, *tptr;
 	struct ini_data *ini = NULL;
 	bool atapi = false;
+	HWND hwnd;
+	bool empty = true;
 
 	geometryfile[0] = 0;
 	text = xcalloc(TCHAR, 100000);
@@ -1591,7 +1606,6 @@ void hd_get_meta(HWND hDlg, int idx, TCHAR *geometryfile)
 		goto doout;
 	}
 
-	bool empty = true;
 	for (int i = 0; i < 512; i++) {
 		if (data[i] != 0)
 			empty = false;
@@ -1655,16 +1669,17 @@ doout:
 		_stprintf(geometry_file + _tcslen(geometry_file), _T(" %llX"), udi->size);
 	if (geometry_file[0])
 		_tcscat(geometry_file, _T(".geo"));
+	makesafefilename(geometry_file, true);
 
-	stringboxdialogactive = 1;
+	SAVECDS;
 	hdini = ini;
-	HWND hwnd = CustomCreateDialog (IDD_DISKINFO, hDlg, StringBoxDialogProc);
+	hwnd = CustomCreateDialog(IDD_DISKINFO, hDlg, StringBoxDialogProc, &cdstate);
 	if (hwnd != NULL) {
-		HFONT font = CreateFont (getscaledfontsize(-1), 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("Lucida Console"));
+		HFONT font = CreateFont (getscaledfontsize(-1, hDlg), 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, _T("Lucida Console"));
 		if (font)
 			SendMessage (GetDlgItem (hwnd, IDC_DISKINFOBOX), WM_SETFONT, WPARAM(font), FALSE);
 		SendMessage (GetDlgItem (hwnd, IDC_DISKINFOBOX), WM_SETTEXT, 0, (LPARAM)text);
-		while (stringboxdialogactive == 1) {
+		while (cdstate.active) {
 			MSG msg;
 			int ret;
 			WaitMessage ();
@@ -1676,11 +1691,12 @@ doout:
 					DispatchMessage (&msg);
 				}
 			}
-			if (stringboxdialogactive == -1)
-				break;
 		}
-		DeleteObject (font);
+		if (font) {
+			DeleteObject (font);
+		}
 	}
+	RESTORECDS;
 
 end:
 	if (ini)
@@ -1704,7 +1720,7 @@ static bool getdeviceinfo (HANDLE hDevice, struct uae_driveinfo *udi)
 	DWORD returnedLength;
 	bool geom_ok = true, gli_ok;
 	UCHAR outBuf[20000];
-	DRIVE_LAYOUT_INFORMATION *dli;
+	DRIVE_LAYOUT_INFORMATION_EX *dli;
 	STORAGE_PROPERTY_QUERY query;
 	DWORD status;
 	TCHAR devname[MAX_DPATH];
@@ -1714,10 +1730,11 @@ static bool getdeviceinfo (HANDLE hDevice, struct uae_driveinfo *udi)
 
 	_tcscpy (devname, udi->device_name + 1);
 
-	if (devname[0] == ':' && devname[1] == 'P' && devname[2] == '#' &&
-		(devname[4] == '_' || devname[5] == '_')) {
-		TCHAR c1 = devname[3];
-		TCHAR c2 = devname[4];
+	TCHAR *n = udi->device_name;
+	if (n[0] == ':' && n[1] == 'P' && n[2] == '#' &&
+		(n[4] == '_' || n[5] == '_')) {
+		TCHAR c1 = n[3];
+		TCHAR c2 = n[4];
 		if (c1 >= '0' && c1 <= '9') {
 			amipart = c1 - '0';
 			if (c2 != '_') {
@@ -1812,21 +1829,21 @@ static bool getdeviceinfo (HANDLE hDevice, struct uae_driveinfo *udi)
 	udi->size = gli.Length.QuadPart;
 
 	// check for amithlon partitions, if any found = quick mount not possible
-	status = DeviceIoControl(hDevice, IOCTL_DISK_GET_DRIVE_LAYOUT, NULL, 0,
+	status = DeviceIoControl(hDevice, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0,
 		&outBuf, sizeof (outBuf), &returnedLength, NULL);
 	if (!status)
 		return true;
-	dli = (DRIVE_LAYOUT_INFORMATION*)outBuf;
-	if (!dli->PartitionCount)
+	dli = (DRIVE_LAYOUT_INFORMATION_EX*)outBuf;
+	if (!dli->PartitionCount || dli->PartitionStyle != PARTITION_STYLE_MBR)
 		return true;
 	bool partfound = false;
 	for (int i = 0; i < dli->PartitionCount; i++) {
-		PARTITION_INFORMATION *pi = &dli->PartitionEntry[i];
-		if (pi->PartitionType == PARTITION_ENTRY_UNUSED)
+		PARTITION_INFORMATION_EX *pi = &dli->PartitionEntry[i];
+		if (pi->Mbr.PartitionType == PARTITION_ENTRY_UNUSED)
 			continue;
-		if (pi->RecognizedPartition == 0)
+		if (pi->Mbr.RecognizedPartition == 0)
 			continue;
-		if (pi->PartitionType != 0x76 && pi->PartitionType != 0x30)
+		if (pi->Mbr.PartitionType != 0x76 && pi->Mbr.PartitionType != 0x30)
 			continue;
 		if (i == amipart) {
 			udi->offset = pi->StartingOffset.QuadPart;
@@ -1846,6 +1863,8 @@ static void lock_drive(struct hardfiledata *hfd, const TCHAR *name, HANDLE drvha
 	bool ntfs_found = false;
 
 	if (!hfd->ci.lock)
+		return;
+	if (hfd->flags & HFD_FLAGS_REALDRIVEPARTITION)
 		return;
 
 	// single partition FAT drives seem to lock this way, without need for administrator privileges
@@ -1966,15 +1985,20 @@ int hdf_open_target (struct hardfiledata *hfd, const TCHAR *pname)
 	hfd->handle->h = INVALID_HANDLE_VALUE;
 	hfd_log (_T("hfd attempting to open: '%s'\n"), name);
 	if (name[0] == ':') {
+		DWORD rw = GENERIC_READ;
+		DWORD srw = FILE_SHARE_READ;
 		int drvnum = -1;
 		TCHAR *p = _tcschr (name + 1, ':');
 		if (p) {
+			// open partitions in shared read/write mode
+			if (name[0] ==':' && name[1] == 'P') {
+				rw |= GENERIC_WRITE;
+				srw |= FILE_SHARE_WRITE;
+			}
 			*p++ = 0;
 			// do not scan for drives if open succeeds and it is a harddrive
 			// to prevent spinup of sleeping drives
-			h = CreateFile (p,
-				GENERIC_READ,
-				FILE_SHARE_READ,
+			h = CreateFile (p, rw, srw,
 				NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS, NULL);
 			DWORD err = GetLastError ();
 			if (h == INVALID_HANDLE_VALUE && err == ERROR_FILE_NOT_FOUND) {
@@ -2018,24 +2042,28 @@ int hdf_open_target (struct hardfiledata *hfd, const TCHAR *pname)
 
 			flags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS;
 			h = CreateFile (udi->device_path,
-				GENERIC_READ | (hfd->ci.readonly && !chs ? 0 : GENERIC_WRITE),
-				FILE_SHARE_READ | (hfd->ci.readonly && !chs ? 0 : FILE_SHARE_WRITE),
+				rw | (hfd->ci.readonly && !chs ? 0 : GENERIC_WRITE),
+				srw | (hfd->ci.readonly && !chs ? 0 : FILE_SHARE_WRITE),
 				NULL, OPEN_EXISTING, flags, NULL);
 			hfd->handle->h = h;
 			if (h == INVALID_HANDLE_VALUE && !hfd->ci.readonly) {
-				DWORD err = GetLastError ();
+				DWORD err = GetLastError();
+				write_log(_T("Real HD open (RW) error: %d\n"), err);
 				if (err == ERROR_WRITE_PROTECT || err == ERROR_SHARING_VIOLATION) {
 					h = CreateFile (udi->device_path,
 						GENERIC_READ,
 						FILE_SHARE_READ,
 						NULL, OPEN_EXISTING, flags, NULL);
-					if (h != INVALID_HANDLE_VALUE)
+					if (h != INVALID_HANDLE_VALUE) {
 						hfd->ci.readonly = true;
+						write_log(_T("Real HD open succeeded in read-only mode\n"));
+					}
 				}
 			}
 
 			if (h == INVALID_HANDLE_VALUE) {
 				DWORD err = GetLastError ();
+				write_log(_T("Real HD open error: %d\n"), err);
 				if (err == ERROR_WRITE_PROTECT)
 					ret = -2;
 				if (err == ERROR_SHARING_VIOLATION)
@@ -2135,7 +2163,7 @@ emptyreal:
 		}
 		
 		hfd->handle->h = h;
-		i = _tcslen (name) - 1;
+		i = uaetcslen(name) - 1;
 		while (i >= 0) {
 			if ((i > 0 && (name[i - 1] == '/' || name[i - 1] == '\\')) || i == 0) {
 				_tcsncpy (hfd->product_id, name + i, 15);
@@ -2263,7 +2291,7 @@ int hdf_dup_target (struct hardfiledata *dhfd, const struct hardfiledata *shfd)
 	return 1;
 }
 
-static int hdf_seek (struct hardfiledata *hfd, uae_u64 offset)
+static int hdf_seek (struct hardfiledata *hfd, uae_u64 offset, bool write)
 {
 	DWORD ret;
 
@@ -2275,14 +2303,23 @@ static int hdf_seek (struct hardfiledata *hfd, uae_u64 offset)
 		if (offset >= hfd->physsize - hfd->virtual_size) {
 			if (hfd->virtual_rdb)
 				return -1;
-			gui_message (_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
-			abort ();
+			if (write) {
+				gui_message (_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
+				abort ();
+			}
+			write_log(_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
+			return -1;
 		}
 		offset += hfd->offset;
 		if (offset & (hfd->ci.blocksize - 1)) {
-			gui_message (_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
+			if (write) {
+				gui_message (_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
+					offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
+				abort ();
+			}
+			write_log(_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
 				offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
-			abort ();
+			return -1;
 		}
 	}
 	if (hfd->handle_valid == HDF_HANDLE_WIN32_NORMAL) {
@@ -2384,7 +2421,7 @@ static int hdf_rw (struct hardfiledata *hfd, void *bufferp, uae_u64 offset, int 
 			size = bs - soff;
 			if (size > len)
 				size = len;
-			hdf_seek (hfd, offset & ~mask);
+			hdf_seek (hfd, offset & ~mask, dowrite != 0);
 			poscheck (hfd, len);
 			if (dowrite)
 				WriteFile (hfd->handle, hfd->cache, bs, &outlen2, NULL);
@@ -2399,7 +2436,7 @@ static int hdf_rw (struct hardfiledata *hfd, void *bufferp, uae_u64 offset, int 
 			len -= size;
 		}
 		while (len >= bs) { /* aligned access */
-			hdf_seek (hfd, offset);
+			hdf_seek (hfd, offset, dowrite != 0);
 			poscheck (hfd, len);
 			size = len & ~mask;
 			if (size > CACHE_SIZE)
@@ -2425,7 +2462,7 @@ static int hdf_rw (struct hardfiledata *hfd, void *bufferp, uae_u64 offset, int 
 			len -= size;
 		}
 		if (len > 0) { /* len > 0 && len < bs */
-			hdf_seek (hfd, offset);
+			hdf_seek (hfd, offset, dowrite != 0);
 			poscheck (hfd, len);
 			if (dowrite)
 				WriteFile (hfd->handle, hfd->cache, bs, &outlen2, NULL);
@@ -2452,13 +2489,17 @@ int hdf_write (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
 
 #else
 
-static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
 	DWORD outlen = 0;
 	int coffset;
 
-	if (offset == 0)
+	if (len == 0) {
+		return 0;
+	}
+	if (offset == 0) {
 		hfd->cache_valid = 0;
+	}
 	coffset = isincache (hfd, offset, len);
 	if (coffset >= 0) {
 		memcpy (buffer, hfd->cache + coffset, len);
@@ -2467,17 +2508,21 @@ static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 	hfd->cache_offset = offset;
 	if (offset + CACHE_SIZE > hfd->offset + (hfd->physsize - hfd->virtual_size))
 		hfd->cache_offset = hfd->offset + (hfd->physsize - hfd->virtual_size) - CACHE_SIZE;
-	if (hdf_seek(hfd, hfd->cache_offset))
+	if (hdf_seek(hfd, hfd->cache_offset, false)) {
+		*error = 45;
 		return 0;
+	}
 	poscheck (hfd, CACHE_SIZE);
 	if (hfd->handle_valid == HDF_HANDLE_WIN32_NORMAL) {
 		ReadFile(hfd->handle->h, hfd->cache, CACHE_SIZE, &outlen, NULL);
 	} else if (hfd->handle_valid == HDF_HANDLE_ZFILE) {
-		outlen = zfile_fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->zf);
+		outlen = (DWORD)zfile_fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->zf);
 	}
 	hfd->cache_valid = 0;
-	if (outlen != CACHE_SIZE)
+	if (outlen != CACHE_SIZE) {
+		*error = 45;
 		return 0;
+	}
 	hfd->cache_valid = 1;
 	coffset = isincache (hfd, offset, len);
 	if (coffset >= 0) {
@@ -2486,16 +2531,26 @@ static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 	}
 	write_log (_T("hdf_read: cache bug! offset=%I64d len=%d\n"), offset, len);
 	hfd->cache_valid = 0;
+	*error = 45;
 	return 0;
 }
 
-int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
 	int got = 0;
 	uae_u8 *p = (uae_u8*)buffer;
+	uae_u32 error2 = 0;
 
-	if (hfd->drive_empty)
+	if (error) {
+		*error = 0;
+	} else {
+		error = &error2;
+	}
+
+	if (hfd->drive_empty) {
+		*error = 29;
 		return 0;
+	}
 
 	if (hfd->handle_valid == HDF_HANDLE_WIN32_CHS) {
 		int len2 = len;
@@ -2513,7 +2568,7 @@ int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
 		DWORD ret;
 		if (hfd->physsize < CACHE_SIZE) {
 			hfd->cache_valid = 0;
-			if (hdf_seek(hfd, offset))
+			if (hdf_seek(hfd, offset, false))
 				return got;
 			if (hfd->physsize)
 				poscheck (hfd, len);
@@ -2521,12 +2576,12 @@ int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
 				ReadFile (hfd->handle->h, hfd->cache, len, &ret, NULL);
 				memcpy (buffer, hfd->cache, ret);
 			} else if (hfd->handle_valid == HDF_HANDLE_ZFILE) {
-				ret = zfile_fread (buffer, 1, len, hfd->handle->zf);
+				ret = (DWORD)zfile_fread (buffer, 1, len, hfd->handle->zf);
 			}
 			maxlen = len;
 		} else {
 			maxlen = len > CACHE_SIZE ? CACHE_SIZE : len;
-			ret = hdf_read_2 (hfd, p, offset, maxlen);
+			ret = hdf_read_2 (hfd, p, offset, maxlen, error);
 		}
 		got += ret;
 		if (ret != maxlen)
@@ -2538,36 +2593,47 @@ int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
 	return got;
 }
 
-static int hdf_write_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
 	DWORD outlen = 0;
 
-	if (hfd->ci.readonly)
+	if (hfd->ci.readonly) {
+		*error = 28;
 		return 0;
-	if (hfd->dangerous)
+	}
+	if (hfd->dangerous) {
+		*error = 28;
 		return 0;
+	}
 	if (len == 0)
 		return 0;
 
 	hfd->cache_valid = 0;
-	if (hdf_seek(hfd, offset))
+	if (hdf_seek(hfd, offset, true)) {
+		*error = 45;
 		return 0;
+	}
 	poscheck (hfd, len);
 	memcpy (hfd->cache, buffer, len);
 	if (hfd->handle_valid == HDF_HANDLE_WIN32_NORMAL) {
-		TCHAR *name = hfd->emptyname == NULL ? _T("<unknown>") : hfd->emptyname;
+		const TCHAR *name = hfd->emptyname == NULL ? _T("<unknown>") : hfd->emptyname;
 		if (offset == 0) {
 			if (!hfd->handle->firstwrite && (hfd->flags & HFD_FLAGS_REALDRIVE) && !(hfd->flags & HFD_FLAGS_REALDRIVEPARTITION)) {
 				hfd->handle->firstwrite = true;
 				if (ismounted (hfd->ci.devname, hfd->handle->h)) {
 					gui_message (_T("\"%s\"\n\nBlock zero write attempt but drive has one or more mounted PC partitions or WinUAE does not have Administrator privileges. Erase the drive or unmount all PC partitions first."), name);
 					hfd->ci.readonly = true;
+					*error = 45;
 					return 0;
 				}
 			}
 		}
 		WriteFile (hfd->handle->h, hfd->cache, len, &outlen, NULL);
+		if (outlen != len) {
+			*error = 45;
+		}
 		if (offset == 0) {
+			DWORD err = GetLastError();
 			DWORD outlen2;
 			uae_u8 *tmp;
 			int tmplen = 512;
@@ -2575,23 +2641,32 @@ static int hdf_write_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, 
 			if (tmp) {
 				int cmplen = tmplen > len ? len : tmplen;
 				memset (tmp, 0xa1, tmplen);
-				hdf_seek (hfd, offset);
+				hdf_seek (hfd, offset, true);
 				ReadFile (hfd->handle->h, tmp, tmplen, &outlen2, NULL);
-				if (memcmp (hfd->cache, tmp, cmplen) != 0 || outlen != len)
-					gui_message (_T("\"%s\"\n\nblock zero write failed! Make sure WinUAE has Windows Administrator privileges."), name);
+				if (memcmp (hfd->cache, tmp, cmplen) != 0 || outlen != len) {
+					gui_message (_T("\"%s\"\n\nblock zero write failed! Make sure WinUAE has Windows Administrator privileges. Error=%d"), name, err);
+					*error = 45;
+				}
 				VirtualFree (tmp, 0, MEM_RELEASE);
 			}
 		}
 	} else if (hfd->handle_valid == HDF_HANDLE_ZFILE) {
-		outlen = zfile_fwrite (hfd->cache, 1, len, hfd->handle->zf);
+		outlen = (DWORD)zfile_fwrite (hfd->cache, 1, len, hfd->handle->zf);
 	}
 	return outlen;
 }
 
-int hdf_write_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+int hdf_write_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
 	int got = 0;
 	uae_u8 *p = (uae_u8*)buffer;
+	uae_u32 error2 = 0;
+
+	if (error) {
+		*error = 0;
+	} else {
+		error = &error2;
+	}
 
 	if (hfd->handle_valid == HDF_HANDLE_WIN32_CHS)
 		return 0;
@@ -2600,7 +2675,7 @@ int hdf_write_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 
 	while (len > 0) {
 		int maxlen = len > CACHE_SIZE ? CACHE_SIZE : len;
-		int ret = hdf_write_2 (hfd, p, offset, maxlen);
+		int ret = hdf_write_2(hfd, p, offset, maxlen, error);
 		if (ret < 0)
 			return ret;
 		got += ret;
@@ -2724,7 +2799,7 @@ static int getstorageproperty (PUCHAR outBuf, int returnedLength, struct uae_dri
 		_tcscpy (udi->device_name, udi->device_path);
 	}
 	udi->removablemedia = devDesc->RemovableMedia;
-	while (_tcslen(udi->device_name) > 0 && udi->device_name[_tcslen(udi->device_name) - 1] == ':')
+	while (udi->device_name[0] != '\0' && udi->device_name[_tcslen(udi->device_name) - 1] == ':')
 		udi->device_name[_tcslen(udi->device_name) - 1] = 0;
 	for (int i = 0; i < _tcslen(udi->device_name); i++) {
 		if (udi->device_name[i] == ':')
@@ -2834,15 +2909,15 @@ static bool getstorageinfo(uae_driveinfo *udi, STORAGE_DEVICE_NUMBER sdnp)
 	SetupDiDestroyDeviceInfoList(hIntDevInfo);
 	if (vpm[0] == 0xffffffff || vpm[1] == 0xffffffff)
 		return false;
-	udi->usb_vid = vpm[0];
-	udi->usb_pid = vpm[1];
+	udi->usb_vid = (uae_u16)vpm[0];
+	udi->usb_pid = (uae_u16)vpm[1];
 	return true;
 }
 
 static void checkhdname(struct uae_driveinfo *udi)
 {
 	int cnt = 1;
-	int off = _tcslen(udi->device_name);
+	size_t off = _tcslen(udi->device_name);
 	TCHAR tmp[MAX_DPATH];
 	_tcscpy(tmp, udi->device_name);
 	udi->device_name[0] = 0;
@@ -2863,7 +2938,7 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 	int i, nosp, geom_ok;
 	int ret = -1;
 	STORAGE_PROPERTY_QUERY query;
-	DRIVE_LAYOUT_INFORMATION		*dli;
+	DRIVE_LAYOUT_INFORMATION_EX *dli;
 	struct uae_driveinfo *udi;
 	TCHAR orgname[1024];
 	HANDLE hDevice = INVALID_HANDLE_VALUE;
@@ -2875,7 +2950,7 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 	ULONG                               length = 0, returned = 0, returnedLength;
 	BOOL showonly = FALSE;
 	struct uae_driveinfo tmpudi = { 0 };
-
+	struct uae_driveinfo* udi2;
 	udi = &tmpudi;
 	int udiindex = *index2;
 
@@ -2971,7 +3046,7 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 	}
 	udi = &uae_drives[udiindex < 0 ? *index2 : udiindex];
 	memcpy (udi, &tmpudi, sizeof (struct uae_driveinfo));
-	struct uae_driveinfo *udi2 = udi;
+	udi2 = udi;
 
 	_tcscpy (orgname, udi->device_name);
 	udi->bytespersector = 512;
@@ -2980,6 +3055,7 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 		DWORD err = GetLastError();
 		if (isnomediaerr (err)) {
 			udi->nomedia = 1;
+			write_log("no media\n");
 			goto amipartfound;
 		}
 		write_log (_T("IOCTL_DISK_GET_DRIVE_GEOMETRY failed with error code %d.\n"), err);
@@ -2993,10 +3069,27 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 			udi->readonly = 1;
 	}
 
+	udi->offset = 0;
+	udi->size = 0;
+
 	if (showonly) {
-		udi->dangerous = -10;
-		udi->readonly = -1;
-		goto amipartfound;
+		memset(outBuf, 0, sizeof(outBuf));
+		status = DeviceIoControl(hDevice, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0,
+			&outBuf, sizeof(outBuf), &returnedLength, NULL);
+		if (status) {
+			dli = (DRIVE_LAYOUT_INFORMATION_EX *)outBuf;
+			if (dli->PartitionCount && dli->PartitionStyle == PARTITION_STYLE_MBR) {
+				//udi->dangerous = -10;
+				//udi->readonly = -1;
+				write_log("MBR but access denied\n");
+				ret = 1;
+				goto end;
+			}
+		}
+		write_log("skipped, GPT drive\n");
+		udiindex = -1;
+		ret = 1;
+		goto end;
 	}
 
 	gli_ok = 1;
@@ -3015,8 +3108,6 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 		goto end;
 	}
 
-	udi->offset = 0;
-	udi->size = 0;
 	if (geom_ok) {
 		udi->bytespersector = dg.BytesPerSector;
 		if (dg.BytesPerSector < 512) {
@@ -3044,7 +3135,7 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 	if (ischs(udi->identity) && gli.Length.QuadPart == 0) {
 		int c, h, s;
 		tochs(udi->identity, -1, &c, &h, &s);
-		udi->size = c * h * s * 512;
+		udi->size = (uae_u64)c * h * s * 512;
 		udi->cylinders = c;
 		udi->heads = h;
 		udi->sectors = s;
@@ -3055,40 +3146,40 @@ static BOOL GetDevicePropertyFromName(const TCHAR *DevicePath, DWORD Index, DWOR
 	trim (orgname);
 
 	memset (outBuf, 0, sizeof (outBuf));
-	status = DeviceIoControl(hDevice, IOCTL_DISK_GET_DRIVE_LAYOUT, NULL, 0,
+	status = DeviceIoControl(hDevice, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0,
 		&outBuf, sizeof (outBuf), &returnedLength, NULL);
 	if (!status) {
 		DWORD err = GetLastError();
-		write_log (_T("IOCTL_DISK_GET_DRIVE_LAYOUT failed with error code %d.\n"), err);
+		write_log (_T("IOCTL_DISK_GET_DRIVE_LAYOUT_EX failed with error code %d.\n"), err);
 	} else {
-		dli = (DRIVE_LAYOUT_INFORMATION*)outBuf;
-		if (dli->PartitionCount) {
+		dli = (DRIVE_LAYOUT_INFORMATION_EX*)outBuf;
+		if (dli->PartitionCount && dli->PartitionStyle == PARTITION_STYLE_MBR) {
 			int nonzeropart = 0;
 			int gotpart = 0;
 			int safepart = 0;
 			write_log (_T("%d MBR partitions found\n"), dli->PartitionCount);
 			for (i = 0; i < dli->PartitionCount && (*index2) < MAX_FILESYSTEM_UNITS; i++) {
-				PARTITION_INFORMATION *pi = &dli->PartitionEntry[i];
-				if (pi->PartitionType == PARTITION_ENTRY_UNUSED)
+				PARTITION_INFORMATION_EX *pi = &dli->PartitionEntry[i];
+				if (pi->Mbr.PartitionType == PARTITION_ENTRY_UNUSED)
 					continue;
 				write_log (_T("%d: num: %d type: %02X offset: %I64d size: %I64d, "), i,
-					pi->PartitionNumber, pi->PartitionType, pi->StartingOffset.QuadPart, pi->PartitionLength.QuadPart);
-				if (pi->RecognizedPartition == 0) {
+					pi->PartitionNumber, pi->Mbr.PartitionType, pi->StartingOffset.QuadPart, pi->PartitionLength.QuadPart);
+				if (pi->Mbr.RecognizedPartition == 0) {
 					write_log (_T("unrecognized\n"));
 					continue;
 				}
 				nonzeropart++;
-				if (pi->PartitionType != 0x76 && pi->PartitionType != 0x30) {
+				if (pi->Mbr.PartitionType != 0x76 && pi->Mbr.PartitionType != 0x30) {
 					write_log (_T("type not 0x76 or 0x30\n"));
 					continue;
 				}
+				write_log (_T("%d, selected\n"), *index2);
 				udi++;
 				(*index2)++;
 				memmove (udi, udi2, sizeof (*udi));
 				udi->device_name[0] = 0;
 				udi->offset = pi->StartingOffset.QuadPart;
 				udi->size = pi->PartitionLength.QuadPart;
-				write_log (_T("used\n"));
 				_stprintf (udi->device_name, _T(":P#%d_%s"), pi->PartitionNumber, orgname);
 				_stprintf(udi->device_full_path, _T("%s:%s"), udi->device_name, udi->device_path);
 				checkhdname(udi);
@@ -3323,8 +3414,8 @@ TCHAR *hdf_getnameharddrive (int index, int flags, int *sectorsize, int *dangero
 	TCHAR tmp[32];
 	uae_u64 size = udi->size;
 	int nomedia = udi->nomedia;
-	TCHAR *dang = _T("?");
-	TCHAR *rw = _T("RW");
+	const TCHAR *dang = _T("?");
+	const TCHAR *rw = _T("RW");
 	bool noaccess = false;
 
 	if (outflags) {
@@ -3401,7 +3492,9 @@ TCHAR *hdf_getnameharddrive (int index, int flags, int *sectorsize, int *dangero
 			if (nomedia) {
 				_tcscpy (tmp, _T("N/A"));
 			} else {
-				if (size >= 1024 * 1024 * 1024)
+				if (size == 0)
+					_tcscpy(tmp, _T("?"));
+				else if (size >= 1024 * 1024 * 1024)
 					_stprintf (tmp, _T("%.1fG"), ((double)(uae_u32)(size / (1024 * 1024))) / 1024.0);
 				else if (size < 10 * 1024 * 1024)
 					_stprintf (tmp, _T("%lldK"), size / 1024);
@@ -3534,22 +3627,26 @@ int win32_hardfile_media_change (const TCHAR *drvname, int inserted)
 		int reopen = 0;
 		if (!hfd || !(hfd->flags & HFD_FLAGS_REALDRIVE))
 			continue;
-		for (j = 0; j < currprefs.mountitems; j++) {
-			if (currprefs.mountconfig[j].configoffset == i) {
-				hmc_check (hfd, &currprefs.mountconfig[j], &rescanned, &reopen, &gotinsert, drvname, inserted);
-				break;
+		if (hfd->ci.lock || hfd->ci.controller_type != HD_CONTROLLER_TYPE_UAE) {
+			for (j = 0; j < currprefs.mountitems; j++) {
+				if (currprefs.mountconfig[j].configoffset == i) {
+					hmc_check(hfd, &currprefs.mountconfig[j], &rescanned, &reopen, &gotinsert, drvname, inserted);
+					break;
+				}
 			}
 		}
 	}
 	for (i = 0; i < currprefs.mountitems; i++) {
-		extern struct hd_hardfiledata *pcmcia_sram;
+		extern struct hd_hardfiledata *pcmcia_disk;
 		int reopen = 0;
 		struct uaedev_config_data *uci = &currprefs.mountconfig[i];
-		if (uci->ci.controller_type == HD_CONTROLLER_TYPE_PCMCIA && uci->ci.controller_type_unit == 0) {
-			hmc_check (&pcmcia_sram->hfd, uci, &rescanned, &reopen, &gotinsert, drvname, inserted);
+		if (uci->ci.lock || uci->ci.controller_type != HD_CONTROLLER_TYPE_UAE) {
+			const struct expansionromtype *ert = get_unit_expansion_rom(uci->ci.controller_type);
+			if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA) && pcmcia_disk) {
+				hmc_check(&pcmcia_disk->hfd, uci, &rescanned, &reopen, &gotinsert, drvname, inserted);
+			}
 		}
 	}
-
 	//write_log (_T("win32_hardfile_media_change returned %d\n"), gotinsert);
 	return gotinsert;
 }
@@ -3569,13 +3666,17 @@ int harddrive_to_hdf (HWND hDlg, struct uae_prefs *p, int idx)
 	DWORD retcode = 0;
 	HWND hwnd, hwndprogress, hwndprogresstxt;
 	MSG msg;
-	int pct, cnt;
+	int pct;
 	DWORD r;
 	bool chsmode = false;
 	DWORD erc = 0;
 	int cyls = 0, heads = 0, secs = 0;
 	int cyl = 0, head = 0;
 	int specialaccessmode = 0;
+	int progressdialogreturn = 0;
+	int seconds = -1;
+
+	SAVECDS;
 
 	cache = VirtualAlloc (NULL, COPY_CACHE_SIZE, MEM_COMMIT, PAGE_READWRITE);
 	if (!cache)
@@ -3641,22 +3742,24 @@ int harddrive_to_hdf (HWND hDlg, struct uae_prefs *p, int idx)
 	SetFilePointer (hdst, 0, &li.HighPart, FILE_BEGIN);
 	li.QuadPart = 0;
 	SetFilePointer (h, 0, &li.HighPart, FILE_BEGIN);
-	progressdialogreturn = -1;
-	progressdialogactive = 1;
-	hwnd = CustomCreateDialog(IDD_PROGRESSBAR, hDlg, ProgressDialogProc);
+	hwnd = CustomCreateDialog(IDD_PROGRESSBAR, hDlg, ProgressDialogProc, &cdstate);
 	if (hwnd == NULL)
 		goto err;
 	hwndprogress = GetDlgItem (hwnd, IDC_PROGRESSBAR);
 	hwndprogresstxt = GetDlgItem (hwnd, IDC_PROGRESSBAR_TEXT);
 	ShowWindow (hwnd, SW_SHOW);
 	pct = 0;
-	cnt = 1000;
 	sizecnt = 0;
 	written = 0;
+	
 	for (;;) {
+		progressdialogreturn = cdstate.active > 0 ? -1 : 0;
 		if (progressdialogreturn >= 0)
 			break;
-		if (cnt > 0) {
+		SYSTEMTIME t;
+		GetLocalTime(&t);
+		if (t.wSecond != seconds) {
+			seconds = t.wSecond;
 			SendMessage (hwndprogress, PBM_SETPOS, (WPARAM)pct, 0);
 			if (chsmode) {
 				_stprintf(tmp2, _T("Cyl %d/%d Head %d/%d"), cyl, cyls, head, heads);
@@ -3671,7 +3774,6 @@ int harddrive_to_hdf (HWND hDlg, struct uae_prefs *p, int idx)
 					DispatchMessage (&msg);
 				}
 			}
-			cnt = 0;
 		}
 		got = gotdst = 0;
 		li.QuadPart = sizecnt;
@@ -3706,7 +3808,7 @@ int harddrive_to_hdf (HWND hDlg, struct uae_prefs *p, int idx)
 		} else {
 			get = COPY_CACHE_SIZE;
 			if (sizecnt + get > size)
-				get = size - sizecnt;
+				get = (DWORD)(size - sizecnt);
 			if (!ReadFile(h, cache, get, &got, NULL)) {
 				progressdialogreturn = 4;
 				break;
@@ -3718,7 +3820,7 @@ int harddrive_to_hdf (HWND hDlg, struct uae_prefs *p, int idx)
 		}
 		if (got > 0) {
 			if (written + got > size)
-				got = size - written;
+				got = (DWORD)(size - written);
 			if (!WriteFile (hdst, cache, got, &gotdst, NULL))  {
 				progressdialogreturn = 5;
 				break;
@@ -3735,11 +3837,10 @@ int harddrive_to_hdf (HWND hDlg, struct uae_prefs *p, int idx)
 			progressdialogreturn = 2;
 			break;
 		}
-		cnt++;
 		sizecnt += got;
 		pct = (int)(sizecnt * 100 / size);
 	}
-	if (progressdialogactive) {
+	if (cdstate.active) {
 		DestroyWindow (hwnd);
 		while (PeekMessage (&msg, 0, 0, 0, PM_REMOVE)) {
 			TranslateMessage (&msg);
@@ -3767,6 +3868,7 @@ err:
 	}
 
 ok:
+	RESTORECDS;
 	if (h != INVALID_HANDLE_VALUE)
 		CloseHandle (h);
 	if (cache)

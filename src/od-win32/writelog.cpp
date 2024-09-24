@@ -68,13 +68,19 @@ int console_logging = 0;
 static int debugger_type = -1;
 extern BOOL debuggerinitializing;
 extern int lof_store;
-extern int seriallog;
 static int console_input_linemode = -1;
-int always_flush_log = 1;
+int always_flush_log = 0;
+TCHAR *conlogfile = NULL;
+static FILE *conlogfilehandle;
 
 #define WRITE_LOG_BUF_SIZE 4096
 
 /* console functions for debugger */
+
+bool is_console_open(void)
+{
+	return consoleopen;
+}
 
 static HWND myGetConsoleWindow (void)
 {
@@ -116,6 +122,7 @@ static void getconsole (void)
 		}
 	}
 	SetConsoleCtrlHandler(ctrlchandler, TRUE);
+	SetConsoleCtrlHandler(NULL, TRUE);
 }
 
 static void flushmsgpump(void)
@@ -190,6 +197,13 @@ void debugger_change (int mode)
 	openconsole ();
 }
 
+void open_console(void)
+{
+	if (!consoleopen) {
+		openconsole();
+	}
+}
+
 void reopen_console (void)
 {
 	HWND hwnd;
@@ -212,6 +226,11 @@ void reopen_console (void)
 			newpos = 0;
 		if (newpos) {
 			RECT rc;
+			int dpi = getdpiforwindow(hwnd);
+			x = x * dpi / 96;
+			y = y * dpi / 96;
+			w = w * dpi / 96;
+			h = h * dpi / 96;
 			rc.left = x;
 			rc.top = y;
 			rc.right = x + w;
@@ -238,6 +257,11 @@ void close_console (void)
 			if (GetWindowRect (hwnd, &r)) {
 				r.bottom -= r.top;
 				r.right -= r.left;
+				int dpi = getdpiforwindow(hwnd);
+				r.left = r.left * 96 / dpi;
+				r.right = r.right * 96 / dpi;
+				r.top = r.top * 96 / dpi;
+				r.bottom = r.bottom * 96 / dpi;
 				regsetint (NULL, _T("LoggerPosX"), r.left);
 				regsetint (NULL, _T("LoggerPosY"), r.top);
 				regsetint (NULL, _T("LoggerPosW"), r.right);
@@ -278,20 +302,20 @@ int read_log(void)
 #endif
 }
 
-static void writeconsole_2 (const TCHAR *buffer)
+static void writeconsole_2(const TCHAR *buffer)
 {
 	DWORD temp;
 
 	if (!consoleopen)
-		openconsole ();
+		openconsole();
 
 	if (consoleopen > 0) {
-		WriteOutput (buffer, _tcslen (buffer));
+		WriteOutput(buffer, uaetcslen(buffer));
 	} else if (realconsole) {
-		fputws (buffer, stdout);
-		fflush (stdout);
+		fputws(buffer, stdout);
+		fflush(stdout);
 	} else if (consoleopen < 0) {
-		WriteConsole (stdoutput, buffer, _tcslen (buffer), &temp, 0);
+		WriteConsole(stdoutput, buffer, uaetcslen(buffer), &temp, 0);
 	}
 }
 
@@ -346,9 +370,18 @@ static void console_put (const TCHAR *buffer)
 	if (console_buffer) {
 		if (_tcslen (console_buffer) + _tcslen (buffer) < console_buffer_size)
 			_tcscat (console_buffer, buffer);
-	} else {
+	} else if (consoleopen) {
 		openconsole ();
 		writeconsole (buffer);
+	}
+	if (conlogfile) {
+		if (!conlogfilehandle) {
+			conlogfilehandle = _tfopen(conlogfile, _T("w"));
+		}
+		if (conlogfilehandle) {
+			fputws(buffer, conlogfilehandle);
+			fflush(conlogfilehandle);
+		}
 	}
 }
 
@@ -556,7 +589,7 @@ void write_dlog (const TCHAR *format, ...)
 		_ftprintf (debugfile, _T("%s"), bufp);
 	}
 	lfdetected = 0;
-	if (_tcslen (bufp) > 0 && bufp[_tcslen (bufp) - 1] == '\n')
+	if (bufp[0] != '\0' && bufp[_tcslen(bufp) - 1] == '\n')
 		lfdetected = 1;
 	va_end (parms);
 	if (bufp != buffer)
@@ -606,14 +639,14 @@ void write_logx(const TCHAR *format, ...)
 		break;
 	}
 	bufp[bufsize - 1] = 0;
-	if (1) {
+	if (consoleopen) {
 		writeconsole (bufp);
 	}
 	if (debugfile) {
 		_ftprintf (debugfile, _T("%s"), bufp);
 	}
 	lfdetected = 0;
-	if (_tcslen (bufp) > 0 && bufp[_tcslen (bufp) - 1] == '\n')
+	if (bufp[0] != '\0' && bufp[_tcslen (bufp) - 1] == '\n')
 		lfdetected = 1;
 	va_end (parms);
 	if (bufp != buffer)
@@ -682,7 +715,7 @@ void write_log (const TCHAR *format, ...)
 #endif
 
 	lfdetected = 0;
-	if (_tcslen (bufp) > 0 && bufp[_tcslen (bufp) - 1] == '\n')
+	if (bufp[0] != '\0' && bufp[_tcslen (bufp) - 1] == '\n')
 		lfdetected = 1;
 	va_end (parms);
 	if (bufp != buffer)
@@ -706,7 +739,7 @@ void f_out (void *f, const TCHAR *format, ...)
 	va_list parms;
 	va_start (parms, format);
 
-	if (f == NULL)
+	if (f == NULL || !consoleopen)
 		return;
 	count = _vsntprintf (buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
 	openconsole ();
@@ -714,7 +747,7 @@ void f_out (void *f, const TCHAR *format, ...)
 	va_end (parms);
 }
 
-TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...)
+TCHAR *buf_out(TCHAR *buffer, int *bufsize, const TCHAR *format, ...)
 {
 	int count;
 	va_list parms;
@@ -722,10 +755,10 @@ TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...)
 
 	if (buffer == NULL)
 		return 0;
-	count = _vsntprintf (buffer, (*bufsize) - 1, format, parms);
+	count = _vsntprintf(buffer, (*bufsize) - 1, format, parms);
 	va_end (parms);
-	*bufsize -= _tcslen (buffer);
-	return buffer + _tcslen (buffer);
+	*bufsize -= uaetcslen(buffer);
+	return buffer + uaetcslen(buffer);
 }
 
 FILE *log_open (const TCHAR *name, int append, int bootlog, TCHAR *outpath)

@@ -24,18 +24,19 @@ typedef int (*allocfunc_type)(int, int, int, xcolnr *);
 
 extern xcolnr xcolors[4096];
 extern uae_u32 p96_rgbx16[65536];
+extern xcolnr fullblack;
 
 extern int graphics_setup (void);
 extern int graphics_init (bool);
 extern void graphics_leave(void);
 extern void graphics_reset(bool);
 extern bool handle_events (void);
-extern int handle_msgpump (void);
+extern int handle_msgpump (bool);
 extern void setup_brkhandler (void);
 extern int isfullscreen (void);
 extern void toggle_fullscreen(int monid, int);
 extern bool toggle_rtg(int monid, int);
-extern void close_rtg(int monid);
+extern void close_rtg(int monid, bool reset);
 
 extern void toggle_mousegrab (void);
 void setmouseactivexy(int monid, int x, int y, int dir);
@@ -79,9 +80,9 @@ extern bool render_screen(int monid, int mode, bool immediate);
 extern void show_screen(int monid, int mode);
 extern bool show_screen_maybe(int monid, bool);
 
-int lockscr(struct vidbuffer *vb, bool fullupdate, bool first);
-void unlockscr(struct vidbuffer *vb, int y_start, int y_end);
-extern bool target_graphics_buffer_update(int monid);
+extern int lockscr(struct vidbuffer*, bool, bool, bool);
+extern void unlockscr(struct vidbuffer*, int, int);
+extern bool target_graphics_buffer_update(int monid, bool force);
 extern float target_adjust_vblank_hz(int monid, float);
 extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
@@ -95,14 +96,14 @@ void refreshtitle (void);
 
 extern int bits_in_mask (unsigned long mask);
 extern int mask_shift (unsigned long mask);
-extern unsigned int doMask (int p, int bits, int shift);
-extern unsigned int doMask256 (int p, int bits, int shift);
+extern uae_u32 doMask (uae_u32 p, int bits, int shift);
+extern uae_u32 doMask256 (int p, int bits, int shift);
 extern void alloc_colors64k (int monid, int, int, int, int, int, int, int, int, int, int, bool);
-extern void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
+extern void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs_, int bs, int aw, int as, int alpha, int byte_swap,
 			      uae_u32 *rc, uae_u32 *gc, uae_u32 *bc);
 extern float getvsyncrate(int monid, float hz, int *mult);
 
-void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32 *rgbx16);
+void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs_, int bs, int rgbfmt, uae_u32 *rgbx16);
 int getconvert(int rgbformat, int pixbytes);
 void copyrow_scale(int monid, uae_u8 *src, uae_u8 *src_screen, uae_u8 *dst,
 	int sx, int sy, int sxadd, int width, int srcbytesperrow, int srcpixbytes,
@@ -160,12 +161,12 @@ struct vidbuffer
 	/* tempbuffer in use */
 	bool tempbufferinuse;
 	/* extra width, chipset hpos extra in right border */
-	int extrawidth;
+	int extrawidth, extraheight;
 
 	int xoffset; /* superhires pixels from left edge */
 	int yoffset; /* lines from top edge */
 
-	int inxoffset; /* positive if sync positioning */
+	int inxoffset; /* sync positioning */
 	int inyoffset;
 
 	int monitor_id;
@@ -174,6 +175,7 @@ struct vidbuffer
 
 extern bool isnativevidbuf(int monid);
 extern int max_uae_width, max_uae_height;
+extern bool gfx_hdr;
 
 struct vidbuf_description
 {
@@ -195,6 +197,8 @@ struct amigadisplay
 	volatile bool picasso_requested_on;
 	bool picasso_requested_forced_on;
 	bool picasso_on;
+	bool interlace_on;
+	int gf_index;
 	int picasso_redraw_necessary;
 	int custom_frame_redraw_necessary;
 	int frame_redraw_necessary;

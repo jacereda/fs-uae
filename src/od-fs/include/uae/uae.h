@@ -283,12 +283,15 @@ void amiga_set_native_library_dirs(const char **library_dirs);
 
 #define DEFEVENT(A, B, C, D, E, F) INPUTEVENT_ ## A,
 #define DEFEVENT2(A, B, B2, C, D, E, F, G) INPUTEVENT_ ## A,
+#define DEFEVENTKB(A, B, C, F, PC) INPUTEVENT_ ## A,
 enum inputevents {
 INPUTEVENT_ZERO,
 #include "uae_inputevents_def.h"
 INPUTEVENT_END
 };
 #undef DEFEVENT
+#undef DEFEVENT2
+#undef DEFEVENTKB
 
 #endif
 

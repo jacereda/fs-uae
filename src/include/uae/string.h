@@ -19,11 +19,13 @@
 /* Using the real _tcs* functions */
 #else
 #define _istdigit isdigit
+#define _istxdigit isxdigit
 #define _istspace isspace
 #define _istupper isupper
 #define _sntprintf snprintf
 #define _stprintf sprintf
 #define _strtoui64 strtoll
+#define _stscanf sscanf
 #define _tcscat strcat
 #define _tcschr strchr
 #define _tcscmp strcmp

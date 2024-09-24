@@ -2,8 +2,8 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?define ProductName = "WinUAE" ?>
-  <?define ProductVersion = "4.2.1" ?>
-  <?define ProductFullVersion = "4.2.1.0" ?>
+  <?define ProductVersion = "5.3.0" ?>
+  <?define ProductFullVersion = "5.3.0.0" ?>
   <?define ProductAuthor = "Arabuusimiehet" ?>
 
   <?if $(var.Platform) = x64 ?>
@@ -157,6 +157,9 @@
       <Component Id="AdditionalFiles21" Guid="867BE54B-E842-4FB8-8306-72A09F1C8735">
         <File Source="$(var.SRCDIST)/Amiga Programs/sources.zip" KeyPath="yes"/>
       </Component>
+      <Component Id="AdditionalFiles22" Guid="77F1992B-37FC-4B14-A2F0-3247344FF8A1">
+        <File Source="$(var.SRCDIST)/Amiga Programs/UAEquit" KeyPath="yes"/>
+      </Component>
     </DirectoryRef>
 
     <DirectoryRef Id="CONFIGURATIONSHOST">
@@ -171,6 +174,9 @@
       </Component>
       <Component Id="ConfigFiles4" Guid="E5DD85B1-29E5-4B1C-99E9-C284C940A4F7">
         <File Source="$(var.SRCDIST)/Configurations/Host/FullwindowD3D.uae" KeyPath="yes"/>
+      </Component>
+      <Component Id="ConfigFiles5" Guid="91F6156D-9329-40C0-BE71-C207022DED47">
+        <File Source="$(var.SRCDIST)/Configurations/Host/Windowed Integer Scaling.uae" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
@@ -225,6 +231,7 @@
       <ComponentRef Id="ConfigFiles2" />
       <ComponentRef Id="ConfigFiles3" />
       <ComponentRef Id="ConfigFiles4" />
+      <ComponentRef Id="ConfigFiles5" />
     </Feature>
 
     <Feature Id="AdditionalFiles" Title="Amiga files" Description="Miscellaneous Amiga utilities" Level="1" AllowAdvertise="no">
@@ -248,6 +255,7 @@
       <ComponentRef Id="AdditionalFiles19" />
       <ComponentRef Id="AdditionalFiles20" />
       <ComponentRef Id="AdditionalFiles21" />
+      <ComponentRef Id="AdditionalFiles22" />
       <ComponentRef Id="AdditionalShortcut" />
     </Feature>
 

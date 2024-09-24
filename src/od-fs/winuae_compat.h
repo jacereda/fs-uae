@@ -52,6 +52,7 @@ extern int _daylight;
 #define _timeb timeb
 
 #define _cdecl
+#define __cdecl
 
 #ifndef ULONG
 #define ULONG unsigned long

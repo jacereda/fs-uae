@@ -34,7 +34,7 @@
 #include "win32.h"
 #include "sounddep/sound.h"
 #include "ahidsound_new.h"
-#include "dxwrap.h"
+#include "render.h"
 
 #include <al.h>
 #include <alc.h>
@@ -380,7 +380,7 @@ struct DSAHI {
 	struct dssample *sample;
 	struct dschannel *channel;
 	int playing, recording;
-	evt evttime;
+	evt_t evttime;
 	uae_u32 signalchannelmask;
 
 	ALCdevice *al_dev, *al_recorddev;
@@ -488,7 +488,7 @@ static int setchannelevent (struct DSAHI *dsahip, struct dschannel *dc)
 {
 	uae_u32 audioctrl = dsahip->audioctrl;
 	uae_u32 puaebase = get_long (audioctrl + ahiac_DriverData);
-	int ch = dc - &dsahip->channel[0];
+	int ch = (int)(dc - &dsahip->channel[0]);
 	uae_u32 mask;
 
 	if (!dsahip->playing || ahi_paused || !dc->al_source || !get_long (audioctrl + ahiac_SoundFunc))
@@ -524,20 +524,20 @@ static void setevent (struct DSAHI *dsahip)
 	uae_u32 freq = get_long (audioctrl + ahiac_PlayerFreq);
 	double f;
 	uae_u32 cycles;
-	evt t;
+	evt_t t;
 
 	f = ((double)(freq >> 16)) + ((double)(freq & 0xffff)) / 65536.0;
 	if (f < 1)
 		return;
-	cycles = maxhpos * maxvpos_nom * vblank_hz;
-	t = (evt)(cycles / f);
+	cycles = (uae_u32)(maxhpos * maxvpos_nom * vblank_hz);
+	t = (evt_t)(cycles / f);
 	if (dsahip->evttime == t)
 		return;
 	write_log (_T("AHI: playerfunc freq = %.2fHz\n"), f);
 	dsahip->evttime = t;
 	if (t < 10)
 		return;
-	event2_newevent2 (t, dsahip - &dsahi[0], evtfunc);
+	event2_newevent2(t, (int)(dsahip - &dsahi[0]), evtfunc);
 }
 
 static void alClear (void)
@@ -726,7 +726,7 @@ static void ds_setvolume (struct DSAHI *dsahip, struct dschannel *dc)
 {
 	if (dc->al_source != -1) {
 		if (abs (dc->cs.volume) != abs (dc->csnext.volume)) {
-			float vol = ((float)(abs (dc->csnext.volume))) / 65536.0;
+			float vol = ((float)(abs (dc->csnext.volume))) / 65536.0f;
 			alClear ();
 			alSourcef (dc->al_source, AL_GAIN, vol);
 			alError (_T("AHI: SetVolume(%d,%d)"), dc->num, vol);
@@ -981,7 +981,7 @@ static void dorecord (struct DSAHI *dsahip)
 	if (recordbuf == 0 || !valid_address (recordbuf, bytes))
 		return;
 	alClear ();
-	alcCaptureSamples (dsahip->al_recorddev, (void*)recordbuf, dsahip->record_samples);
+	alcCaptureSamples(dsahip->al_recorddev, get_real_address(recordbuf), dsahip->record_samples);
 	if (alGetError () != AL_NO_ERROR)
 		return;
 	put_word (pbase + pub_RecordHookDone, 0);
@@ -1164,7 +1164,7 @@ static int unqueuebuffers (struct dschannel *dc)
 	}
 }
 
-void ahi_hsync (void)
+static void ahi_hsync (void)
 {
 	struct DSAHI *dsahip = &dsahi[0];
 	static int cnt;
@@ -1355,7 +1355,7 @@ static uae_u32 AHIsub_AllocAudio (TrapContext *ctx)
 		write_log (_T("AHI: corrupted memory\n"));
 		return AHISF_ERROR;
 	}
-	put_long (pbase + pub_Index, dsahip - dsahi);
+	put_long(pbase + pub_Index, (int)(dsahip - dsahi));
 	dsahip->audioctrl = audioctrl;
 
 	dsahip->maxplaysamples = UAE_MAXPLAYSAMPLES;

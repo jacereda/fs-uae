@@ -12,7 +12,6 @@
 #include <windows.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <ddraw.h>
 #include <commctrl.h>
 #include <commdlg.h>
 #include <stdio.h>
@@ -56,7 +55,7 @@ void gettimeofday (struct timeval *tv, void *blah)
 
 	ftime (&time);
 
-	tv->tv_sec = time.time;
+	tv->tv_sec = (long)time.time;
 	tv->tv_usec = time.millitm * 1000;
 #else
 	SYSTEMTIME st;
@@ -110,6 +109,11 @@ void uae_sem_wait (uae_sem_t * event)
 	WaitForSingleObject (*event, INFINITE);
 }
 
+void uae_sem_unpost (uae_sem_t * event)
+{
+	ResetEvent(*event);
+}
+
 void uae_sem_post (uae_sem_t * event)
 {
 	SetEvent (*event);
@@ -140,7 +144,7 @@ void uae_sem_destroy (uae_sem_t * event)
 
 uae_thread_id uae_thread_get_id(void)
 {
-	return (uae_thread_id)GetCurrentThreadId();
+	return (uae_thread_id)(INT_PTR)GetCurrentThreadId();
 }
 
 #ifndef _CONSOLE
@@ -149,21 +153,21 @@ typedef unsigned (__stdcall *BEGINTHREADEX_FUNCPTR)(void *);
 
 struct thparms
 {
-	void *(*f)(void*);
+	void (*f)(void *);
 	void *arg;
 };
 
 static unsigned __stdcall thread_init (void *f)
 {
 	struct thparms *thp = (struct thparms*)f;
-	void *(*fp)(void*) = thp->f;
+	void (*fp)(void *) = thp->f;
 	void *arg = thp->arg;
 
 	xfree (f);
 
 #ifndef _CONSOLE
 	__try {
-		fp (arg);
+		fp(arg);
 #endif
 #ifndef _CONSOLE
 	} __except (WIN32_ExceptionFilter (GetExceptionInformation (), GetExceptionCode ())) {
@@ -183,7 +187,7 @@ void uae_end_thread (uae_thread_id *tid)
 typedef BOOL(WINAPI* AVSETMMTHREADPRIORITY)(HANDLE, AVRT_PRIORITY);
 static AVSETMMTHREADPRIORITY pAvSetMmThreadPriority;
 
-int uae_start_thread (const TCHAR *name, void *(*f)(void *), void *arg, uae_thread_id *tid)
+int uae_start_thread (const TCHAR *name, void (*f)(void *), void *arg, uae_thread_id *tid)
 {
 	HANDLE hThread;
 	int result = 1;
@@ -218,7 +222,7 @@ int uae_start_thread (const TCHAR *name, void *(*f)(void *), void *arg, uae_thre
 	return result;
 }
 
-int uae_start_thread_fast (void *(*f)(void *), void *arg, uae_thread_id *tid)
+int uae_start_thread_fast (void (*f)(void *), void *arg, uae_thread_id *tid)
 {
 	int v = uae_start_thread (NULL, f, arg, tid);
 	if (*tid) {

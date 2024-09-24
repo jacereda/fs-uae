@@ -27,6 +27,7 @@
                 # expat
                 # flex
                 # gettext
+                gdb
                 git
                 glib
                 # gmp

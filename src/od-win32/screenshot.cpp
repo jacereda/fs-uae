@@ -1,8 +1,8 @@
 
 #define PNG_SCREENSHOTS 1
+#define IFF_SCREENSHOTS 2
 
 #include <windows.h>
-#include <ddraw.h>
 
 #include <stdio.h>
 
@@ -10,23 +10,23 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "custom.h"
-#include "dxwrap.h"
+#include "render.h"
 #include "win32.h"
 #include "win32gfx.h"
 #include "direct3d.h"
-#include "opengl.h"
 #include "registry.h"
 #include "gfxfilter.h"
 #include "xwin.h"
 #include "drawing.h"
 #include "fsdb.h"
 #include "zfile.h"
-#include "picasso96_win.h"
+#include "gfxboard.h"
 
 #include "png.h"
 
 int screenshotmode = PNG_SCREENSHOTS;
 int screenshot_originalsize = 0;
+int screenshot_paletteindexed = 0;
 int screenshot_clipmode = 0;
 int screenshot_multi = 0;
 
@@ -42,7 +42,7 @@ static void namesplit (TCHAR *s)
 {
 	int l;
 
-	l = _tcslen (s) - 1;
+	l = uaetcslen(s) - 1;
 	while (l >= 0) {
 		if (s[l] == '.')
 			s[l] = 0;
@@ -53,7 +53,7 @@ static void namesplit (TCHAR *s)
 		l--;
 	}
 	if (l > 0)
-		memmove (s, s + l, (_tcslen (s + l) + 1) * sizeof (TCHAR));
+		memmove (s, s + l, (uaetcslen(s + l) + 1) * sizeof (TCHAR));
 }
 
 static int toclipboard (BITMAPINFO *bi, void *bmp)
@@ -70,8 +70,8 @@ static int toclipboard (BITMAPINFO *bi, void *bmp)
 	if (hg) {
 		dib = (uae_u8*)GlobalLock (hg);
 		if (dib) {
-			memcpy (dib, &bi->bmiHeader, bi->bmiHeader.biSize);
-			memcpy (dib + bi->bmiHeader.biSize, bmp, bi->bmiHeader.biSizeImage);
+			memcpy (dib, &bi->bmiHeader, bi->bmiHeader.biSize + bi->bmiHeader.biClrUsed * sizeof(RGBQUAD));
+			memcpy (dib + bi->bmiHeader.biSize + +bi->bmiHeader.biClrUsed * sizeof(RGBQUAD), bmp, bi->bmiHeader.biSizeImage);
 		}
 		GlobalUnlock (hg);
 		if (SetClipboardData (CF_DIB, hg))
@@ -125,7 +125,9 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 
 	if (!standard) {
 		regqueryint(NULL, _T("Screenshot_Original"), &screenshot_originalsize);
+		regqueryint(NULL, _T("Screenshot_PaletteIndexed"), &screenshot_paletteindexed);
 		regqueryint(NULL, _T("Screenshot_ClipMode"), &screenshot_clipmode);
+		regqueryint(NULL, _T("Screenshot_Mode"), &screenshotmode);
 	} else {
 		screenshot_originalsize = 1;
 		screenshot_clipmode = 0;
@@ -144,8 +146,8 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 		int screenshot_width = 0, screenshot_height = 0;
 		int screenshot_xoffset = -1, screenshot_yoffset = -1;
 
-		if (WIN32GFX_IsPicassoScreen(mon)) {
-			src = mem = getrtgbuffer(monid, &width, &height, &spitch, &bits, pal);
+		if (gfxboard_isgfxboardscreen(monid)) {
+			src = mem = gfxboard_getrtgbuffer(monid, &width, &height, &spitch, &bits, pal);
 			needfree = true;
 			rgb_bb2 = 8;
 			rgb_gb2 = 8;
@@ -189,7 +191,7 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 		if (width == 0 || height == 0) {
 			if (needfree) {
 				if (WIN32GFX_IsPicassoScreen(mon))
-					freertgbuffer(0, mem);
+					gfxboard_freertgbuffer(0, mem);
 				else
 					freefilterbuffer(0, mem);
 			}
@@ -219,10 +221,10 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 				int maxh = currprefs.screenshot_max_height << currprefs.gfx_vresolution;
 				int minw = currprefs.screenshot_min_width << currprefs.gfx_resolution;
 				int minh = currprefs.screenshot_min_height << currprefs.gfx_vresolution;
-				if (minw > AMIGA_WIDTH_MAX << currprefs.gfx_resolution)
-					minw = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
-				if (minh > AMIGA_HEIGHT_MAX << currprefs.gfx_resolution)
-					minh = AMIGA_HEIGHT_MAX << currprefs.gfx_resolution;
+				if (minw > (maxhpos_display + 1) << currprefs.gfx_resolution)
+					minw = (maxhpos_display + 1) << currprefs.gfx_resolution;
+				if (minh > (maxvsize_display + 1) << currprefs.gfx_resolution)
+					minh = (maxvsize_display + 1) << currprefs.gfx_resolution;
 				if (maxw < minw)
 					maxw = minw;
 				if (maxh < minh)
@@ -268,6 +270,7 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 		int yoffset = screenshot_yoffset < 0 ? (screenshot_height - height) / 2 : -screenshot_yoffset;
 
 		ZeroMemory (bi, sizeof(bi));
+		bi->bmiHeader.biClrUsed = bits <= 8 ? (1 << bits) : 0;
 		bi->bmiHeader.biSize = sizeof (BITMAPINFOHEADER);
 		bi->bmiHeader.biWidth = screenshot_width * screenshot_xmult;
 		bi->bmiHeader.biHeight = screenshot_height * screenshot_ymult;
@@ -278,7 +281,6 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 		bi->bmiHeader.biSizeImage = dpitch * bi->bmiHeader.biHeight;
 		bi->bmiHeader.biXPelsPerMeter = 0;
 		bi->bmiHeader.biYPelsPerMeter = 0;
-		bi->bmiHeader.biClrUsed = bits <= 8 ? (1 << bits) : 0;
 		bi->bmiHeader.biClrImportant = 0;
 		if (bits <= 8) {
 			for (int i = 0; i < bi->bmiHeader.biClrUsed; i++) {
@@ -290,7 +292,7 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 		if (!(lpvBits = xmalloc(uae_u8, bi->bmiHeader.biSizeImage))) {
 			if (needfree) {
 				if (WIN32GFX_IsPicassoScreen(mon))
-					freertgbuffer(monid, mem);
+					gfxboard_freertgbuffer(monid, mem);
 				else
 					freefilterbuffer(monid, mem);
 			}
@@ -342,7 +344,7 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 					uae_u8 *d2 = d;
 					for (int y2 = 0; y2 < ymult; y2++) {
 						for (int x2 = 0; x2 < xmult; x2++) {
-							d[xx + x2] = s[x];
+							d2[xx + x2] = s[x];
 						}
 						d2 += dpitch2;
 					}
@@ -405,12 +407,11 @@ static int screenshot_prepare(int monid, int imagemode, struct vidbuffer *vb, bo
 				}
 			}
 
-
 			src += spitch;
 		}
 		if (needfree) {
-			if (WIN32GFX_IsPicassoScreen(mon))
-				freertgbuffer(monid, mem);
+			if (gfxboard_isgfxboardscreen(monid))
+				gfxboard_freertgbuffer(monid, mem);
 			else
 				freefilterbuffer(monid, mem);
 		}
@@ -426,9 +427,9 @@ donormal:
 			height = state->Height;
 		}
 		if (D3D_isenabled(0) == 2) {
-			int w, h, pitch, bits = 32;
+			int w, h, pitch, bits = 32, d;
 			void *data;
-			bool got = D3D11_capture(monid, &data, &w, &h, &pitch, renderTarget);
+			bool got = D3D11_capture(monid, &data, &w, &h, &d, &pitch, renderTarget);
 
 			int dpitch = (((width * depth + 31) & ~31) / 8);
 			lpvBits = xmalloc(uae_u8, dpitch * height);
@@ -446,7 +447,7 @@ donormal:
 			bi->bmiHeader.biClrUsed = 0;
 			bi->bmiHeader.biClrImportant = 0;
 
-			if (got && lpvBits) {
+			if (got && lpvBits && d <= 32) {
 				for (int y = 0; y < h && y < height; y++) {
 					uae_u8 *d = (uae_u8*)lpvBits + (height - y - 1) * dpitch;
 					uae_u32 *s = (uae_u32*)((uae_u8*)data + y * pitch);
@@ -465,7 +466,7 @@ donormal:
 				}
 			}
 			if (got)
-				D3D11_capture(monid, NULL, NULL, NULL, NULL, renderTarget);
+				D3D11_capture(monid, NULL, NULL, NULL, NULL, NULL, renderTarget);
 			d3dcaptured = true;
 
 		} else if (D3D_isenabled(0) == 1) {
@@ -627,6 +628,184 @@ void Screenshot_RGBinfo (int rb, int gb, int bb, int ab, int rs, int gs, int bs,
 	rgb_as = as;
 }
 
+extern bool get_custom_color_reg(int colreg, uae_u8 *r, uae_u8 *g, uae_u8 *b);
+
+static uae_u32 uniquecolors[256] = { 0 };
+static int uniquecolorcount, uniquecolordepth;
+static uae_u8 *palettebm;
+
+static void count_colors(bool alpha)
+{
+	int h = bi->bmiHeader.biHeight;
+	int w = bi->bmiHeader.biWidth;
+	int d = bi->bmiHeader.biBitCount;
+	uae_u32 customcolors[256] = { 0 };
+	bool uniquecolorsa[256] = { 0 };
+	bool palettea[256] = { 0 };
+	uae_u32 palette[256] = { 0 };
+	uae_u8 indextab[256] = { 0 };
+	int palettecount = 0;
+
+	uniquecolorcount = 0;
+	if (!screenshot_paletteindexed || alpha) {
+		uniquecolorcount = -1;
+		return;
+	}
+	if (d <= 8) {
+		return;
+	}
+	palettebm = xcalloc(uae_u8, w * h);
+	if (!palettebm) {
+		return;
+	}
+	palettecount = 0;
+	uae_u8 r, g, b;
+	if (get_custom_color_reg(0, &r, &g, &b)) {
+		palettea[palettecount] = true;
+		palette[palettecount] = (b << 16) | (g << 8) | r;
+		palettecount++;
+	}
+	for (int i = 0; i < h; i++) {
+		uae_u8 *p = (uae_u8*)lpvBits + i * ((((w * 24) + 31) & ~31) / 8);
+		for (int j = 0; j < w; j++) {
+			uae_u32 co = (p[0] << 16) | (p[1] << 8) | (p[2] << 0);
+			p += 3;
+			int c = 0;
+			if (palettecount >= 1 && co == palette[palettecount - 1]) {
+				c = palettecount - 1;
+			} else {
+				for (c = 0; c < palettecount; c++) {
+					if (palette[c] == co) {
+						break;
+					}
+				}
+			}
+			if (c >= palettecount) {
+				if (palettecount >= 256) {
+					// run out of palette slots
+					write_log("Run out of palette slots when counting colors.");
+					uniquecolorcount = -1;
+					xfree(palettebm);
+					palettebm = NULL;
+					return;
+				}
+				palettea[palettecount] = true;
+				palette[palettecount] = co;
+				palettecount++;
+			}
+		}
+	}
+	write_log("Screenshot color count: %d\n", palettecount);
+
+	// get custom colors
+	for (int i = 0; i < 256; i++) {
+		uniquecolors[i] = 0;
+		uniquecolorsa[i] = false;
+	}
+	int customcolorcnt = 0;
+	for (int i = 0; i < 256; i++) {
+		if (!get_custom_color_reg(i, &r, &g, &b))
+			break;
+		uae_u32 co = (b << 16) | (g << 8) | r;
+		int j = 0;
+		for (j = 0; j < customcolorcnt; j++) {
+			if (uniquecolors[i] == co)
+				break;
+		}
+		if (j >= customcolorcnt) {
+			uniquecolors[i] = co;
+			customcolorcnt++;
+		}
+	}
+	// find matching colors from bitmap and allocate colors
+	int match = 0;
+	for (int i = 0; i < palettecount; i++) {
+		if (palettea[i]) {
+			uae_u32 cc = palette[i];
+			for (int j = 0; j < customcolorcnt; j++) {
+				uae_u32 cc2 = uniquecolors[j];
+				if (!uniquecolorsa[j] && cc == cc2) {
+					uniquecolorsa[j] = true;
+					if (j >= uniquecolorcount) {
+						uniquecolorcount = j + 1;
+					}
+					palettea[i] = false;
+					match++;
+					break;
+				}
+			}
+		}
+	}
+	write_log("Screenshot custom register color matches: %d\n", match);
+	// add remaining colors not yet matched
+	match = 0;
+	// use all unused colors if IFF mode to keep total colors as small as possible
+	// if not iff: try to preserve first 32 colors.
+	int safecolors = screenshotmode == 2 ? 0 : 32;
+	if (uniquecolorcount < safecolors) {
+		uniquecolorcount = safecolors;
+	}
+	for (int i = 0; i < palettecount; i++) {
+		if (palettea[i]) {
+			int j = 0;
+			for (j = safecolors; j < 256 + safecolors; j++) {
+				int jj = j & 255;
+				if (!uniquecolorsa[jj]) {
+					uniquecolors[jj] = palette[i];
+					uniquecolorsa[jj] = true;
+					palettea[i] = false;
+					if (jj > uniquecolorcount) {
+						uniquecolorcount = jj + 1;
+					}
+					match++;
+					break;
+				}
+			}
+			if (j >= 256 + safecolors) {
+				// run out of palette slots
+				write_log("Run out of palette slots when adding remaining colors.");
+				uniquecolorcount = -1;
+				xfree(palettebm);
+				palettebm = NULL;
+				return;
+			}
+		}
+	}
+	write_log("Screenshot non-custom register matched colors: %d\n", match);
+	// create image
+	int prevc = -1;
+	for (int i = 0; i < h; i++) {
+		uae_u8 *p = (uae_u8 *)lpvBits + i * ((((w * 24) + 31) & ~31) / 8);
+		uae_u8 *dp = palettebm + w * i;
+		for (int j = 0; j < w; j++) {
+			uae_u32 co = (p[0] << 16) | (p[1] << 8) | (p[2] << 0);
+			p += 3;
+			int c = 0;
+			if (prevc >= 0 && co == uniquecolors[prevc]) {
+				c = prevc;
+			} else {
+				for (c = 0; c < 256; c++) {
+					if (uniquecolors[c] == co) {
+						prevc = c;
+						if (c > uniquecolorcount) {
+							uniquecolorcount = c + 1;
+						}
+						break;
+					}
+				}
+			}
+			*dp++ = (uae_u8)c;
+		}
+	}
+	// select depth
+	uniquecolordepth = 1;
+	for (int i = 0; i < 8; i++) {
+		if (uniquecolorcount > (1 << i)) {
+			uniquecolordepth = i + 1;
+		}
+	}
+}
+
 #if PNG_SCREENSHOTS > 0
 
 static void _cdecl pngtest_blah (png_structp png_ptr, png_const_charp message)
@@ -664,28 +843,44 @@ static int savepng(FILE *fp, bool alpha)
 		return 3;
 	}
 
+	count_colors(alpha);
 	png_init_io (png_ptr, fp);
 	png_set_filter (png_ptr, 0, PNG_FILTER_NONE);
 	png_set_IHDR (png_ptr, info_ptr,
-		w, h, 8, d <= 8 ? PNG_COLOR_TYPE_PALETTE : (alpha ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
+		w, h, 8, uniquecolorcount <= 256 && uniquecolorcount >= 0 ? PNG_COLOR_TYPE_PALETTE : (alpha ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
 		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-	if (d <= 8) {
-		for (i = 0; i < (1 << d); i++) {
-			pngpal[i].red = bi->bmiColors[i].rgbRed;
-			pngpal[i].green = bi->bmiColors[i].rgbGreen;
-			pngpal[i].blue = bi->bmiColors[i].rgbBlue;
-		}
-		png_set_PLTE (png_ptr, info_ptr, pngpal, 1 << d);
-	}
 	row_pointers = xmalloc (png_bytep, h);
-	for (i = 0; i < h; i++) {
-		int j = h - i - 1;
-		row_pointers[i] = (uae_u8*)lpvBits + j * (((w * (d <= 8 ? 8 : (alpha ? 32 : 24)) + 31) & ~31) / 8);
+	if (palettebm) {
+		for (i = 0; i < (1 << uniquecolordepth); i++) {
+			pngpal[i].red = (uniquecolors[i] >> 0) & 0xff;
+			pngpal[i].green = (uniquecolors[i] >> 8) & 0xff;
+			pngpal[i].blue = (uniquecolors[i] >> 16) & 0xff;
+		}
+		png_set_PLTE(png_ptr, info_ptr, pngpal, 1 << uniquecolordepth);
+		for (i = 0; i < h; i++) {
+			int j = h - i - 1;
+			row_pointers[i] = palettebm + j * w;
+		}
+	} else {
+		if (d <= 8) {
+			for (i = 0; i < (1 << d); i++) {
+				pngpal[i].red = bi->bmiColors[i].rgbRed;
+				pngpal[i].green = bi->bmiColors[i].rgbGreen;
+				pngpal[i].blue = bi->bmiColors[i].rgbBlue;
+			}
+			png_set_PLTE(png_ptr, info_ptr, pngpal, 1 << d);
+		}
+		for (i = 0; i < h; i++) {
+			int j = h - i - 1;
+			row_pointers[i] = (uae_u8 *)lpvBits + j * (((w * (d <= 8 ? 8 : (alpha ? 32 : 24)) + 31) & ~31) / 8);
+		}
 	}
 	png_set_rows (png_ptr, info_ptr, row_pointers);
 	png_write_png (png_ptr,info_ptr, PNG_TRANSFORM_BGR, NULL);
 	png_destroy_write_struct (&png_ptr, &info_ptr);
 	xfree (row_pointers);
+	xfree(palettebm);
+	palettebm = NULL;
 	return 0;
 }
 
@@ -696,6 +891,123 @@ static void __cdecl write_data_fn(png_structp p, png_bytep data, png_size_t len)
 }
 static void __cdecl output_flush_fn(png_structp p)
 {
+}
+
+static int saveiff(FILE *fp, bool alpha)
+{
+	const uae_u8 iffilbm[] = {
+	'F','O','R','M',0,0,0,0,'I','L','B','M',
+	'B','M','H','D',0,0,0,20, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	'C','A','M','G',0,0,0, 4,  0,0,0,0,
+	};
+
+	count_colors(alpha);
+
+	int h = bi->bmiHeader.biHeight;
+	int w = bi->bmiHeader.biWidth;
+	int iffbpp = uniquecolordepth;
+	if (uniquecolorcount < 0 || uniquecolorcount > 256) {
+		iffbpp = 24;
+	}
+
+	int bodysize = (((w + 15) & ~15) / 8) * h * iffbpp;
+
+	int iffsize = sizeof(iffilbm) + (8 + 256 * 3 + 1) + (4 + 4) + bodysize;
+	uae_u8 *iff = xcalloc(uae_u8, iffsize);
+	memcpy(iff, iffilbm, sizeof(iffilbm));
+	if (!iff) {
+		return 1;
+	}
+	uae_u8 *p = iff + 5 * 4;
+	// BMHD
+	p[0] = w >> 8;
+	p[1] = w;
+	p[2] = h >> 8;
+	p[3] = h;
+	p[8] = iffbpp;
+	p[14] = 1;
+	p[15] = 1;
+	p[16] = w >> 8;
+	p[17] = w;
+	p[18] = h >> 8;
+	p[19] = h;
+	p = iff + sizeof iffilbm - 4;
+	// CAMG
+	if (w > 400)
+		p[2] |= 0x80; // HIRES
+	if (h > 300)
+		p[3] |= 0x04; // LACE
+	p += 4;
+	if (iffbpp <= 8) {
+		int cols = 1 << iffbpp;
+		int cnt = 0;
+		memcpy(p, "CMAP", 4);
+		p[4] = 0;
+		p[5] = 0;
+		p[6] = (cols * 3) >> 8;
+		p[7] = (cols * 3);
+		p += 8;
+		for (int i = 0; i < cols; i++) {
+			*p++ = uniquecolors[i] >> 0;
+			*p++ = uniquecolors[i] >> 8;
+			*p++ = uniquecolors[i] >> 16;
+			cnt += 3;
+		}
+		if (cnt & 1)
+			*p++ = 0;
+	}
+	memcpy(p, "BODY", 4);
+	p[4] = bodysize >> 24;
+	p[5] = bodysize >> 16;
+	p[6] = bodysize >> 8;
+	p[7] = bodysize >> 0;
+	p += 8;
+
+	if (iffbpp <= 8) {
+		for (int y = 0; y < h; y++) {
+			uae_u8 *s = palettebm + ((h - 1) - y) * w;
+			int b;
+			for (b = 0; b < iffbpp; b++) {
+				int mask2 = 1 << b;
+				for (int x = 0; x < w; x++) {
+					int off = x / 8;
+					int mask = 1 << (7 - (x & 7));
+					uae_u8 v = s[x]; 
+					if (v & mask2)
+						p[off] |= mask;
+				}
+				p += ((w + 15) & ~15) / 8;
+			}
+		}
+	} else {
+		for (int y = 0; y < h; y++) {
+			uae_u32 *s = (uae_u32*)(((uae_u8*)lpvBits) + ((h - 1) - y) * ((w * (alpha ? 32 : 24) + 31) & ~31) / 8);
+			int b, bb;
+			for (bb = 0; bb < 3; bb++) {
+				for (b = 0; b < 8; b++) {
+					int mask2 = 1 << (((2 - bb) * 8) + b);
+					for (int x = 0; x < w; x++) {
+						int off = x / 8;
+						int mask = 1 << (7 - (x & 7));
+						uae_u32 v = s[x];
+						if (v & mask2)
+							p[off] |= mask;
+					}
+					p += ((w + 15) & ~15) / 8;
+				}
+			}
+		}
+	}
+
+	int tsize = addrdiff(p, iff) - 8;
+	p = iff + 4;
+	p[0] = tsize >> 24;
+	p[1] = tsize >> 16;
+	p[2] = tsize >> 8;
+	p[3] = tsize >> 0;
+	fwrite(iff, 1, 8 + tsize + (tsize & 1), fp);
+	xfree(iff);
+	return 0;
 }
 
 static struct zfile *savepngzfile(bool alpha)
@@ -729,10 +1041,11 @@ static struct zfile *savepngzfile(bool alpha)
 		return NULL;
 	}
 
+	count_colors(alpha);
 	png_set_write_fn(png_ptr, zf, write_data_fn, output_flush_fn);
 	png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
 	png_set_IHDR(png_ptr, info_ptr,
-		w, h, 8, d <= 8 ? PNG_COLOR_TYPE_PALETTE : (alpha ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
+		w, h, 8, uniquecolorcount <= 256 && uniquecolorcount >= 0 ? PNG_COLOR_TYPE_PALETTE : (alpha ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
 		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	if (d <= 8) {
 		for (i = 0; i < (1 << d); i++) {
@@ -743,14 +1056,37 @@ static struct zfile *savepngzfile(bool alpha)
 		png_set_PLTE(png_ptr, info_ptr, pngpal, 1 << d);
 	}
 	row_pointers = xmalloc(png_bytep, h);
-	for (i = 0; i < h; i++) {
-		int j = h - i - 1;
-		row_pointers[i] = (uae_u8*)lpvBits + j * (((w * (d <= 8 ? 8 : (alpha ? 32 : 24)) + 31) & ~31) / 8);
+	if (palettebm) {
+		for (i = 0; i < (1 << uniquecolordepth); i++) {
+			pngpal[i].red = (uniquecolors[i] >> 0) & 0xff;
+			pngpal[i].green = (uniquecolors[i] >> 8) & 0xff;
+			pngpal[i].blue = (uniquecolors[i] >> 16) & 0xff;
+		}
+		png_set_PLTE(png_ptr, info_ptr, pngpal, 1 << uniquecolordepth);
+		for (i = 0; i < h; i++) {
+			int j = h - i - 1;
+			row_pointers[i] = palettebm + j * w;
+		}
+	} else {
+		if (d <= 8) {
+			for (i = 0; i < (1 << d); i++) {
+				pngpal[i].red = bi->bmiColors[i].rgbRed;
+				pngpal[i].green = bi->bmiColors[i].rgbGreen;
+				pngpal[i].blue = bi->bmiColors[i].rgbBlue;
+			}
+			png_set_PLTE(png_ptr, info_ptr, pngpal, 1 << d);
+		}
+		for (i = 0; i < h; i++) {
+			int j = h - i - 1;
+			row_pointers[i] = (uae_u8 *)lpvBits + j * (((w * (d <= 8 ? 8 : (alpha ? 32 : 24)) + 31) & ~31) / 8);
+		}
 	}
 	png_set_rows(png_ptr, info_ptr, row_pointers);
 	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 	xfree(row_pointers);
+	xfree(palettebm);
+	palettebm = NULL;
 	return zf;
 }
 
@@ -786,8 +1122,17 @@ static void screenshot_prepare_multi(void)
 static int filenumber = 0;
 static int dirnumber = 1;
 
+static void getscreenshotfilename(TCHAR *name)
+{
+	if (currprefs.floppyslots[0].dfxtype >= 0 && currprefs.floppyslots[0].df[0]) {
+		_tcscpy(name, currprefs.floppyslots[0].df);
+	} else if (currprefs.cdslots[0].inuse) {
+		_tcscpy(name, currprefs.cdslots[0].name);
+	}
+}
+
 /*
-Captures the Amiga display (DirectDraw, D3D or OpenGL) surface and saves it to file as a 24bit bitmap.
+Captures the Amiga display (GDI, D3D) surface and saves it to file as a 24bit bitmap.
 */
 int screenshotf(int monid, const TCHAR *spath, int mode, int doprepare, int imagemode, struct vidbuffer *vb)
 {
@@ -795,7 +1140,7 @@ int screenshotf(int monid, const TCHAR *spath, int mode, int doprepare, int imag
 	FILE *fp = NULL;
 	int failed = 0;
 	int screenshot_max = 1000; // limit 999 iterations / screenshots
-	TCHAR *format = _T("%s%s%s%03d.%s");
+	const TCHAR *format = _T("%s%s%s%03d.%s");
 	bool alpha = usealpha();
 
 	HBITMAP offscreen_bitmap = NULL; // bitmap that is converted to a DIB
@@ -826,10 +1171,12 @@ int screenshotf(int monid, const TCHAR *spath, int mode, int doprepare, int imag
 			fp = _tfopen (spath, _T("wb"));
 			if (fp) {
 #if PNG_SCREENSHOTS > 0
-				if (screenshotmode)
+				if (screenshotmode == 1)
 					failed = savepng (fp, alpha);
-				else
 #endif
+				if (screenshotmode == 2)
+					failed = saveiff(fp, alpha);
+				if (screenshotmode == 0)
 					failed = savebmp (fp, alpha);
 				fclose(fp);
 				fp = NULL;
@@ -863,19 +1210,15 @@ int screenshotf(int monid, const TCHAR *spath, int mode, int doprepare, int imag
 			CreateDirectory(path, NULL);
 		}
 
-
 		name[0] = 0;
-		if (currprefs.floppyslots[0].dfxtype >= 0)
-			_tcscpy (name, currprefs.floppyslots[0].df);
-		else if (currprefs.cdslots[0].inuse)
-			_tcscpy (name, currprefs.cdslots[0].name);
+		getscreenshotfilename(name);
 		if (!name[0])
 			underline[0] = 0;
 		namesplit (name);
 
 		while(++filenumber < screenshot_max)
 		{
-			_stprintf (filename, format, path, name, underline, filenumber, screenshotmode ? _T("png") : _T("bmp"));
+			_stprintf (filename, format, path, name, underline, filenumber, screenshotmode == 2 ? _T("iff") : (screenshotmode ? _T("png") : _T("bmp")));
 			if ((fp = _tfopen (filename, _T("rb"))) == NULL) // does file not exist?
 			{
 				int nok = 0;
@@ -884,10 +1227,12 @@ int screenshotf(int monid, const TCHAR *spath, int mode, int doprepare, int imag
 					goto oops; // error
 				}
 #if PNG_SCREENSHOTS > 0
-				if (screenshotmode)
+				if (screenshotmode == 1)
 					nok = savepng (fp, alpha);
-				else
 #endif
+				if (screenshotmode == 2)
+					nok = saveiff(fp, alpha);
+				if (screenshotmode == 0)
 					nok = savebmp (fp, alpha);
 				fclose(fp);
 				if (nok && fp) {
@@ -949,7 +1294,7 @@ void screenshot_reset(void)
 	screenshot_free();
 }
 
-uae_u8 *save_screenshot(int monid, int *len)
+uae_u8 *save_screenshot(int monid, size_t *len)
 {
 #if 0
 	struct amigadisplay *ad = &adisplays[monid];
@@ -960,7 +1305,7 @@ uae_u8 *save_screenshot(int monid, int *len)
 	int w = avidinfo->drawbuffer.inwidth;
 	int h = avidinfo->drawbuffer.inheight;
 	if (!programmedmode) {
-		h = (maxvpos + lof_store - minfirstline) << currprefs.gfx_vresolution;
+		h = (maxvpos + lof_display - minfirstline) << currprefs.gfx_vresolution;
 	}
 	if (interlace_seen && currprefs.gfx_vresolution > 0) {
 		h -= 1 << (currprefs.gfx_vresolution - 1);

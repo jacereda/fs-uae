@@ -39,15 +39,15 @@ void update_audio (void);
 void audio_evhandler (void);
 void audio_hsync (void);
 void audio_update_adkmasks (void);
-void update_sound (double clk);
-void update_cda_sound (double clk);
+void update_sound(float clk);
+void update_cda_sound (float clk);
 void led_filter_audio (void);
 void set_audio (void);
 int audio_activate (void);
 void audio_deactivate (void);
 void audio_vsync (void);
 void audio_sampleripper(int);
-void write_wavheader (struct zfile *wavfile, uae_u32 size, uae_u32 freq);
+void write_wavheader (struct zfile *wavfile, size_t size, uae_u32 freq);
 
 int audio_is_pull(void);
 int audio_pull_buffer(void);
@@ -91,6 +91,8 @@ enum {
 	SND_4CH,
 	SND_6CH_CLONEDSTEREO,
 	SND_6CH,
+	SND_8CH_CLONEDSTEREO,
+	SND_8CH,
 	SND_NONE
 };
 
@@ -106,19 +108,21 @@ static inline int get_audio_stereomode (int channels)
 		return SND_4CH;
 	case 6:
 		return SND_6CH;
+	case 8:
+		return SND_8CH;
 	}
 	return SND_STEREO;
 }
 
 STATIC_INLINE int get_audio_nativechannels (int stereomode)
 {
-	int ch[] = { 1, 2, 4, 4, 6, 6, 0 };
+	int ch[] = { 1, 2, 4, 4, 6, 6, 8, 8, 0 };
 	return ch[stereomode];
 }
 
 STATIC_INLINE int get_audio_amigachannels (int stereomode)
 {
-	int ch[] = { 1, 2, 2, 4, 2, 4, 0 };
+	int ch[] = { 1, 2, 2, 4, 2, 4, 2, 4, 0 };
 	return ch[stereomode];
 }
 

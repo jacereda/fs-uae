@@ -51,9 +51,25 @@ static TCHAR evilchars[NUM_EVILCHARS] = { '\\', '*', '?', '\"', '<', '>', '|' };
 *        1632
 */
 
+void makesafefilename(TCHAR *s, bool evilonly)
+{
+	TCHAR *c;
+
+	for (int i = 0; i < NUM_EVILCHARS; i++)
+		while ((c = _tcschr(s, evilchars[i])) != 0)
+			*c = '_';
+
+	if (!evilonly) {
+		while ((c = _tcschr(s, '.')) != 0)
+			*c = '_';
+		while ((c = _tcschr(s, ' ')) != 0)
+			*c = '_';
+	}
+}
+
 static TCHAR *make_uaefsdbpath (const TCHAR *dir, const TCHAR *name)
 {
-	int len;
+	size_t len;
 	TCHAR *p;
 
 	len = _tcslen (dir) + 1 + 1;
@@ -124,11 +140,11 @@ static int delete_uaefsdb (const TCHAR *dir)
 	return ret;
 }
 
-static int write_uaefsdb (const TCHAR *dir, uae_u8 *fsdb)
+static int write_uaefsdb(const TCHAR *item, uae_u8 *fsdb)
 {
 	TCHAR *p;
 	HANDLE h;
-	DWORD written = 0, dirflag, dirattr;
+	DWORD written = 0, itemflag, itemattr;
 	DWORD attr = INVALID_FILE_ATTRIBUTES;
 	FILETIME t1, t2, t3;
 	int time_valid = FALSE;
@@ -137,78 +153,99 @@ static int write_uaefsdb (const TCHAR *dir, uae_u8 *fsdb)
 	TCHAR path[MAX_DPATH];
 	
 	if (currprefs.win32_filesystem_mangle_reserved_names == false) {
-		_tcscpy (path, PATHPREFIX);
-		_tcscat (path, dir);
+		_tcscpy(path, PATHPREFIX);
+		_tcscat(path, item);
 		namep = path;
 	} else {
-		namep = dir;
+		namep = item;
 	}
 
-	p = make_uaefsdbpath (dir, NULL);
+	p = make_uaefsdbpath (item, NULL);
 
-	dirattr = GetFileAttributesSafe (dir);
-	dirflag = FILE_ATTRIBUTE_NORMAL;
-	if (dirattr != INVALID_FILE_ATTRIBUTES && (dirattr & FILE_ATTRIBUTE_DIRECTORY))
-		dirflag = FILE_FLAG_BACKUP_SEMANTICS; /* argh... */
-	h = CreateFile (namep, GENERIC_READ, 0,
-		NULL, OPEN_EXISTING, dirflag, NULL);
+	itemattr = GetFileAttributesSafe (item);
+	itemflag = FILE_ATTRIBUTE_NORMAL;
+	if (itemflag != INVALID_FILE_ATTRIBUTES && (itemattr & FILE_ATTRIBUTE_DIRECTORY))
+		itemflag = FILE_FLAG_BACKUP_SEMANTICS; /* argh... */
+	h = CreateFile(namep, GENERIC_READ, 0, NULL, OPEN_EXISTING, itemflag, NULL);
 	if (h != INVALID_HANDLE_VALUE) {
-		if (GetFileTime (h, &t1, &t2, &t3))
+		if (GetFileTime(h, &t1, &t2, &t3)) {
+			if (fsdb_debug) {
+				write_log(_T("time ok (%08x-%08x %08x-%08x %08x-%08x)\n"),
+					t1.dwHighDateTime, t1.dwLowDateTime,
+					t2.dwHighDateTime, t2.dwLowDateTime,
+					t3.dwHighDateTime, t3.dwLowDateTime);
+			}
 			time_valid = TRUE;
-		CloseHandle (h);
+		}
+		CloseHandle(h);
 	}
-	h = CreateFile (p, GENERIC_WRITE, 0,
-		NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	h = CreateFile(p, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fsdb_debug) {
 		TCHAR *an, *nn, *co;
-		an = au_fs ((char*)fsdb + 5);
-		nn = au_fs ((char*)fsdb + 262);
-		co = au_fs ((char*)fsdb + 519);
-		write_log (_T("write_uaefsdb '%s' = %x\n"), p, h);
+		an = au_fs((char*)fsdb + 5);
+		nn = au_fs((char*)fsdb + 262);
+		co = au_fs((char*)fsdb + 519);
+		write_log (_T("write_uaefsdb '%s' = %p\n"), p, h);
 		write_log (_T("v=%02x flags=%08x an='%s' nn='%s' c='%s'\n"),
 			fsdb[0], ((uae_u32*)(fsdb+1))[0], an, nn, co);
-		xfree (co);
-		xfree (nn);
-		xfree (an);
+		xfree(co);
+		xfree(nn);
+		xfree(an);
 	}
-	if (h == INVALID_HANDLE_VALUE && GetLastError () == ERROR_ACCESS_DENIED) {
-		attr = GetFileAttributes (p);
-		if (attr != INVALID_FILE_ATTRIBUTES) {
-			if (attr & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN)) {
-				SetFileAttributes (p, attr & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN));
-				h = CreateFile (p, GENERIC_WRITE, 0,
-					NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-				if (fsdb_debug)
-					write_log (_T("write_uaefsdb (2) '%s' = %x\n"), p, h);
+	if (h == INVALID_HANDLE_VALUE) {
+		DWORD err = GetLastError();
+		if (fsdb_debug) {
+			write_log(_T("fail %d\n"), err);
+		}
+		if (err == ERROR_ACCESS_DENIED) {
+			attr = GetFileAttributes(p);
+			if (fsdb_debug) {
+				write_log(_T("attrs %08x\n"), attr);
+			}
+			if (attr != INVALID_FILE_ATTRIBUTES) {
+				if (attr & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN)) {
+					uae_u32 attr2 = attr & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN);
+					if (!SetFileAttributes(p, attr2)) {
+						write_log(_T("'%s' SetFileAttributes1 %08x %d\n"), p, attr2, GetLastError());
+					}
+					h = CreateFile(p, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+					if (fsdb_debug) {
+						write_log(_T("write_uaefsdb (2) '%s' = %p %d\n"), p, h, GetLastError());
+					}
+				}
 			}
 		}
 	}
 	if (h != INVALID_HANDLE_VALUE) {
-		WriteFile (h, fsdb, UAEFSDB2_LEN, &written, NULL);
-		CloseHandle (h);
+		WriteFile(h, fsdb, UAEFSDB2_LEN, &written, NULL);
+		CloseHandle(h);
 		if (written == UAEFSDB2_LEN) {
 			if (fsdb_debug)
-				write_log (_T("->ok\n"));
+				write_log(_T("->ok\n"));
 			ret = 1;
 			goto end;
 		}
 	}
 	if (fsdb_debug)
-		write_log (_T("->fail %d, %d\n"), written, GetLastError ());
+		write_log(_T("->fail %d, %d\n"), written, GetLastError());
 
-	DeleteFile (p);
+	DeleteFile(p);
 end:
-	if (attr != INVALID_FILE_ATTRIBUTES)
-		SetFileAttributes (p, attr);
-	if (time_valid) {
-		h = CreateFile (namep, GENERIC_WRITE, 0,
-			NULL, OPEN_EXISTING, dirflag, NULL);
-		if (h != INVALID_HANDLE_VALUE) {
-			SetFileTime (h, &t1, &t2, &t3);
-			CloseHandle (h);
+	if (attr != INVALID_FILE_ATTRIBUTES) {
+		if (!SetFileAttributes(p, attr)) {
+			write_log(_T("'%s' SetFileAttributes2 %08x %d\n"), p, attr, GetLastError());
 		}
 	}
-	xfree (p);
+	if (time_valid) {
+		h = CreateFile(namep, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, itemflag, NULL);
+		if (h != INVALID_HANDLE_VALUE) {
+			if (!SetFileTime(h, &t1, &t2, &t3)) {
+				write_log(_T("'%s' SetFileTime %d\n"), namep, GetLastError());
+			}
+			CloseHandle(h);
+		}
+	}
+	xfree(p);
 	return ret;
 }
 
@@ -283,14 +320,15 @@ static a_inode *aino_from_buf (a_inode *base, uae_u8 *buf, int *winmode)
 /* Return nonzero for any name we can't create on the native filesystem.  */
 static int fsdb_name_invalid_2x (const TCHAR *n, int dir)
 {
-	int i;
+	size_t i;
 	static char s1[MAX_DPATH];
 	static WCHAR s2[MAX_DPATH];
 	TCHAR a = n[0];
 	TCHAR b = (a == '\0' ? a : n[1]);
 	TCHAR c = (b == '\0' ? b : n[2]);
 	TCHAR d = (c == '\0' ? c : n[3]);
-	int l = _tcslen (n), ll;
+	size_t l = _tcslen(n);
+	int ll;
 
 	/* the reserved fsdb filename */
 	if (_tcscmp (n, FSDB_FILE) == 0)
@@ -350,8 +388,6 @@ static int fsdb_name_invalid_2 (a_inode *aino, const TCHAR *n, int dir)
 	int v = fsdb_name_invalid_2x(n, dir);
 	if (v <= 1 || !aino)
 		return v;
-	if (!os_win7)
-		return 1;
 	TCHAR *p = build_nname(aino->nname, n);
 	HANDLE h = CreateFile(p, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	DWORD err = -1;
@@ -582,21 +618,13 @@ int fsdb_mode_representable_p (const a_inode *aino, int amigaos_mode)
 
 TCHAR *fsdb_create_unique_nname (a_inode *base, const TCHAR *suggestion)
 {
-	TCHAR *c;
 	TCHAR tmp[256] = UAEFSDB_BEGINS;
 	int i;
 
 	_tcsncat (tmp, suggestion, 240);
 
 	/* replace the evil ones... */
-	for (i = 0; i < NUM_EVILCHARS; i++)
-		while ((c = _tcschr (tmp, evilchars[i])) != 0)
-			*c = '_';
-
-	while ((c = _tcschr (tmp, '.')) != 0)
-		*c = '_';
-	while ((c = _tcschr (tmp, ' ')) != 0)
-		*c = '_';
+	makesafefilename(tmp, false);
 
 	for (;;) {
 		TCHAR *p = build_nname (base->nname, tmp);
@@ -613,7 +641,7 @@ TCHAR *fsdb_create_unique_nname (a_inode *base, const TCHAR *suggestion)
 	}
 }
 
-TCHAR *fsdb_search_dir (const TCHAR *dirname, TCHAR *rel)
+TCHAR *fsdb_search_dir(const TCHAR *dirname, TCHAR *rel, TCHAR **relalt)
 {
 	WIN32_FIND_DATA fd;
 	HANDLE h;
@@ -621,6 +649,7 @@ TCHAR *fsdb_search_dir (const TCHAR *dirname, TCHAR *rel)
 	const TCHAR *namep;
 	TCHAR path[MAX_DPATH];
 	
+	*relalt = NULL;
 	tmp = build_nname (dirname, rel);
 	if (!tmp)
 		return NULL;
@@ -638,6 +667,32 @@ TCHAR *fsdb_search_dir (const TCHAR *dirname, TCHAR *rel)
 		else
 			p = my_strdup (fd.cFileName);
 		FindClose (h);
+	} else {
+		// check if it is *.lnk shortcut
+		TCHAR tmp[MAX_DPATH];
+		_tcscpy(tmp, namep);
+		_tcscat(tmp, _T(".lnk"));
+		DWORD flags = GetFileAttributesSafe(tmp);
+		if (flags != INVALID_FILE_ATTRIBUTES && !(flags & FILE_ATTRIBUTE_SYSTEM) && !(flags & FILE_ATTRIBUTE_DIRECTORY)) {
+			h = FindFirstFile(tmp, &fd);
+			if (h != INVALID_HANDLE_VALUE) {
+				TCHAR tmp2[MAX_DPATH];
+				_tcscpy(tmp2, tmp);
+				if (my_resolvesoftlink(tmp2, sizeof tmp2 / sizeof(TCHAR), false)) {
+					if (_tcslen(fd.cFileName) > 4 && !_tcsicmp(fd.cFileName + _tcslen(fd.cFileName) - 4, _T(".lnk"))) {
+						fd.cFileName[_tcslen(fd.cFileName) - 4] = 0;
+					}
+					if (_tcscmp(fd.cFileName, rel) == 0)
+						p = rel;
+					else
+						p = my_strdup(fd.cFileName);
+					_tcscpy(tmp2, p);
+					_tcscat(tmp2, _T(".lnk"));
+					*relalt = my_strdup(tmp2);
+				}
+				FindClose(h);
+			}
+		}
 	}
 	xfree (tmp);
 	return p;

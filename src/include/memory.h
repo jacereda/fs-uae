@@ -15,16 +15,20 @@ extern void a1000_reset(void);
 
 #ifdef JIT
 extern int special_mem;
+extern int special_mem_default;
+extern int jit_n_addr_unsafe;
 #endif
 
 #define S_READ 1
 #define S_WRITE 2
+#define S_N_ADDR 4
 
 bool init_shm (void);
 void free_shm (void);
 bool preinit_shm (void);
 extern bool canbang;
 extern bool jit_direct_compatible_memory;
+extern uaecptr highest_ram;
 
 #define Z3BASE_UAE 0x10000000
 #define Z3BASE_REAL 0x40000000
@@ -35,9 +39,11 @@ extern bool jit_direct_compatible_memory;
 
 #ifdef ADDRESS_SPACE_24BIT
 #define MEMORY_BANKS 256
+#define MEMORY_BANKS_24 256
 #define MEMORY_RANGE_MASK ((1<<24)-1)
 #else
 #define MEMORY_BANKS 65536
+#define MEMORY_BANKS_24 256
 #define MEMORY_RANGE_MASK (~0)
 #endif
 
@@ -46,7 +52,7 @@ typedef void (REGPARAM3 *mem_put_func)(uaecptr, uae_u32) REGPARAM;
 typedef uae_u8 *(REGPARAM3 *xlate_func)(uaecptr) REGPARAM;
 typedef int (REGPARAM3 *check_func)(uaecptr, uae_u32) REGPARAM;
 
-extern uae_u32 max_z3fastmem;
+extern uae_u32 max_z3fastmem, max_physmem;
 
 extern uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode);
 extern void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v);
@@ -95,6 +101,7 @@ enum
 	ABFLAG_CHIPRAM = 4096, ABFLAG_CIA = 8192, ABFLAG_PPCIOSPACE = 16384,
 	ABFLAG_MAPPED = 32768,
 	ABFLAG_DIRECTACCESS = 65536,
+	ABFLAG_NODMA = 131072,
 	ABFLAG_CACHE_ENABLE_DATA = CACHE_ENABLE_DATA << ABFLAG_CACHE_SHIFT,
 	ABFLAG_CACHE_ENABLE_DATA_BURST = CACHE_ENABLE_DATA_BURST << ABFLAG_CACHE_SHIFT,
 	ABFLAG_CACHE_ENABLE_INS = CACHE_ENABLE_INS << ABFLAG_CACHE_SHIFT,
@@ -104,8 +111,10 @@ enum
 #define ABFLAG_CACHE_ENABLE_BOTH (ABFLAG_CACHE_ENABLE_DATA | ABFLAG_CACHE_ENABLE_INS)
 #define ABFLAG_CACHE_ENABLE_ALL (ABFLAG_CACHE_ENABLE_BOTH | ABFLAG_CACHE_ENABLE_INS_BURST | ABFLAG_CACHE_ENABLE_DATA_BURST)
 
-typedef struct {
-	/* These ones should be self-explanatory... */
+typedef struct _addrbank {
+	/* These ones should be self-explanatory...
+	 * Do not move. JIT depends on it
+	 */
 	mem_get_func lget, wget, bget;
 	mem_put_func lput, wput, bput;
 	/* Use xlateaddr to translate an Amiga address to a uae_u8 * that can
@@ -141,6 +150,8 @@ typedef struct {
 	uae_u8 *baseaddr_direct_r;
 	uae_u8 *baseaddr_direct_w;
 	uae_u32 startaccessmask;
+	bool barrier;
+	uae_u32 protectmode;
 } addrbank;
 
 #define MEMORY_MIN_SUBBANK 1024
@@ -167,8 +178,10 @@ struct autoconfig_info
 	uae_u32 start;
 	uae_u32 size;
 	int zorro;
+	// never direct maps RAM
+	bool indirect;
 	const TCHAR *label;
-	addrbank *addrbank;
+	struct _addrbank *addrbank;
 	uaecptr write_bank_address;
 	struct romconfig *rc;
 	uae_u32 last_high_ram;
@@ -433,7 +446,8 @@ extern addrbank debugmem_bank;
 extern addrbank a3000lmem_bank;
 extern addrbank a3000hmem_bank;
 extern addrbank extendedkickmem_bank;
-extern addrbank extendedkickmem2_bank;
+extern addrbank extendedkickmem2a_bank;
+extern addrbank extendedkickmem2b_bank;
 extern addrbank custmem1_bank;
 extern addrbank custmem2_bank;
 extern addrbank romboardmem_bank[MAX_ROM_BOARDS];
@@ -442,9 +456,9 @@ extern void rtarea_init(void);
 extern void rtarea_free(void);
 extern void rtarea_init_mem(void);
 extern void rtarea_setup(void);
-extern void expamem_reset (void);
-extern void expamem_next (addrbank *mapped, addrbank *next);
-extern void expamem_shutup (addrbank *mapped);
+extern void expamem_reset(int);
+extern void expamem_next(addrbank *mapped, addrbank *next);
+extern void expamem_shutup(addrbank *mapped);
 extern bool expamem_z3hack(struct uae_prefs*);
 extern void expansion_cpu_fallback(void);
 extern void set_expamem_z3_hack_mode(int);
@@ -452,8 +466,6 @@ extern uaecptr expamem_board_pointer, expamem_highmem_pointer;
 extern uaecptr expamem_z3_pointer_real, expamem_z3_pointer_uae;
 extern uae_u32 expamem_z3_highram_real, expamem_z3_highram_uae;
 extern uae_u32 expamem_board_size;
-
-extern uae_u32 last_custom_value1;
 
 /* Default memory access functions */
 
@@ -524,6 +536,9 @@ extern void set_roms_modified (void);
 extern void reload_roms(void);
 extern bool read_kickstart_version(struct uae_prefs *p);
 extern void chipmem_setindirect(void);
+extern void initramboard(addrbank *ab, struct ramboard *rb);
+extern void loadboardfile(addrbank *ab, struct boardloadfile *lf);
+extern void mman_set_barriers(bool);
 
 uae_u32 memory_get_long(uaecptr);
 uae_u32 memory_get_word(uaecptr);
@@ -551,6 +566,52 @@ STATIC_INLINE uae_u32 get_wordi(uaecptr addr)
 {
 	return memory_get_wordi(addr);
 }
+
+// do split memory access if it can cross memory banks
+STATIC_INLINE uae_u32 get_long_compatible(uaecptr addr)
+{
+	if ((addr &0xffff) < 0xfffd) {
+		return memory_get_long(addr);
+	} else if (addr & 1) {
+		uae_u8 v0 = memory_get_byte(addr + 0);
+		uae_u16 v1 = memory_get_word(addr + 1);
+		uae_u8 v3 = memory_get_byte(addr + 3);
+		return (v0 << 24) | (v1 << 8) | (v3 << 0);
+	} else {
+		uae_u16 v0 = memory_get_word(addr + 0);
+		uae_u16 v1 = memory_get_word(addr + 2);
+		return (v0 << 16) | (v1 << 0);
+	}
+}
+STATIC_INLINE uae_u32 get_word_compatible(uaecptr addr)
+{
+	if ((addr & 0xffff) < 0xffff) {
+		return memory_get_word(addr);
+	} else {
+		uae_u8 v0 = memory_get_byte(addr + 0);
+		uae_u8 v1 = memory_get_byte(addr + 1);
+		return (v0 << 8) | (v1 << 0);
+	}
+}
+STATIC_INLINE uae_u32 get_byte_compatible(uaecptr addr)
+{
+	return memory_get_byte(addr);
+}
+STATIC_INLINE uae_u32 get_longi_compatible(uaecptr addr)
+{
+	if ((addr & 0xffff) < 0xfffd) {
+		return memory_get_longi(addr);
+	} else {
+		uae_u16 v0 = memory_get_wordi(addr + 0);
+		uae_u16 v1 = memory_get_wordi(addr + 2);
+		return (v0 << 16) | (v1 << 0);
+	}
+}
+STATIC_INLINE uae_u32 get_wordi_compatible(uaecptr addr)
+{
+	return memory_get_wordi(addr);
+}
+
 
 STATIC_INLINE uae_u32 get_long_jit(uaecptr addr)
 {
@@ -623,6 +684,11 @@ STATIC_INLINE void *get_pointer (uaecptr addr)
 # endif
 #endif
 
+void dma_put_word(uaecptr addr, uae_u16 v);
+uae_u16 dma_get_word(uaecptr addr);
+void dma_put_byte(uaecptr addr, uae_u8 v);
+uae_u8 dma_get_byte(uaecptr addr);
+
 void memory_put_long(uaecptr, uae_u32);
 void memory_put_word(uaecptr, uae_u32);
 void memory_put_byte(uaecptr, uae_u32);
@@ -639,6 +705,35 @@ STATIC_INLINE void put_byte (uaecptr addr, uae_u32 b)
 {
 	memory_put_byte(addr, b);
 }
+
+// do split memory access if it can cross memory banks
+STATIC_INLINE void put_long_compatible(uaecptr addr, uae_u32 l)
+{
+	if ((addr & 0xffff) < 0xfffd) {
+		memory_put_long(addr, l);
+	} else if (addr & 1) {
+		memory_put_byte(addr + 0, l >> 24);
+		memory_put_word(addr + 1, l >>  8);
+		memory_put_byte(addr + 3, l >>  0);
+	} else {
+		memory_put_word(addr + 0, l >> 16);
+		memory_put_word(addr + 2, l >>  0);
+	}
+}
+STATIC_INLINE void put_word_compatible(uaecptr addr, uae_u32 w)
+{
+	if ((addr & 0xffff) < 0xffff) {
+		memory_put_word(addr, w);
+	} else {
+		memory_put_byte(addr + 0, w >> 8);
+		memory_put_byte(addr + 1, w >> 0);
+	}
+}
+STATIC_INLINE void put_byte_compatible(uaecptr addr, uae_u32 b)
+{
+	memory_put_byte(addr, b);
+}
+
 
 STATIC_INLINE void put_long_jit(uaecptr addr, uae_u32 l)
 {
@@ -823,5 +918,9 @@ typedef struct UaeMemoryMap {
 } UaeMemoryMap;
 
 void uae_memory_map(UaeMemoryMap *map);
+
+#ifdef FSUAE
+int uae_get_memory_checksum(void *data, int size);
+#endif
 
 #endif /* UAE_MEMORY_H */

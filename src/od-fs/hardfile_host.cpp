@@ -534,7 +534,7 @@ void hfd_flush_cache (struct hardfiledata *hfd, int now)
 }
 #endif
 
-static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
     long outlen = 0;
     int coffset;
@@ -549,15 +549,20 @@ static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
     hfd->cache_offset = offset;
     if (offset + CACHE_SIZE > hfd->offset + (hfd->physsize - hfd->virtual_size))
         hfd->cache_offset = hfd->offset + (hfd->physsize - hfd->virtual_size) - CACHE_SIZE;
-    hdf_seek (hfd, hfd->cache_offset);
+    if (hdf_seek (hfd, hfd->cache_offset)) {
+	    *error = 45;
+	    return 0;
+    }
     poscheck (hfd, CACHE_SIZE);
     if (hfd->handle_valid == HDF_HANDLE_LINUX)
         outlen = fread (hfd->cache, 1, CACHE_SIZE, hfd->handle->h);
     else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
         outlen = zfile_fread (hfd->cache, 1, CACHE_SIZE, hfd->handle->zf);
     hfd->cache_valid = 0;
-    if (outlen != CACHE_SIZE)
+    if (outlen != CACHE_SIZE) {
+	*error = 45;
         return 0;
+    }
     hfd->cache_valid = 1;
     coffset = isincache (hfd, offset, len);
     if (coffset >= 0) {
@@ -566,16 +571,26 @@ static int hdf_read_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
     }
     write_log ("hdf_read: cache bug! offset=0x%llx len=%d\n", offset, len);
     hfd->cache_valid = 0;
+    *error = 45;
     return 0;
 }
 
-int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
     int got = 0;
     uae_u8 *p = (uae_u8*)buffer;
+    uae_u32 error2 = 0;
 
-    if (hfd->drive_empty)
-        return 0;
+    if (error) {
+	    *error = 0;
+    } else {
+	    error = &error2;
+    }
+
+    if (hfd->drive_empty) {
+	    *error = 29;
+	    return 0;
+    }
     while (len > 0) {
         int maxlen;
         int ret = 0;
@@ -592,7 +607,7 @@ int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
             maxlen = len;
         } else {
             maxlen = len > CACHE_SIZE ? CACHE_SIZE : len;
-            ret = hdf_read_2 (hfd, p, offset, maxlen);
+            ret = hdf_read_2 (hfd, p, offset, maxlen, error);
         }
         got += ret;
         if (ret != maxlen)
@@ -604,28 +619,39 @@ int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
     return got;
 }
 
-static int hdf_write_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+static int hdf_write_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
     int outlen = 0;
 
     if (hfd->ci.readonly) {
+        *error = 28;
         if (g_debug) {
             write_log("hfd->readonly\n");
         }
         return 0;
     }
     if (hfd->dangerous) {
+        *error = 28;
         if (g_debug) {
             write_log("hfd->dangerous\n");
         }
         return 0;
     }
+    if (len == 0)
+      return 0;
+
     hfd->cache_valid = 0;
-    hdf_seek (hfd, offset);
+    if (hdf_seek (hfd, offset)) {
+       *error = 45;
+       return 0;
+    }
     poscheck (hfd, len);
     memcpy (hfd->cache, buffer, len);
     if (hfd->handle_valid == HDF_HANDLE_LINUX) {
         outlen = fwrite (hfd->cache, 1, len, hfd->handle->h);
+	if (outlen != len) {
+	  *error = 45;
+	}
         //fflush(hfd->handle->h);
         if (g_debug) {
             write_log("wrote %u bytes (wanted %d) at offset %llx\n", outlen,
@@ -641,8 +667,10 @@ static int hdf_write_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, 
                 memset (tmp, 0xa1, tmplen);
                 hdf_seek (hfd, offset);
                 outlen2 = fread (tmp, 1, tmplen, hfd->handle->h);
-                if (memcmp (hfd->cache, tmp, tmplen) != 0 || outlen != len)
+                if (memcmp (hfd->cache, tmp, tmplen) != 0 || outlen != len) {
                     gui_message (_T("\"%s\"\n\nblock zero write failed!"), name);
+		    *error = 45;
+		}
                 xfree (tmp);
             }
         }
@@ -651,10 +679,18 @@ static int hdf_write_2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, 
     }
     return outlen;
 }
-int hdf_write_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+
+int hdf_write_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len, uae_u32 *error)
 {
     int got = 0;
     uae_u8 *p = (uae_u8*)buffer;
+    uae_u32 error2 = 0;
+
+    if (error) {
+      *error = 0;
+    } else {
+      error = &error2;
+    }
 
     if (g_debug) {
         write_log("hdf_write_target off %llx len %d virtual size %lld\n",
@@ -668,7 +704,7 @@ int hdf_write_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
     }
     while (len > 0) {
         int maxlen = len > CACHE_SIZE ? CACHE_SIZE : len;
-        int ret = hdf_write_2 (hfd, p, offset, maxlen);
+        int ret = hdf_write_2 (hfd, p, offset, maxlen, error);
         if (ret < 0)
             return ret;
         got += ret;

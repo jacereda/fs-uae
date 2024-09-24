@@ -97,9 +97,11 @@ static int sleep_millis2 (int ms, bool main)
 
 int sleep_millis_main (int ms)
 {
+#if defined FSUAE_XXX
     if (fsemu) {
         printf("sleep_millis_main %d\n", ms);
     }
+#endif
 	return sleep_millis2(ms, true);
 }
 int sleep_millis (int ms)

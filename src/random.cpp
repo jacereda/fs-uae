@@ -68,7 +68,7 @@ static uint32_t xorshift(uint32_t *state)
 // TODO: Ability to set seed from netplay server - currently using fixed seed.
 
 static int old_seed = -1;
-static uae_u32 randseed;
+//static uae_u32 randseed;
 int g_random_debug_logging = 0;
 // static rand_context g_rand_context;
 

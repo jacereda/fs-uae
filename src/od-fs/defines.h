@@ -133,7 +133,6 @@ typedef unsigned short USHORT;
 
 extern TCHAR start_path_data[];
 extern void picasso_reset (void);
-extern void picasso_handle_hsync (void);
 extern void init_hz_p96 (void);
 int GetDriveType(TCHAR* vol);
 

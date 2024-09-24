@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 const int FSEMU_SEMAPHORE_TIMEOUT = 1;
+#define INFINITE (~0)
 
 struct fsemu_semaphore_t;
 typedef struct fsemu_semaphore_t fsemu_semaphore_t;

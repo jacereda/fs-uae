@@ -4,10 +4,10 @@
 #include "statusline.h"
 #include "uae.h"
 
-bool softstatusline(void)
-{
-	return false;
-}
+// bool softstatusline(void)
+// {
+// 	return false;
+// }
 
 void statusline_updated(int monid)
 {
@@ -22,4 +22,9 @@ void statusline_render(int monid, uae_u8 *buf, int bpp, int pitch, int width, in
 bool isguiactive(void)
 {
 	return true;
+}
+
+void ldp_render(const char *txt, int len, uae_u8 *buf, struct vidbuffer *vd, int dx, int dy, int mx, int my)
+{
+
 }

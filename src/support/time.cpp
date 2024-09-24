@@ -84,7 +84,7 @@ static frame_time_t read_processor_time_qpf(void)
 	frame_time_t t;
 	QueryPerformanceCounter(&counter);
 	if (qpcdivisor == 0)
-		t = (frame_time_t) (counter.LowPart);
+		t = (frame_time_t) (counter.QuadPart);
 	else
 		t = (frame_time_t) (counter.QuadPart >> qpcdivisor);
 	if (!t)
@@ -92,24 +92,13 @@ static frame_time_t read_processor_time_qpf(void)
 	return t;
 }
 
-static frame_time_t read_processor_time_rdtsc(void)
+uae_s64 read_processor_time_rdtsc(void)
 {
-	frame_time_t foo = 0;
-#if defined(X86_MSVC_ASSEMBLY)
-	frame_time_t bar;
-	__asm
-	{
-		rdtsc
-			mov foo, eax
-			mov bar, edx
-	}
-	/* very high speed CPU's RDTSC might overflow without this.. */
-	foo >>= 6;
-	foo |= bar << 26;
-	if (!foo)
-		foo++;
+#ifdef __arm__
+	return read_processor_time_qpf();
+#else
+	return __rdtsc();
 #endif
-	return foo;
 }
 
 uae_time_t uae_time(void)
@@ -131,9 +120,9 @@ uae_time_t uae_time(void)
 	return t;
 }
 
-uae_u32 read_system_time(void)
+uae_s64 read_system_time(void)
 {
-	return GetTickCount();
+	return GetTickCount64();
 }
 
 static volatile int dummythread_die;
@@ -144,7 +133,7 @@ static void _cdecl dummythread(void *dummy)
 	while (!dummythread_die);
 }
 
-static uae_u64 win32_read_processor_time(void)
+static uae_s64 win32_read_processor_time(void)
 {
 #if defined(X86_MSVC_ASSEMBLY)
 	uae_u32 foo, bar;
@@ -155,7 +144,7 @@ static uae_u64 win32_read_processor_time(void)
 			mov foo, eax
 			mov bar, edx
 	}
-	return (((uae_u64)bar) << 32) | foo;
+	return (((uae_s64)bar) << 32) | foo;
 #else
 	return 0;
 #endif
@@ -164,7 +153,7 @@ static uae_u64 win32_read_processor_time(void)
 static void figure_processor_speed_rdtsc(void)
 {
 	static int freqset;
-	uae_u64 clockrate;
+	frame_time_t clockrate;
 	int oldpri;
 	HANDLE th;
 
@@ -200,14 +189,14 @@ static void figure_processor_speed_qpf(void)
 	qpfrate = freq.QuadPart;
 	/* limit to 10MHz */
 	qpcdivisor = 0;
-	while (qpfrate >= 10000000) {
+	while (qpfrate > 10000000) {
 		qpfrate >>= 1;
 		qpcdivisor++;
 	}
 	write_log(_T("CLOCKFREQ: QPF %.2fMHz (%.2fMHz, DIV=%d)\n"),
 		  freq.QuadPart / 1000000.0,
 		  qpfrate / 1000000.0, 1 << qpcdivisor);
-	syncbase = (int) qpfrate;
+	syncbase = qpfrate;
 }
 
 void uae_time_calibrate(void)

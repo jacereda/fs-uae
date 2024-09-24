@@ -25,6 +25,7 @@
 #include "native2amiga.h"
 #include "inputdevice.h"
 #include "uae/ppc.h"
+#include "devices.h"
 
 /* Commonly used autoconfig strings */
 
@@ -82,7 +83,7 @@ static bool istrapwait(void)
 	return false;
 }
 
-bool rethink_traps(void)
+static bool rethink_traps2(void)
 {
 	if (currprefs.uaeboard < 2)
 		return false;
@@ -95,6 +96,12 @@ bool rethink_traps(void)
 		return false;
 	}
 }
+
+static void rethink_traps(void)
+{
+	rethink_traps2();
+}
+
 
 #define RTAREA_WRITEOFFSET 0xfff0
 
@@ -192,7 +199,7 @@ static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 	} else if (addr == RTAREA_INTREQ + 1) {
 		rtarea_bank.baseaddr[addr] = hwtrap_waiting != 0;
 	} else if (addr == RTAREA_INTREQ + 2) {
-		if (rethink_traps()) {
+		if (rethink_traps2()) {
 			rtarea_bank.baseaddr[addr] = 1;
 		} else {
 			rtarea_bank.baseaddr[addr] = 0;
@@ -320,6 +327,11 @@ static void REGPARAM2 rtarea_lput (uaecptr addr, uae_u32 value)
 	}
 }
 
+static int rt_addr;
+static int rt_straddr;
+static int rt_addr_restart;
+static bool rt_addr_reset;
+
 void rtarea_reset(void)
 {
 	uae_u8 *p = rtarea_bank.baseaddr;
@@ -329,6 +341,11 @@ void rtarea_reset(void)
 		memset(p + RTAREA_HEARTBEAT, 0, 0x10000 - RTAREA_HEARTBEAT);
 		memset(p + RTAREA_VARIABLES, 0, RTAREA_VARIABLES_SIZE);
 	}
+	if (rt_addr_reset) {
+		rt_addr_reset = false;
+		rt_addr_restart = rt_addr;
+	}
+	rt_addr = rt_addr_restart;
 	trap_reset();
 	absolute_rom_address = 0;
 }
@@ -336,9 +353,6 @@ void rtarea_reset(void)
 /* some quick & dirty code to fill in the rt area and save me a lot of
 * scratch paper
 */
-
-static int rt_addr;
-static int rt_straddr;
 
 uae_u32 addr (int ptr)
 {
@@ -380,16 +394,16 @@ uae_u8 dbg (uaecptr addr)
 * backward.  store pointer at current address
 */
 
-uae_u32 ds_ansi (const uae_char *str)
+uae_u32 ds_ansi(const uae_char *str)
 {
 	int len;
 
 	if (!str)
-		return addr (rt_straddr);
-	len = strlen (str) + 1;
+		return addr(rt_straddr);
+	len = uaestrlen(str) + 1;
 	rt_straddr -= len;
-	strcpy ((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
-	return addr (rt_straddr);
+	strcpy((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
+	return addr(rt_straddr);
 }
 
 uae_u32 ds (const TCHAR *str)
@@ -411,7 +425,7 @@ uae_u32 ds_bstr_ansi (const uae_char *str)
 {
 	int len;
  
-	len = strlen (str) + 2;
+	len = uaestrlen(str) + 2;
 	rt_straddr -= len;
 	while (rt_straddr & 3)
 		rt_straddr--;
@@ -579,6 +593,7 @@ void rtarea_init(void)
 
 	rt_straddr = 0xFF00 - 2;
 	rt_addr = 0;
+	rt_addr_reset = true;
 
 	rt_trampoline_ptr = rtarea_base + RTAREA_TRAMPOLINE;
 	trap_entry = 0;
@@ -642,6 +657,10 @@ void rtarea_init(void)
 
 	org (RTAREA_TRAPS | rtarea_base);
 	init_extended_traps ();
+
+	if (currprefs.uaeboard >= 2) {
+		device_add_rethink(rethink_traps);
+	}
 }
 
 volatile uae_atomic uae_int_requested = 0;

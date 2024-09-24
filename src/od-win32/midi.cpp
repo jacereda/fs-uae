@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <mmsystem.h>
-#include <ddraw.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -739,5 +738,13 @@ void Midi_Close(void)
 		midi_ready = FALSE;
 		write_log (_T("MIDI: closed.\n"));
 		DeleteCriticalSection(&cs_proc);
+	}
+}
+
+void Midi_Reopen(void)
+{
+	if (midi_ready) {
+		Midi_Close();
+		Midi_Open();
 	}
 }

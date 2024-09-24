@@ -21,6 +21,9 @@
 #include "uae.h"
 #include "xwin.h"
 
+int key_swap_hack;
+bool gfx_hdr;
+
 void gui_lock (void)
 {
 
@@ -51,7 +54,7 @@ int get_guid_target (uae_u8 *out) {
     return 0;
 }
 
-uae_u8 *save_log (int bootlog, int *len) {
+uae_u8 *save_log (int bootlog, size_t *len) {
     STUB("");
     return NULL;
 }
@@ -113,7 +116,7 @@ void target_save_options (struct zfile *f, struct uae_prefs *p) {
     LOG_STUB("zfile=%p p=%p", f, p);
 }
 
-int target_parse_option (struct uae_prefs *p, const TCHAR *option, const TCHAR *value) {
+int target_parse_option (struct uae_prefs *p, const TCHAR *option, const TCHAR *value, int type) {
     STUB("p=%p\n, option=\"%s\"", p, option);
     return 0;
 }
@@ -238,7 +241,7 @@ bool gui_ask_disk(int drv, TCHAR *name)
     return false;
 }
 
-void target_inputdevice_unacquire(void)
+void target_inputdevice_unacquire(bool b)
 {
     STUB("");
 }
@@ -259,7 +262,7 @@ void target_getdate(int *y, int *m, int *d)
     *d = 8;
 }
 
-uae_u8 *save_screenshot(int monid, int *len)
+uae_u8 *save_screenshot(int monid, size_t *len)
 {
     STUB("");
     return NULL;
@@ -269,4 +272,25 @@ uae_u8 *save_screenshot(int monid, int *len)
 bool frame_drawn (int monid)
 {
     return false;
+}
+
+void target_setdefaultstatefilename(const TCHAR *name)
+{
+	STUB("");
+}
+
+
+bool target_osd_keyboard(int)
+{
+	STUB("");
+}
+
+void target_osk_control(int, int, int, int)
+{
+	STUB("");
+}
+
+void release_keys(void)
+{
+	STUB("");
 }

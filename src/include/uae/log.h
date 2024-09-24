@@ -14,6 +14,7 @@
 
 #include "uae/api.h"
 #include "uae/attributes.h"
+#include "uae/funcattr.h"
 #include "uae/types.h"
 
 typedef void (UAECALL *uae_log_function)(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);

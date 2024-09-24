@@ -147,7 +147,7 @@ static const unsigned char table_four[34]=
 
 static void crc_calc(struct lzxdata *d, unsigned char *memory, unsigned int length)
 {
- register unsigned int temp;
+ unsigned int temp;
 
  if(length)
  {
@@ -168,8 +168,8 @@ static void crc_calc(struct lzxdata *d, unsigned char *memory, unsigned int leng
 static int make_decode_table(struct lzxdata *d, short number_symbols, short table_size,
 		      unsigned char *length, unsigned short *table)
 {
- register unsigned char bit_num = 0;
- register short symbol;
+ unsigned char bit_num = 0;
+ short symbol;
  unsigned short leaf; /* could be a register */
  unsigned short bit_mask, fill, next_symbol, reverse;
  unsigned int table_mask, pos;
@@ -291,8 +291,8 @@ static int make_decode_table(struct lzxdata *d, short number_symbols, short tabl
 
 static int read_literal_table(struct lzxdata *d)
 {
- register unsigned int control;
- register short shift;
+ unsigned int control;
+ short shift;
  unsigned short temp; /* could be a register */
  unsigned short symbol, pos, count, fix, max_symbol;
 #if LZX_ERROR_CHECK
@@ -493,13 +493,13 @@ static int read_literal_table(struct lzxdata *d)
       }
       symbol = table_four[d->literal_len[pos] + 17 - symbol];
       while((pos < max_symbol) && (count--))
-       d->literal_len[pos++] = symbol;
+       d->literal_len[pos++] = (unsigned char)symbol;
       break;
      }
      default:
      {
       symbol = table_four[d->literal_len[pos] + 17 - symbol];
-      d->literal_len[pos++] = symbol;
+      d->literal_len[pos++] = (unsigned char)symbol;
       break;
      }
     }
@@ -531,8 +531,8 @@ static int read_literal_table(struct lzxdata *d)
 
 static void decrunch(struct lzxdata *d)
 {
- register unsigned int control;
- register short shift;
+ unsigned int control;
+ short shift;
  unsigned short temp; /* could be a register */
  unsigned short symbol, count;
  unsigned char *string;
@@ -576,7 +576,7 @@ static void decrunch(struct lzxdata *d)
   }
   if(symbol < 256)
   {
-   *d->destination++ = symbol;
+   *d->destination++ = (unsigned char)symbol;
   }
   else
   {
@@ -656,12 +656,12 @@ struct zfile *archive_access_lzx (struct znode *zn)
 		if (!zt || zt->offset != 0)
 			break;
 		znfirst = zt;
-		unpsize += znfirst->size;
+		unpsize += (unsigned int)znfirst->size;
     }
     /* find last file in compressed block */
     znlast = zn;
     while (znlast) {
-		unpsize += znlast->size;
+		unpsize += (unsigned int)znlast->size;
 		if (znlast->offset != 0)
 			break;
 		znlast = znlast->next;
@@ -715,7 +715,7 @@ struct zfile *archive_access_lzx (struct znode *zn)
 		if (!znfirst->f) {
 			dstf = zfile_fopen_empty (zf, znfirst->name, znfirst->size);
 			if (znfirst->size) {
-				zfile_fwrite(dbuf + znfirst->offset2, znfirst->size, 1, dstf);
+				zfile_fwrite(dbuf + znfirst->offset2, (size_t)znfirst->size, 1, dstf);
 			}
 			znfirst->f = dstf;
 			if (znfirst == zn)
@@ -765,7 +765,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
  do
  {
   abort = 1; /* assume an error */
-  actual = zfile_fread(archive_header, 1, 31, in_file);
+  actual = (int)zfile_fread(archive_header, 1, 31, in_file);
   if(!zfile_ferror(in_file))
   {
    if(actual) /* 0 is normal and means EOF */
@@ -780,7 +780,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
      archive_header[26] = 0;
      crc_calc(&d, archive_header, 31);
      temp = archive_header[30]; /* filename length */
-     actual = zfile_fread(header_filename, 1, temp, in_file);
+     actual = (int)zfile_fread(header_filename, 1, temp, in_file);
      if(!zfile_ferror(in_file))
      {
       if(actual == temp)
@@ -788,7 +788,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
        header_filename[temp] = 0;
        crc_calc(&d, (unsigned char*)header_filename, temp);
        temp = archive_header[14]; /* comment length */
-       actual = zfile_fread(header_comment, 1, temp, in_file);
+       actual = (int)zfile_fread(header_comment, 1, temp, in_file);
        if(!zfile_ferror(in_file))
        {
 	if(actual == temp)
@@ -850,7 +850,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 	  {
 	   merge_size = 0;
 	   if (zn) {
-		   zn->offset = zfile_ftell(in_file);
+		   zn->offset = zfile_ftell32(in_file);
 		   zn->packedsize = pack_size;
 	   }
 	   if(!zfile_fseek(in_file, pack_size, SEEK_CUR))

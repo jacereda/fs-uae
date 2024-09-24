@@ -555,8 +555,15 @@ int checkserwrite(int spaceneeded)
 	return 1;
 }
 
-int readseravail (void)
+void flushser(void)
 {
+	STUB("");
+}
+
+int readseravail (bool *breakcond)
+{
+	if (breakcond)
+		*breakcond = false;
 	if (tcpserial) {
 		if (tcp_is_connected ()) {
 			int err = uae_socket_select_read(serialconn);
@@ -788,14 +795,14 @@ void setserstat (int mask, int onoff)
 #endif
 }
 
-int setbaud (long baud)
+int setbaud (int baud, int org_baud)
 {
 	if (!currprefs.use_serial) {
 		return 1;
 	}
 
 #ifdef WITH_MIDI
-	if (baud == 31400) {
+	if (org_baud == 31400) {
 		/* MIDI baud-rate */
 		if (!midi_ready) {
 			/* try to open midi devices */
