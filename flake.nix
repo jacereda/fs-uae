@@ -24,6 +24,7 @@
                 # bison
                 # binutils
                 enet
+                flac
                 # expat
                 # flex
                 # gettext

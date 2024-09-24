@@ -16,8 +16,6 @@
 
 #ifdef HAVE_SYS_TIMEB_H
 #include <sys/timeb.h>
-#else
-
 #endif
 
 #include "options.h"
@@ -30,7 +28,7 @@
 #include "scsidev.h"
 #include "mp3decoder.h"
 #include "cda_play.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "audio.h"
 #include "uae.h"
 #include "uae/cdrom.h"
@@ -38,10 +36,9 @@
 #include "rp.h"
 #endif
 
-#ifdef FSUAE
-#else
+#if !defined FSUAE
 #define FLAC__NO_DLL
-#endif // NL
+#endif
 
 #include "FLAC/stream_decoder.h"
 
@@ -258,9 +255,6 @@ static FLAC__bool file_eof_callback (const FLAC__StreamDecoder *decoder, void *c
 
 static void flac_get_size (struct cdtoc *t)
 {
-	#if defined FSUAE
-	STUB("");
-	#else
 	FLAC__StreamDecoder *decoder = FLAC__stream_decoder_new ();
 	if (decoder) {
 		FLAC__stream_decoder_set_md5_checking (decoder, false);
@@ -272,7 +266,6 @@ static void flac_get_size (struct cdtoc *t)
 		FLAC__stream_decoder_process_until_end_of_metadata (decoder);
 		FLAC__stream_decoder_delete (decoder);
 	}
-	#endif
 }
 static uae_u8 *flac_get_data (struct cdtoc *t)
 {

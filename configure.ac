@@ -218,6 +218,8 @@ AC_CHECK_LIB([compat], [ftime])
 
 AC_CHECK_LIB([dl], [dlopen])
 
+AC_CHECK_LIB([FLAC], [FLAC__stream_decoder_set_metadata_respond])
+
 # not using freetype right now
 # AC_DEFINE([USE_FREETYPE], [1], [Define to 1 to use FreeType])
 # PKG_CHECK_MODULES([FREETYPE], [freetype2])
