@@ -17,7 +17,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "a2091.h"
 #include "zfile.h"
 #include "rommgr.h"

@@ -11,10 +11,6 @@
 #define UAE_BSDSOCKET_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "traps.h"
-#include "threaddep/thread.h"
-#endif
 
 #define BSD_TRACING_ENABLED 0
 

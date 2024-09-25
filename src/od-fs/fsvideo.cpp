@@ -1,6 +1,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include "custom.h"
+#include "xwin.h"
 #include "drawing.h"
 #include "devices.h"
 #include "dxwrap.h"

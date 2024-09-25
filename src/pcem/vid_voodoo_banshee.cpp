@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "sysdeps.h"
 #include "ibm.h"
 #include "device.h"
 #include "io.h"

@@ -206,7 +206,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -216,6 +216,7 @@
 #include "crc32.h"
 #include "akiko.h"
 #include "xwin.h"
+#include "rtgmodes.h"
 #include "gfxboard.h"
 
 #define DEBUG

@@ -7,13 +7,7 @@
 void picasso96_alloc (TrapContext* ctx);
 uae_u32 picasso_demux (uae_u32 arg, TrapContext *ctx);
 
-#ifdef FSUAE // NL
-
-#include "picasso96_win.h"
-
-#else
-
-#ifdef WIN32
+#if defined WIN32 || defined FSUAE
 
 #include "picasso96_win.h"
 
@@ -598,7 +592,6 @@ extern int p96hack_vpos2;
 extern int p96refresh_active;
 #endif
 
-#endif
 #endif
 
 #endif /* UAE_PICASSO96_H */

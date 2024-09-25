@@ -8,15 +8,6 @@
 #define UAE_DRAWING_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include "custom.h"
-#include "xwin.h"
-#endif
-
-#ifdef FSUAE // NL
-// #define FSUAE_FRAME_DEBUG 1
-#endif
 
 #define SMART_UPDATE 1
 

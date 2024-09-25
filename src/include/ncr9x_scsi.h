@@ -2,9 +2,6 @@
 #define UAE_NCR9X_SCSI_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/memory.h"
-#endif
 
 extern void cpuboard_ncr9x_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 extern void cpuboard_dkb_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);

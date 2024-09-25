@@ -37,6 +37,8 @@
  * Adapted for JIT compilation (c) Bernd Meyer, 2000
  */
 
+#include <stdlib.h>
+#include "uae/inline.h"
 #include "sysdeps.h"
 
 #ifdef JIT

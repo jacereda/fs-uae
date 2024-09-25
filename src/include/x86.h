@@ -1,10 +1,6 @@
 #ifndef UAE_X86_H
 #define UAE_X86_H
 
-#ifdef FSUAE // NL
-#include "uae/memory.h"
-#endif
-
 bool a1060_init(struct autoconfig_info *aci);
 bool a2088xt_init(struct autoconfig_info *aci);
 bool a2088t_init(struct autoconfig_info *aci);

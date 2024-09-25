@@ -11,9 +11,6 @@
 #define UAE_ZFILE_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include <stddef.h>
-#endif
 
 struct zfile;
 struct zvolume;

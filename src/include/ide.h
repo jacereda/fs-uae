@@ -2,11 +2,6 @@
 #define UAE_IDE_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/memory.h"
-#include "commpipe.h"
-#include "filesys.h"
-#endif
 
 /* IDE drive registers */
 #define IDE_DATA	0x00

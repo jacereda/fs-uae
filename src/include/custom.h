@@ -10,12 +10,7 @@
 #define UAE_CUSTOM_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include "options.h"
-#else
 #include "machdep/rpt.h"
-#endif
 
 #define BEAMCON0_HARDDIS	0x4000
 #define BEAMCON0_LPENDIS	0x2000
@@ -300,9 +295,5 @@ struct custom_store
 extern struct custom_store custom_storage[256];
 
 void vsync_event_done(void);
-
-#ifdef CPUEMU_13
-extern uae_u8 cycle_line[256 + 1];
-#endif
 
 #endif /* UAE_CUSTOM_H */

@@ -2,9 +2,6 @@
 #define UAE_READCPU_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/enum.h"
-#endif
 
 ENUMDECL {
   Dreg, Areg, Aind, Aipi, Apdi, Ad16, Ad8r,

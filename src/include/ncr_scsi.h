@@ -2,9 +2,6 @@
 #define UAE_NCR_SCSI_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/memory.h"
-#endif
 
 void ncr710_io_bput_a4000t(uaecptr, uae_u32);
 uae_u32 ncr710_io_bget_a4000t(uaecptr);

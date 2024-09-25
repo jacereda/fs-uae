@@ -26,7 +26,7 @@ int disk_debug_track = -1;
 
 #include "uae.h"
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "uae/io.h"
 #include "events.h"
 #include "custom.h"
@@ -47,11 +47,7 @@ int disk_debug_track = -1;
 #include "driveclick.h"
 #endif
 #ifdef CAPS
-#ifdef FSUAE
-#include "uae/caps.h"
-#else
 #include "caps/caps_win32.h"
-#endif
 #endif
 #ifdef SCP
 #include "scp.h"

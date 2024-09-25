@@ -1,6 +1,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include "memory.h"
 #include "autoconf.h"
 #include "fsdb.h"
 #include "options.h"

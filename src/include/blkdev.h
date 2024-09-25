@@ -2,9 +2,6 @@
 #define UAE_BLKDEV_H
 
 #include "uae/types.h"
-#ifdef FSUAE // NL
-#include "uae/limits.h"
-#endif
 
 #define DEVICE_SCSI_BUFSIZE (65536 - 1024)
 

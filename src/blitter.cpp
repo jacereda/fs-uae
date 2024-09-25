@@ -15,7 +15,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "events.h"
 #include "newcpu.h"
@@ -254,7 +254,6 @@ There is at least one demo that does this..
 	1FE,8C,RGA,8C
 
  */
-
 
 void build_blitfilltable (void)
 {

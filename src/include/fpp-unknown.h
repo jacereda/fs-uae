@@ -12,10 +12,6 @@
 #define UAE_FPP_UNKNOWN_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include <math.h>
-#endif
 
 #ifndef HAVE_to_single
 STATIC_INLINE double to_single (uae_u32 value)

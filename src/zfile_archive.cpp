@@ -9,12 +9,9 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#ifdef FSUAE
-#else
 #ifdef _WIN32
 #include <windows.h>
 #include "win32.h"
-#endif
 #endif
 
 #include "options.h"
@@ -24,10 +21,6 @@
 #include "crc32.h"
 #include "zarchive.h"
 #include "disk.h"
-
-#ifdef FSUAE // NL
-#undef _WIN32
-#endif
 
 #include <zlib.h>
 

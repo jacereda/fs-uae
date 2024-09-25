@@ -11,9 +11,6 @@
 #define UAE_DEBUG_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#endif
 
 #ifndef D
 #define D

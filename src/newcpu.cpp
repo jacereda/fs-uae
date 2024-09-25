@@ -1,10 +1,3 @@
-#ifdef FSUAE
-#define _tcstoul strtoul
-// static int _tclen(const char *s) {
-// 	// FIXME: Correctly implement?
-// 	return 1;
-// }
-#endif
 /*
 * UAE - The Un*x Amiga Emulator
 *
@@ -30,7 +23,7 @@
 #include "options.h"
 #include "events.h"
 #include "uae.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "disasm.h"
@@ -67,11 +60,6 @@
 /* Need to have these somewhere */
 bool check_prefs_changed_comp (bool checkonly) { return false; }
 #endif
-
-#ifdef FSUAE // NL
-#include "fs/emu/hacks.h"
-#endif
-
 /* For faster JIT cycles handling */
 int pissoff = 0;
 
@@ -2176,10 +2164,7 @@ static void update_68k_cycles (void)
 			cpucycleunit /= 2;
 		}
 	} else if (currprefs.cpu_frequency) {
-#ifdef FSUAE
-		// FIXME: overflow when calculating CYCLE_UNIT * baseclock ?
-#endif
-		cpucycleunit = CYCLE_UNIT * baseclock / currprefs.cpu_frequency;
+		cpucycleunit = CYCLE_UNIT * (uint64_t)baseclock / currprefs.cpu_frequency;
 	} else if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_clock_multiplier == 0) {
 		if (currprefs.cpu_model >= 68040) {
 			cpucycleunit = CYCLE_UNIT / 16;

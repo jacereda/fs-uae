@@ -1,9 +1,12 @@
+#include "config.h"
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include "memory.h"
 #include "autoconf.h"
 #include "debug.h"
 #include "disk.h"
+#include "custom.h"
 #include "drawing.h"
 #include "enforcer.h"
 #include "ethernet.h"
@@ -283,6 +286,7 @@ void target_setdefaultstatefilename(const TCHAR *name)
 bool target_osd_keyboard(int)
 {
 	STUB("");
+	return false;
 }
 
 void target_osk_control(int, int, int, int)

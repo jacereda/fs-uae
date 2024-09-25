@@ -1,9 +1,6 @@
 #ifndef UAE_PCI_H
 #define UAE_PCI_H
 
-#ifdef FSUAE // NL
-#include "memory.h"
-#endif
 extern void pci_dump(int);
 
 extern bool dkb_wildfire_pci_init(struct autoconfig_info *aci);

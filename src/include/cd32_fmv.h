@@ -2,9 +2,6 @@
 #define UAE_CD32_FMV_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/memory.h"
-#endif
 
 extern addrbank *cd32_fmv_init (struct autoconfig_info *aci);
 

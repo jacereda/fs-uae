@@ -1,6 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "uae/mman.h"
 #include "uae/vm.h"
 #include "options.h"

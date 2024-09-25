@@ -1,6 +1,7 @@
 /*Generic SVGA handling*/
 /*This is intended to be used by another SVGA driver, and not as a card in it's own right*/
 #include <stdlib.h>
+#include "sysdeps.h"
 #include "ibm.h"
 #include "mem.h"
 #include "video.h"

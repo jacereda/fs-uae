@@ -152,7 +152,7 @@
 #ifdef CD32
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "events.h"
 #include "savestate.h"
 #include "blkdev.h"
@@ -163,9 +163,7 @@
 #include "crc32.h"
 #include "uae.h"
 #include "custom.h"
-#define checkint cpucheckint // name clash with newcpu.h version
 #include "newcpu.h"
-#undef checkint
 #include "flashrom.h"
 #include "debug.h"
 #include "rommgr.h"
@@ -503,7 +501,7 @@ static smp_comm_pipe requests;
 static volatile int akiko_thread_running;
 static uae_sem_t akiko_sem, sub_sem, cda_sem;
 
-static void checkint (void)
+static void akcheckint (void)
 {
 	if (cdrom_intreq & cdrom_intena) {
 		irq ();
@@ -526,13 +524,13 @@ static void set_status (uae_u32 status)
 	}
 #endif
 	cdrom_intreq |= status;
-	checkint ();
+	akcheckint ();
 	cdrom_led ^= LED_CD_ACTIVE2;
 }
 
 static void rethink_akiko(void)
 {
-	checkint ();
+	akcheckint ();
 }
 
 static void cdaudiostop_do (void)

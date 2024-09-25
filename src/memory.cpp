@@ -16,7 +16,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "ersatz.h"
 #include "zfile.h"
@@ -42,10 +42,6 @@
 #include "devices.h"
 #include "inputdevice.h"
 #include "draco.h"
-
-#ifdef FSUAE // NL
-#undef _WIN32
-#endif
 
 bool canbang;
 uaecptr highest_ram;

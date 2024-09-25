@@ -51,11 +51,11 @@ using namespace std;
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
 #define X86_64_ASSEMBLY 1
-#define SAHF_SETO_PROFITABLE
+#define SAHF_SETO_PROFITABLE 1
 #elif defined(__i386__) || defined(_M_IX86)
 #define CPU_i386 1
 #define X86_ASSEMBLY 1
-#define SAHF_SETO_PROFITABLE
+#define SAHF_SETO_PROFITABLE 1
 #elif defined(__powerpc__) || defined(_M_PPC)
 #define CPU_powerpc 1
 #else
@@ -82,9 +82,7 @@ using namespace std;
 #define REGPARAM2 JITCALL
 #define REGPARAM3 JITCALL
 
-#ifdef FSUAE
-#include "uae/types.h"
-#else
+#if defined _WIN32
 #include <tchar.h>
 #endif
 
@@ -184,11 +182,6 @@ typedef char uae_char;
 
 typedef struct { uae_u8 RGB[3]; } RGB;
 
-#ifdef FSUAE
-#define VAL64(a) (a ## LL)
-#define UVAL64(a) (a ## uLL)
-
-#else
 #if SIZEOF_SHORT == 2
 typedef unsigned short uae_u16;
 typedef short uae_s16;
@@ -229,7 +222,6 @@ typedef uae_u32 uaecptr;
 #define uae_u64 unsigned long;
 #define VAL64(a) (a ## l)
 #define UVAL64(a) (a ## ul)
-#endif
 #endif
 
 #ifdef FSUAE
@@ -527,9 +519,6 @@ extern bool use_long_double;
 #endif
 #endif
 
-#ifdef FSUAE // NL
-#include "uae/cycleunit.h"
-#else
 /* Every Amiga hardware clock cycle takes this many "virtual" cycles.  This
    used to be hardcoded as 1, but using higher values allows us to time some
    stuff more precisely.
@@ -543,7 +532,6 @@ extern bool use_long_double;
 /* This one is used by cfgfile.c.  We could reduce the CYCLE_UNIT back to 1,
    I'm not 100% sure this code is bug free yet.  */
 #define OFFICIAL_CYCLE_UNIT 512
-#endif
 
 /*
  * You can specify numbers from 0 to 5 here. It is possible that higher

@@ -11,7 +11,7 @@
 #include "options.h"
 #include "uae.h"
 #include "gui.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "zfile.h"
 #include "crc32.h"

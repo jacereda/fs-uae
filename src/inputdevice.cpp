@@ -32,7 +32,7 @@
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "events.h"
 #include "newcpu.h"
 #include "uae.h"

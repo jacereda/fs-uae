@@ -28,10 +28,6 @@
 #define UAE_CPUMMU_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include "newcpu.h"
-#endif
 
 #define MMU_ICACHE 0
 #define MMU_IPAGECACHE 1

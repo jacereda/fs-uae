@@ -1,10 +1,6 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
-#ifdef FSUAE // NL
-#include "uae/types.h"
-#endif
-
 #define MAX_ROMMGR_ROMS 320
 
 extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);

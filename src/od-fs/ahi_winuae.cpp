@@ -25,7 +25,7 @@
 
 #include "options.h"
 #include "audio.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "events.h"
 #include "custom.h"
 #include "newcpu.h"

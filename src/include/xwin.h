@@ -10,10 +10,6 @@
 #define UAE_XWIN_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/asm.h"
-#include <string.h>
-#endif
 #include "machdep/rpt.h"
 
 #define MAX_AMIGADISPLAYS 4

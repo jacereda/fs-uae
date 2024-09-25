@@ -10,7 +10,7 @@
 #include "sysdeps.h"
 #include "options.h"
 
-#include "uae/memory.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "uae/patch.h"

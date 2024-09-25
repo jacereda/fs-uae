@@ -4,10 +4,6 @@
 #define MMU030_DEBUG 0
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include "newcpu.h"
-#endif
 
 #include "mmu_common.h"
 

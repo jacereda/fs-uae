@@ -50,7 +50,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "zfile.h"
 #include "ar.h"
 #include "autoconf.h"

@@ -7,12 +7,12 @@
 #include "sysdeps.h"
 
 #include "uae/log.h"
-#include "custom.h"
 
 #include <stdio.h>
 #include <stdarg.h>
 
 #ifdef FSUAE
+#include "custom.h"
 #include "fs/emu/hacks.h"
 #include "fsemu-time.h"
 static int64_t g_timestamp;

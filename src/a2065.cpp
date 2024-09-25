@@ -13,7 +13,7 @@
 #ifdef A2065
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "a2065.h"
@@ -26,11 +26,7 @@
 #include "devices.h"
 #include "threaddep/thread.h"
 
-#ifdef FSUAE
-#define DUMPPACKET 1
-#else
 #define DUMPPACKET 0
-#endif
 
 #define MEM_MIN 0xffff
 int log_a2065 = 0;

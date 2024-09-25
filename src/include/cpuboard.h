@@ -2,9 +2,6 @@
 #define UAE_CPUBOARD_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/memory.h"
-#endif
 
 bool cpuboard_autoconfig_init(struct autoconfig_info*);
 bool cpuboard_maprom(void);

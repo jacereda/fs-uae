@@ -1,10 +1,6 @@
 #ifndef UAE_GFXBOARD_H
 #define UAE_GFXBOARD_H
 
-#ifdef FSUAE // NL
-#include "uae/memory.h"
-#endif
-
 #include "picasso96.h"
 
 extern bool gfxboard_init_memory (struct autoconfig_info*);

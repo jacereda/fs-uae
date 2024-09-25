@@ -2,15 +2,11 @@
 #define UAE_CPU_PREFETCH_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include "newcpu.h"
-#endif
+
+#ifdef CPUEMU_20
 
 extern uae_u32 get_word_020_prefetch (int);
 extern void continue_020_prefetch(void);
-
-#ifdef CPUEMU_20
 
 STATIC_INLINE uae_u32 next_iword_020_prefetch (void)
 {

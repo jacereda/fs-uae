@@ -11,9 +11,6 @@
 #define UAE_FSDB_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include <stdio.h>
-#endif
 
 #ifndef FSDB_FILE
 #define FSDB_FILE _T("_UAEFSDB.___")

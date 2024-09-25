@@ -16,7 +16,7 @@
 #include "gensound.h"
 #include "audio.h"
 #include "events.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #ifdef SERIAL_PORT
 #include "serial.h"

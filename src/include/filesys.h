@@ -11,10 +11,6 @@
 
 #include "uae/types.h"
 #include "traps.h"
-#ifdef FSUAE
-#include "options.h"
-#include <time.h>
-#endif
 
 struct hardfilehandle;
 

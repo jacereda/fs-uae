@@ -10,11 +10,6 @@
 #define UAE_SAVESTATE_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/limits.h"
-#include "uae/inline.h"
-#include <stddef.h>
-#endif
 
 /* functions to save byte,word or long word
  * independent of CPU's endianness */

@@ -13,9 +13,6 @@
 #define UAE_FPP_IEEE_BE_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#endif
 
 
 STATIC_INLINE double to_single (uae_u32 value)

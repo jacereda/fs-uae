@@ -13,23 +13,16 @@
 
 #include "options.h"
 #include "uae/io.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "uae/seh.h"
 #include "moduleripper.h"
 #include "gui.h"
 #include "uae.h"
 
-#ifdef FSUAE // NL
-
-typedef unsigned char Uchar;
-typedef unsigned long Ulong;
-
 extern "C" {
 #include "../prowizard/include/globals.h"
 #include "../prowizard/include/extern.h"
 }
-
-#endif
 
 static int got, canceled;
 

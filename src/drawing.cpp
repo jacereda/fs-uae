@@ -40,7 +40,7 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "options.h"
 #include "threaddep/thread.h"
 #include "uae.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "xwin.h"
@@ -5301,12 +5301,12 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 	int monid = 0;
 	struct amigadisplay *ad = &adisplays[monid];
 
-#if 1 || defined JA
+#if defined FSUAE
 	if (initial) {
-    struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
-    struct vidbuffer *vb = &vidinfo->drawbuffer;
-    lockscr(vb, false, true, true);
-    unlockscr(vb, -1, -1);
+		struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
+		struct vidbuffer *vb = &vidinfo->drawbuffer;
+		lockscr(vb, false, true, true);
+		unlockscr(vb, -1, -1);
 	}
 #endif
 

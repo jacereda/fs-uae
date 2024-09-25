@@ -1,5 +1,7 @@
 #include <string.h>
 
+#include "sysconfig.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "blkdev.h"
 #include "clipboard.h"
@@ -18,7 +20,7 @@
 #include "uae/fs.h"
 #include "uae/glib.h"
 #include "uae/log.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "uae/time.h"
 
 static struct {

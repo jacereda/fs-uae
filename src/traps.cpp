@@ -16,7 +16,7 @@
 #define NEW_TRAP_DEBUG 0
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "threaddep/thread.h"
@@ -24,9 +24,6 @@
 #include "traps.h"
 #include "uae.h"
 #include "debug.h"
-#ifdef FSUAE
-#include "bsdsocket.h"
-#endif
 
 /*
 * Traps are the mechanism via which 68k code can call emulator code
@@ -696,6 +693,7 @@ TrapContext *alloc_host_main_trap_context(void)
 
 void free_host_trap_context(TrapContext *ctx)
 {
+	assert(0 && "broken");
 	if (trap_is_indirect()) {
 		int trap_slot = RTAREA_TRAP_DATA_NUM;
 		atomic_dec(&outtrap_alloc[trap_slot]);

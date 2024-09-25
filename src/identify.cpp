@@ -11,7 +11,7 @@
 #ifdef DEBUGGER
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "identify.h"
 
 const struct mem_labels int_labels[] =

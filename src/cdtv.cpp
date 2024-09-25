@@ -20,7 +20,7 @@
 #ifdef CDTV
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "custom.h"
 #define checkint cpucheckint // name collision
 #include "newcpu.h"

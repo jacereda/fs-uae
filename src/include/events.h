@@ -13,13 +13,6 @@
 #define UAE_EVENTS_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/inline.h"
-#include "uae/likely.h"
-#include "options.h"
-// FIXME: move CYCLE_UNIT define here instead
-#include "uae/cycleunit.h"
-#endif
 
 #undef EVENT_DEBUG
 

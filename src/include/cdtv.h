@@ -2,9 +2,6 @@
 #define UAE_CDTV_H
 
 #include "uae/types.h"
-#ifdef FSUAE
-#include "uae/memory.h"
-#endif
 
 #ifdef CDTV
 

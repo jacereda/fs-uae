@@ -15,7 +15,7 @@
 #include "options.h"
 #include "uae.h"
 #include "traps.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"

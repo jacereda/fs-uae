@@ -21,7 +21,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae/memory.h"
+#include "memory.h"
 #include "uae/attributes.h"
 #include "uae/vm.h"
 #include "custom.h"
