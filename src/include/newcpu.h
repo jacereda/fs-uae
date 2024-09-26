@@ -857,6 +857,7 @@ extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC("cpufunctbl");
 #ifdef JIT
 extern void (*flush_icache)(int);
 extern void compemu_reset(void);
+extern const struct cputbl *uaegetjitcputbl(void);
 #else
 #define flush_icache(int) do {} while (0)
 #define flush_icache_hard(int) do {} while (0)

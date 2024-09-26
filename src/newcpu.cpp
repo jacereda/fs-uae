@@ -1872,7 +1872,6 @@ static const struct cputbl *cputbls[6][8] =
 
 #ifdef JIT
 
-static
 const struct cputbl *uaegetjitcputbl(void)
 {
 	int lvl = (currprefs.cpu_model - 68000) / 10;
