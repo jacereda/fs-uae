@@ -688,7 +688,8 @@ void amiga_set_initialized_and_apply_options(void)
 
     uae_log("UAE initialized, apply pending options done\n");
     uae_log("-------------------------------------------\n");
-    g_list_free_full(pending_options, free);
+    // XXX this can be called several times and will crash due to freed pending_options
+    //    g_list_free_full(pending_options, free);
 }
 
 // ----------------------------------------------------------------------------
