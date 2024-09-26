@@ -39,7 +39,7 @@ extern "C" {
 extern int fsemu;
 
 #ifdef WITH_LUA
-#include <lauxlib.h>
+#include "lauxlib.h"
 lua_State *fs_emu_get_lua_state(void);
 void fs_emu_acquire_lua(void);
 void fs_emu_release_lua(void);

@@ -3,7 +3,7 @@
 
 #ifdef WITH_LUA
 
-#include <lauxlib.h>
+#include "lauxlib.h"
 
 void fs_emu_lua_init(void);
 void fs_emu_lua_log_error(const char *msg);

@@ -10,7 +10,7 @@
 #define UAE_LUASCRIPT_H
 
 #ifdef WITH_LUA
-#include <lauxlib.h>
+#include "lauxlib.h"
 
 void uae_lua_init(void);
 void uae_lua_load(const TCHAR *filename);

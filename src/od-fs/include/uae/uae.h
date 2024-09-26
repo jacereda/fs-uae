@@ -28,7 +28,7 @@ void amiga_on_save_state_finished(uae_callback_function *function);
 void amiga_on_restore_state_finished(uae_callback_function *function);
 
 #ifdef WITH_LUA
-#include <lauxlib.h>
+#include "lauxlib.h"
 void amiga_init_lua(void (*lock)(void), void (*unlock)(void));
 void amiga_init_lua_state(lua_State *L);
 #endif

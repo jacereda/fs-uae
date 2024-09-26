@@ -9,7 +9,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <lualib.h>
+#include "lua.hpp"
 
 #include "options.h"
 #include "savestate.h"
@@ -110,7 +110,7 @@ static int l_uae_log(lua_State *L)
     return 0;
 }
 
-void uae_lua_log_error(lua_State *L, const char *msg)
+static void uae_lua_log_error(lua_State *L, const char *msg)
 {
     write_log("%s: %s\n", msg, lua_tostring(L, -1));
     //printf("%s: %s\n", msg, lua_tostring(L, -1));
