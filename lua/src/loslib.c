@@ -316,6 +316,7 @@ static const luaL_Reg syslib[] = {
 
 
 
+LUAMOD_API int luaopen_os (lua_State *L);
 LUAMOD_API int luaopen_os (lua_State *L) {
   luaL_newlib(L, syslib);
   return 1;

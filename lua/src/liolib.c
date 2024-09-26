@@ -645,6 +645,7 @@ static void createstdfile (lua_State *L, FILE *f, const char *k,
 }
 
 
+LUAMOD_API int luaopen_io (lua_State *L);
 LUAMOD_API int luaopen_io (lua_State *L) {
   luaL_newlib(L, iolib);  /* new module */
   createmeta(L);
