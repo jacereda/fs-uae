@@ -14,6 +14,7 @@
 #include "uae/fs.h"
 #include "win32gfx.h"
 #include "xwin.h"
+#include "lcd.h"
 
 #ifdef PICASSO96
 #include "picasso96.h"
