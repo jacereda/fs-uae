@@ -49,7 +49,7 @@ static TCHAR *parsedvaluess[MAX_VALUES];
 // 4            =               right to left
 static int op_preced(const TCHAR c)
 {
-    switch(c)    {
+    switch(uint8_t(c))    {
         case 0xf0: case 0xf1: case 0xf2:
         case '!':
             return 4;
@@ -70,7 +70,7 @@ static int op_preced(const TCHAR c)
  
 static bool op_left_assoc(const TCHAR c)
 {
-    switch(c)    {
+    switch(uint8_t(c))    {
         // left to right
         case '*': case '/': case '%': case '+': case '-':
         case '|': case '&': case '^':
@@ -85,7 +85,7 @@ static bool op_left_assoc(const TCHAR c)
  
 static unsigned int op_arg_count(const TCHAR c)
 {
-    switch(c)  {
+    switch(uint8_t(c))  {
         case '?':
             return 3;
         case '*': case '/': case '%': case '+': case '-': case '=': case '@': case '@' | 0x80: case '<': case '>':
@@ -308,12 +308,12 @@ static TCHAR *stacktostring(struct calcstack *st)
 }
 
 
-static TCHAR *docalcxs(TCHAR op, TCHAR *v1, TCHAR *v2, double *voutp)
+static TCHAR *docalcxs(TCHAR op, TCHAR *v1, const TCHAR *v2, double *voutp)
 {
     TCHAR tmp[MAX_DPATH];
     tmp[0] = 0;
 
-    switch(op)
+    switch(uint8_t(op))
     {
     case '+':
         _tcscpy(tmp, v1);
@@ -349,7 +349,7 @@ static TCHAR *docalcxs(TCHAR op, TCHAR *v1, TCHAR *v2, double *voutp)
 static bool docalcx(TCHAR op, double v1, double v2, double *valp)
 {
     double v = 0;
-	switch (op)
+	switch (uint8_t(op))
 	{
 		case '-':
 		v = v1 - v2;
@@ -419,7 +419,7 @@ static bool docalcx(TCHAR op, double v1, double v2, double *valp)
 
 static bool docalc2(TCHAR op, struct calcstack *sv1, struct calcstack *sv2, double *valp, TCHAR *sp)
 {
-    *sp = NULL;
+    *sp = 0;
     *valp = 0;
     if (isstackstring(sv1) || isstackstring(sv2)) {
         TCHAR *v1 = stacktostring(sv1);
@@ -583,10 +583,10 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
 				if (outval)
 					*outval = val;
                 if (outstring) {
-                    if (vals && _tcslen(vals) >= maxlen) {
+                    if (_tcslen(vals) >= maxlen) {
                         vals[maxlen] = 0;
                     }
-                    _tcscpy(outstring, vals ? vals : _T(""));
+                    _tcscpy(outstring, vals);
                 }
 				ok = true;
 		}
