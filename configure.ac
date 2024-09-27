@@ -876,6 +876,12 @@ REQ_FEATURE([WITH_TOCCATA], [toccata], [toccata],
             [Toccata sound card emulation])
 OPT_FEATURE([WITH_UAENATIVE], [uaenative], [uaenative],
             [uaenative.library])
+OPT_FEATURE([WITH_DRACO], [draco], [draco],
+            [Draco emulation support])
+OPT_FEATURE([WITH_DSP], [dsp], [dsp],
+            [DSP3210 support])
+OPT_FEATURE([AMAX], [amax], [amax],
+            [A-Max ROM adapater emulation])
 OPT_FEATURE([SANA2], [uaenet], [uaenet],
             [uaenet.device])
 OPT_FEATURE([SCSIEMU], [uaescsi], [uaescsi],
