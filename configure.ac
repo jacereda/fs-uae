@@ -731,7 +731,7 @@ OPT_FEATURE([ACTION_REPLAY], [action_replay], [action-replay],
             [Action Replay 1/2/3 support])
 OPT_FEATURE([AGA], [aga], [aga],
             [AGA chipset emulation])
-DIS_FEATURE([AHI], [ahi], [ahi],
+OPT_FEATURE([AHI], [ahi], [ahi],
             [builtin AHI device (unsupported)])
 OPT_FEATURE([ARCADIA], [arcadia], [arcadia],
             [Arcadia arcade system])

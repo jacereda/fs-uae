@@ -16,6 +16,7 @@
 #include "inputdevice.h"
 #include "newcpu.h"
 #include "options.h"
+#include "parser.h"
 #include "rommgr.h"
 #include "sampler.h"
 #include "sana2.h"
@@ -295,6 +296,11 @@ void target_osk_control(int, int, int, int)
 }
 
 void release_keys(void)
+{
+	STUB("");
+}
+
+void flushprinter (void)
 {
 	STUB("");
 }
