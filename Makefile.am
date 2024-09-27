@@ -1397,6 +1397,11 @@ fs_uae_SOURCES += \
 	src/sndboard.cpp
 endif
 
+if WITH_TABLETLIBRARY
+fs_uae_SOURCES += \
+	src/tabletlibrary.cpp
+endif
+
 if WITH_UDIS86
 noinst_LIBRARIES += libudis86.a
 AM_CPPFLAGS += -iquote$(s)/libudis86/include

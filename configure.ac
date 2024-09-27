@@ -877,6 +877,8 @@ OPT_FEATURE([WITH_UAENATIVE], [uaenative], [uaenative],
             [uaenative.library])
 OPT_FEATURE([WITH_DRACO], [draco], [draco],
             [Draco emulation support])
+OPT_FEATURE([WITH_TABLETLIBRARY], [tabletlibrary], [tabletlibrary],
+            [tablet.library])
 OPT_FEATURE([WITH_DSP], [dsp], [dsp],
             [DSP3210 support])
 OPT_FEATURE([AMAX], [amax], [amax],
