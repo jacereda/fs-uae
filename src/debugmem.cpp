@@ -1138,14 +1138,14 @@ static bool loadcodefiledata(struct debugcodefile *cf)
 	struct zfile *zf = zfile_fopen(fpath, _T("rb"));
 	if (!zf) {
 		console_out_f(_T("Couldn't open source file '%s'\n"), fpath);
-		return NULL;
+		return false;
 	}
 	int length;
 	uae_u8 *data2 = zfile_getdata(zf, 0, -1, &length);
 	if (!data2) {
 		zfile_fclose(zf);
 		console_out_f(_T("Couldn't read source file '%s'\n"), fpath);
-		return NULL;
+		return false;
 	}
 	uae_u8 *data = xcalloc(uae_u8, length + 1);
 	memcpy(data, data2, length);
