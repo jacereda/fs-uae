@@ -1,7 +1,7 @@
 # -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.67])
+AC_PREREQ([2.72])
 
 m4_define([fsbuild_version], [0.0.0])
 m4_define([fsbuild_version_major], [0])
@@ -9,8 +9,7 @@ m4_define([fsbuild_version_minor], [0])
 m4_define([fsbuild_version_revision], [0])
 m4_define([fsbuild_commit], [])
 
-AC_INIT([FS-UAE], [fsbuild_version],
-        [frode@fs-uae.net], [fs-uae], [https://fs-uae.net])
+AC_INIT([FS-UAE],[fsbuild_version],[frode@fs-uae.net],[fs-uae],[https://fs-uae.net])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_HOST
 AC_CONFIG_SRCDIR([src/main.cpp])
@@ -693,29 +692,29 @@ AS_CASE([$host_os],
 # Byte swapping
 
 AC_MSG_CHECKING(for bswap_16)
-AC_TRY_LINK([
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	#if HAVE_BYTESWAP_H
 	# include <byteswap.h>
 	#endif
-], [
+]], [[
 	bswap_16(0x12);
-], [
+]])],[
 	AC_DEFINE(HAVE_BSWAP_16, 1, [Define to 1 if you have the 'bswap_16' function.])
 	AC_MSG_RESULT(yes)
-], [
+],[
 	AC_MSG_RESULT(no)
 ])
 AC_MSG_CHECKING(for bswap_32)
-AC_TRY_LINK([
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	#if HAVE_BYTESWAP_H
 	# include <byteswap.h>
 	#endif
-], [
+]], [[
 	bswap_32(0x1234);
-], [
+]])],[
 	AC_DEFINE(HAVE_BSWAP_32, 1, [Define to 1 if you have the 'bswap_32' function.])
 	AC_MSG_RESULT(yes)
-], [
+],[
 	AC_MSG_RESULT(no)
 ])
 
@@ -811,17 +810,17 @@ OPT_FEATURE([FLOPPYBRIDGE], [floppybridge], [floppybridge],
 
 AC_ARG_ENABLE([jit], [AS_HELP_STRING([--disable-jit], [JIT compiler])])
 AS_IF([test "x$enable_jit" != xno], [
-    AC_TRY_COMPILE([
-    ], [
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+    ]], [[
         #if !defined(__i386__) && !defined(__x86_64__)
         #error JIT is only supported on x86/x86-64
         #endif
         #if defined(__OpenBSD__) || defined(__FreeBSD__)
         #error no JIT on OpenBSD/FreeBSD right now
         #endif
-    ], [
+    ]])],[
         AC_DEFINE([JIT], [1], [Define to 1 to enable JIT compilation])
-    ], [
+    ],[
         if test "x$enable_jit" = xyes; then
             AC_MSG_FAILURE(
                 [JIT is not supported on $host])
@@ -895,14 +894,14 @@ OPT_FEATURE([WITH_VPAR], [vpar], [vpar],
 
 AC_ARG_ENABLE([x86], [AS_HELP_STRING([--disable-x86], [x86 bridgeboard support])])
 AS_IF([test "x$enable_x86" != xno], [
-    AC_TRY_COMPILE([
-    ], [
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+    ]], [[
         #if !defined(__i386__) && !defined(__x86_64__)
         #error Bridgeboard is only supported on x86/x86-64
         #endif
-    ], [
+    ]])],[
         AC_DEFINE([WITH_X86], [1], [Define to 1 to enable x86 bridgeboard support])
-    ], [
+    ],[
         if test "x$enable_x86" = xyes; then
             AC_MSG_FAILURE(
                 [x86 bridgeboard is not supported on $host])

@@ -21,37 +21,19 @@
                 autoconf
                 automake
                 bear
-                # bison
-                # binutils
                 enet
                 flac
-                # expat
-                # flex
-                # gettext
                 gdb
                 git
                 glib
-                # gmp
-                # gperf
-                # lhasa
-                # libmpc
                 libmpeg2
                 libpng
                 xorg.makedepend
-                # mpfr
-                # ncurses
-                # patch
-                # pcre2
-                # perlPackages.PodSimple
                 pkg-config
-                # readline
-                # rsync
+                portmidi
                 SDL2
                 SDL2_ttf
-                # harfbuzz
                 freetype
-                # texinfo
-                # wget
                 udis86
                 zip
                 xorg.libXcursor
