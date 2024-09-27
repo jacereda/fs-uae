@@ -68,7 +68,7 @@ extern FILE *g_fs_uae_sync_debug_file;
 
 #define USE_X86_FPUCW 1
 #define USE_NORMAL_CALLING_CONVENTION 1
-#define NOFLAGS_SUPPORT_GENCPU
+//#define NOFLAGS_SUPPORT_GENCPU
 #define NOFLAGS_SUPPORT_GENCOMP
 #define OPTIMIZED_FLAGS
 
