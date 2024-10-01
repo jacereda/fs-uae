@@ -23,7 +23,7 @@
 
 stdenv.mkDerivation {
   pname = "fs-uae";
-  version = "tbd";
+  version = "5.3.0pre";
 
   src = ./.;
 
