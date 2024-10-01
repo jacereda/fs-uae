@@ -2,8 +2,10 @@
 #include "sysdeps.h"
 
 #include "mp3decoder.h"
-#include "FLAC/stream_decoder.h"
 #include "cda_play.h"
+
+#if 0
+#include "FLAC/stream_decoder.h"
 
 FLAC_API FLAC__StreamDecoder *FLAC__stream_decoder_new(void) {
     return NULL;
@@ -38,6 +40,8 @@ FLAC_API FLAC__bool FLAC__stream_decoder_process_until_end_of_stream(FLAC__Strea
 
 FLAC_API void FLAC__stream_decoder_delete(FLAC__StreamDecoder *decoder) {
 }
+
+#endif
 
 mp3decoder::~mp3decoder() {
 }

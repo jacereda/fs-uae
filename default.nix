@@ -6,12 +6,14 @@
 , flac
 , freetype
 , glib
+, libGL
 , libX11
 , libXcursor
 , libXext
 , libXi
 , libXxf86vm
 , libmpeg2
+, libogg
 , libpng
 , pkg-config
 , portmidi
@@ -46,6 +48,7 @@ stdenv.mkDerivation {
     flac
     freetype
     glib
+    libGL
     libX11
     libXcursor
     libXext
@@ -72,6 +75,7 @@ stdenv.mkDerivation {
       models, but you can tweak the hardware configuration and create customized
       Amigas.
     '';
+    mainProgram = "fs-uae";
     licencse = licenses.gpl2Plus;
     platforms = with platforms; linux ++ darwin;
   };

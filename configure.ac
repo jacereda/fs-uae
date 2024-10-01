@@ -41,7 +41,7 @@ AM_INIT_AUTOMAKE([tar-ustar subdir-objects])
 
 AC_SUBST([PACKAGE_SERIES], [devel])
 
-AC_DEFINE_UNQUOTED([UAE_BASE_VERSION], ["WinUAE 4.2.1"],
+AC_DEFINE_UNQUOTED([UAE_BASE_VERSION], ["WinUAE 5.3.0"],
 [Which UAE core this version is based on.])
 
 PACKAGE_MAJOR=`echo ${PACKAGE_VERSION} | sed -e 's,\(\.*\)\..*\..*,\1,g'`
@@ -217,7 +217,15 @@ AC_CHECK_LIB([compat], [ftime])
 
 AC_CHECK_LIB([dl], [dlopen])
 
-AC_CHECK_LIB([FLAC], [FLAC__stream_decoder_set_metadata_respond])
+AC_DEFINE([WITH_FLAC], [1], [Define to 1 to use libflac])
+PKG_CHECK_MODULES([FLAC], [flac])
+AM_CONDITIONAL([WITH_FLAC], [test x$with_flac != xno])
+
+AC_DEFINE([WITH_OGG], [1], [Define to 1 to use OGG])
+PKG_CHECK_MODULES([OGG], [ogg])
+AM_CONDITIONAL([WITH_OGG], [test x$with_ogg != xno])
+
+
 
 # not using freetype right now
 # AC_DEFINE([USE_FREETYPE], [1], [Define to 1 to use FreeType])

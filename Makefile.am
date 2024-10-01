@@ -1092,6 +1092,12 @@ libglad_a_SOURCES = \
 	glad/src/glad.c
 endif
 
+if WITH_FLAC
+CM_CFLAGS += @FLAC_CFLAGS@ @OGG_CFLAGS@
+LIBS += @FLAC_LIBS@ @OGG_LIBS@
+endif
+
+
 if WITH_PEARPC_CPU
 noinst_LIBRARIES += libpearpc.a
 AM_CPPFLAGS += -iquote$(s)/src/ppc/pearpc
