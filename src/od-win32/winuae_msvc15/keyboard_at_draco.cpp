@@ -42,7 +42,7 @@ static void keyboard_at_log(const char *txt, ...)
     va_list parms;
     va_start(parms, txt);
     vsprintf(buffer, txt, parms);
-    write_log(buffer);
+    write_log("%s", buffer);
     va_end(parms);
 }
 static void fatalx(const char *txt, ...)

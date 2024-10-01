@@ -7,9 +7,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "ibm.h"
 
 #include "sysconfig.h"
+#include "ibm.h"
 #include "config.h"
 #include "mem.h"
 #include "video.h"

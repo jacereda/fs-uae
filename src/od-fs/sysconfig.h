@@ -1,6 +1,9 @@
 #ifndef FSUAE_SYSCONFIG_H
 #define FSUAE_SYSCONFIG_H
 
+
+#include <limits.h>
+
 // FIXME: this file was created by configure for PUAE and has been
 // manually altered with reasonable values.
 // New macros that are explicitly used in code are added to config.h for
