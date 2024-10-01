@@ -1,7 +1,27 @@
-{ pkgs ? import <nixpkgs> {}
+
+{ lib
+, SDL2
+, SDL2_ttf
+, autoreconfHook
+, flac
+, freetype
+, glib
+, libX11
+, libXcursor
+, libXext
+, libXi
+, libXxf86vm
+, libmpeg2
+, libpng
+, pkg-config
+, portmidi
+, stdenv
+, strip-nondeterminism
+, udis86
+, zip
 }:
 
-pkgs.stdenv.mkDerivation {
+stdenv.mkDerivation {
   pname = "fs-uae";
   version = "tbd";
 
@@ -13,40 +33,46 @@ pkgs.stdenv.mkDerivation {
 
   hardeningDisable = [ "all" ];
 
-  nativeBuildInputs = with pkgs; [
+  nativeBuildInputs = [
     autoreconfHook
-    bear
-    enet
-    gdb
-    git
-    xorg.makedepend
     pkg-config
+    strip-nondeterminism
     zip
   ];
 
-  buildInputs = with pkgs; [
+  buildInputs = [
+    SDL2
+    SDL2_ttf
     flac
+    freetype
     glib
+    libX11
+    libXcursor
+    libXext
+    libXi
+    libXxf86vm
     libmpeg2
     libpng
     portmidi
-    SDL2
-    SDL2_ttf
-    freetype
     udis86
-    xorg.libXcursor
-    xorg.libXxf86vm
-    xorg.libX11
-    xorg.libXext
-    xorg.libXi
   ];
 
-  meta = with pkgs.lib; {
+  strictDeps = true;
+
+  postFixup = ''
+    strip-nondeterminism --type zip $out/share/fs-uae/fs-uae.dat
+  '';
+
+  meta = with lib; {
     homepage = "https://github.com/jacereda/fs-uae";
-    description = ''
-    Amiga emulator based on UAE/WinUAE, with a focus on emulating games.
+    description = "Accurate, customizable Amiga Emulator";
+    longDescription = ''
+      FS-UAE integrates the most accurate Amiga emulation code available from
+      WinUAE. FS-UAE emulates A500, A500+, A600, A1200, A1000, A3000 and A4000
+      models, but you can tweak the hardware configuration and create customized
+      Amigas.
     '';
-    licencse = licenses.gpl2;
+    licencse = licenses.gpl2Plus;
     platforms = with platforms; linux ++ darwin;
   };
 }

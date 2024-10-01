@@ -16,7 +16,12 @@
   in rec {
     packages.default = pkgs.callPackage ./default.nix {};
     devShells.default = pkgs.mkShell {
-      nativeBuildInputs = packages.default.nativeBuildInputs;
+      nativeBuildInputs = packages.default.nativeBuildInputs ++ (with pkgs; [
+        bear
+        enet
+        gdb
+        git
+      ]);
       buildInputs = packages.default.buildInputs;
     };
   });
