@@ -8,6 +8,8 @@
 #include "fsemu-sdl.h"
 #include "fsemu-util.h"
 
+#include <SDL2/SDL_ttf.h>
+
 int fsemu_font_log_level = FSEMU_LOG_LEVEL_INFO;
 
 struct fsemu_font {

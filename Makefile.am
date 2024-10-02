@@ -6,7 +6,6 @@ WARNINGS =
 
 CM_CFLAGS =
 CM_CFLAGS += @ALSA_CFLAGS@
-CM_CFLAGS += @FREETYPE_CFLAGS@
 CM_CFLAGS += @GLEW_CFLAGS@
 CM_CFLAGS += @GLIB_CFLAGS@
 # CM_CFLAGS += @GTK3_CFLAGS@
@@ -18,7 +17,6 @@ CM_CFLAGS += @OPENGL_CFLAGS@
 CM_CFLAGS += @PNG_CFLAGS@
 CM_CFLAGS += @QT_CFLAGS@
 CM_CFLAGS += @SDL2_CFLAGS@
-CM_CFLAGS += @SDL2_TTF_CFLAGS@
 CM_CFLAGS += @X11_CFLAGS@
 CM_CFLAGS += @ZLIB_CFLAGS@
 CM_CFLAGS += $(WARNINGS)
@@ -70,7 +68,6 @@ AM_CPPFLAGS += -DUAE -DFSUAE
 
 LIBS += @ALSA_LIBS@
 LIBS += @CARBON_LIBS@
-LIBS += @FREETYPE_LIBS@
 LIBS += @GLEW_LIBS@
 LIBS += @GLIB_LIBS@
 # LIBS += @GTK3_LIBS@
@@ -83,7 +80,6 @@ LIBS += @PNG_LIBS@
 LIBS += @QT_LIBS@
 LIBS += @MIDI_LIBS@
 LIBS += @SDL2_LIBS@
-LIBS += @SDL2_TTF_LIBS@
 LIBS += @X11_LIBS@
 LIBS += @ZLIB_LIBS@
 
@@ -879,7 +875,6 @@ libfsemu2_a_SOURCES = \
 	fsemu/src/fsemu-events.h \
 	fsemu/src/fsemu-fade.c \
 	fsemu/src/fsemu-fade.h \
-	fsemu/src/fsemu-font.c \
 	fsemu/src/fsemu-font.h \
 	fsemu/src/fsemu-fontcache.c \
 	fsemu/src/fsemu-fontcache.h \
@@ -1046,6 +1041,14 @@ fsuae_data_files = \
 
 # FIXME: EXTRA_DIST ?
 libfsemu2_a_SOURCES += $(fsemu_data_files)
+
+if WITH_SDL2_TTF
+CM_CFLAGS += @SDL2_TTF_CFLAGS@
+LIBS += @SDL2_TTF_LIBS@
+libfsemu2_a_SOURCES += fsemu/src/fsemu-font.c
+else
+libfsemu2_a_SOURCES += fsemu/src/fsemu-font-stb.c
+endif
 
 data/.fsemu: $(fsemu_data_files) ${fsuae_data_files}
 	mkdir -p $(b)/data/

@@ -3,6 +3,7 @@
 , SDL2
 , SDL2_ttf
 , autoreconfHook
+, alsa-lib
 , flac
 , freetype
 , glib
@@ -45,6 +46,7 @@ stdenv.mkDerivation {
   buildInputs = [
     SDL2
     SDL2_ttf
+    alsa-lib
     flac
     freetype
     glib
@@ -55,6 +57,7 @@ stdenv.mkDerivation {
     libXi
     libXxf86vm
     libmpeg2
+    libogg
     libpng
     portmidi
     udis86

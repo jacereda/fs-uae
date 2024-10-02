@@ -17,8 +17,6 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
-#include <SDL2/SDL_ttf.h>
-// #include <SDL.h>
 
 #if !SDL_VERSION_ATLEAST(2, 0, 5)
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN

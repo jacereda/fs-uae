@@ -225,14 +225,6 @@ AC_DEFINE([WITH_OGG], [1], [Define to 1 to use OGG])
 PKG_CHECK_MODULES([OGG], [ogg])
 AM_CONDITIONAL([WITH_OGG], [test x$with_ogg != xno])
 
-
-
-# not using freetype right now
-# AC_DEFINE([USE_FREETYPE], [1], [Define to 1 to use FreeType])
-# PKG_CHECK_MODULES([FREETYPE], [freetype2])
-AC_SUBST([FREETYPE_CFLAGS])
-AC_SUBST([FREETYPE_LIBS])
-
 AC_CHECK_LIB([gdi32], [main])
 
 AC_DEFINE([USE_GLIB], [1], [Define to 1 to use GLib])
@@ -361,7 +353,8 @@ PKG_CHECK_MODULES([SDL2], [sdl2])
 AC_DEFINE([USE_SDL_VIDEO], [1], [Define to 1 to use SDL for video])
 AC_DEFINE([USE_SDL_INPUT], [1], [Define to 1 to use SDL for input])
 
-PKG_CHECK_MODULES([SDL2_TTF], [SDL2_ttf])
+PKG_CHECK_MODULES([SDL2_TTF], [SDL2_ttf], [HAVE_SDL2_TTF=1], [HAVE_SDL2_TTF=0])
+AM_CONDITIONAL([WITH_SDL2_TTF], [test "x$HAVE_SDL2_TTF" = x1])
 
 AS_CASE([$host_os],
 [mingw*], [],
