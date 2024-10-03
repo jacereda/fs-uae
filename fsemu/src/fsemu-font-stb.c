@@ -44,6 +44,7 @@ static void fsemu_font_finalize(void *object)
 
 fsemu_font_t *fsemu_font_load(const char *name, int size)
 {
+	size *= 1.5;
 	fsemu_font_init();
 	fsemu_font_t *font = FSEMU_UTIL_MALLOC0(fsemu_font_t);
 	fsemu_refable_init_with_finalizer(font, fsemu_font_finalize);
@@ -100,7 +101,7 @@ fsemu_image_t *fsemu_font_render_text_to_image(fsemu_font_t *font,
 		.height = h,
 		.stride = w * sizeof(*data),
 		.width = w,
-		.data = data,
+		.data = (uint8_t*)data,
 		.free_function = free,
 		.free_param = data,
 	};
