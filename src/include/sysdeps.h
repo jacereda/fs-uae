@@ -26,7 +26,7 @@
 // musl workaround
 //#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
 
-#if defined __cplusplus && !defined _GLIBCXX_INCLUDE_NEXT_C_HEADERS
+#if defined __cplusplus && !defined _GLIBCXX_INCLUDE_NEXT_C_HEADERSb
 #include <string>
 using namespace std;
 #else
