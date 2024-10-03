@@ -362,7 +362,7 @@ static bool fsemu_sdlwindow_kmsdrm(void)
     static int initialized;
     if (!initialized) {
         const char *driver = SDL_GetCurrentVideoDriver();
-        result = strcmp(driver, "KMSDRM") == 0;
+        result = driver && strcmp(driver, "KMSDRM") == 0;
         // printf("%s %d\n", driver, result);
         // exit(1);
     }
