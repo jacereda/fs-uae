@@ -1,5 +1,6 @@
 #if !defined _WIN32
-#include_next "sysconfig.h"
+//#include_next "sysconfig.h"
+#include "../od-fs/sysconfig.h"
 #else
 
 #ifndef WINUAE_SYSCONFIG_H

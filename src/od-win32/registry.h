@@ -1,5 +1,6 @@
 #if !defined WIN32
-#include_next "registry.h"
+//#include_next "registry.h"
+#include "../od-fs/include/registry.h"
 #else
 typedef struct UAEREG {
     HKEY fkey;

@@ -1,5 +1,6 @@
 #if !defined _WIN32
-#include_next "direct3d.h"
+//#include_next "direct3d.h"
+#include "../od-fs/include/direct3d.h"
 #else
 
 struct extoverlay

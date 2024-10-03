@@ -1,5 +1,6 @@
 #if !defined _WIN32
-#include_next "win32gui.h"
+//#include_next "win32gui.h"
+#include "../od-fs/include/win32gui.h"
 #else
 
 #ifndef WIN32GUI_H
