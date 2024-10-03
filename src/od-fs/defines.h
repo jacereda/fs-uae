@@ -220,4 +220,10 @@ int _uae_main(int argc, char* argv[]);
 int _uae_main(int argc, char* argv[])
 #endif
 
+
+#ifdef __cplusplus
+template <typename T> T min(T a, T b) { return a < b? a : b; }
+template <typename T> T max(T a, T b) { return a > b? a : b; }
+#endif
+
 #endif // EXTRA_DEFINES_H

@@ -217,9 +217,9 @@ AC_CHECK_LIB([compat], [ftime])
 
 AC_CHECK_LIB([dl], [dlopen])
 
-AC_DEFINE([WITH_FLAC], [1], [Define to 1 to use libflac])
-PKG_CHECK_MODULES([FLAC], [flac])
-AM_CONDITIONAL([WITH_FLAC], [test x$with_flac != xno])
+PKG_CHECK_MODULES([FLAC], [flac], [HAVE_FLAC=1], [HAVE_FLAC=0])
+AM_CONDITIONAL([WITH_FLAC], [test "x$HAVE_FLAC" = x1])
+
 
 AC_DEFINE([WITH_OGG], [1], [Define to 1 to use OGG])
 PKG_CHECK_MODULES([OGG], [ogg])

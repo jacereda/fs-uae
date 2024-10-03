@@ -23,7 +23,10 @@
 #define UAE
 #endif
 
-#ifdef __cplusplus
+// musl workaround
+//#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
+
+#if defined __cplusplus && !defined _GLIBCXX_INCLUDE_NEXT_C_HEADERS
 #include <string>
 using namespace std;
 #else

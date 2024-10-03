@@ -10,42 +10,70 @@
     "x86_64-linux" "i686-linux" "aarch64-linux" "x86_64-darwin"
   ] (system:
     let
-      pkgs = import nixpkgs {
+      opkgs = (import nixpkgs {
         inherit system;
-        overlays = [];
-      };
-      spkgs = import nixpkgs {
+      });
+
+      overlay = (self: super: {
+        libGL=opkgs.libGL;
+
+        # portimidi = null;
+        portmidi = super.portmidi.overrideAttrs (p: {
+          postInstall = "";
+        });
+
+        SDL2_ttf = null;
+
+        SDL2 = (super.SDL2.override {
+          alsaSupport = false;
+          dbusSupport = false;
+          udevSupport = false;
+          libdecorSupport = false;
+          pipewireSupport = false;
+          pulseaudioSupport = false;
+        }).overrideAttrs (p: {
+          postFixup = "";
+        });
+
+      });
+      # xpkgs = (import nixpkgs {
+      #   inherit system;
+      #   overlays = [ overlay ];
+      #   crossOverlays = [ overlay ];
+      # });
+      pkgs = (import nixpkgs {
         inherit system;
-        overlays = [
-          (self: super: {
-
-            portimidi = super.portmidi.overrideAttrs (p: {
-              postInstall = "";
-            });
-
-            SDL2 = (super.SDL2.override {
-              alsaSupport = false;
-              dbusSupport = false;
-              udevSupport = false;
-              libdecorSupport = false;
-              pipewireSupport = false;
-              pulseaudioSupport = false;
-            }).overrideAttrs (p: {
-              postFixup = "";
-            });
-
-          })
-        ];
-      };
+        overlays = [ overlay ];
+      });
+      mpkgs = pkgs.pkgsCross.musl64;
+      spkgs = pkgs.pkgsStatic;
+      nstdenv = pkgs.clangStdenv;
+      sstdenv = pkgs.clangStdenv;
     in rec {
-      packages.default = spkgs.callPackage ./default.nix {};
-      devShells.default = pkgs.mkShell {
+      packages.default = pkgs.callPackage ./default.nix {};
+      packages.musl64 = mpkgs.callPackage ./default.nix {};
+      packages.static = spkgs.callPackage ./default.nix {
+        stdenv = sstdenv;
+        autoreconfHook = pkgs.autoreconfHook;
+        pkg-config = pkgs.pkg-config;
+        strip-nondeterminism = pkgs.strip-nondeterminism;
+        zip = pkgs.zip;
+      };
+      devShells.default = (pkgs.mkShell.override {stdenv = nstdenv;}) {
         nativeBuildInputs = packages.default.nativeBuildInputs ++ (with pkgs; [
           bear
           gdb
           git
         ]);
         buildInputs = packages.default.buildInputs;
+      };
+      devShells.static = (spkgs.mkShell.override {stdenv = sstdenv;}) {
+        nativeBuildInputs = packages.static.nativeBuildInputs ++ (with pkgs; [
+          bear
+          gdb
+          git
+        ]);
+        buildInputs = packages.static.buildInputs;
       };
     });
 }

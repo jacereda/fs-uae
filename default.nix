@@ -7,15 +7,19 @@
 , flac
 , freetype
 , glib
+, libiconv
 , libGL
 , libX11
 , libXcursor
 , libXext
 , libXi
+, libXrandr
+, libXScrnSaver
 , libXxf86vm
 , libmpeg2
 , libogg
 , libpng
+, pcre2
 , pkg-config
 , portmidi
 , stdenv
@@ -50,15 +54,19 @@ stdenv.mkDerivation {
     flac
     freetype
     glib
+    libiconv
     libGL
     libX11
     libXcursor
     libXext
     libXi
+    libXrandr
+    libXScrnSaver
     libXxf86vm
     libmpeg2
     libogg
     libpng
+    pcre2
     portmidi
     udis86
   ];
