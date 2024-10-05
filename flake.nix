@@ -25,7 +25,7 @@
         SDL2_ttf = null;
 
         SDL2 = (super.SDL2.override {
-          alsaSupport = false;
+          alsaSupport = true;
           dbusSupport = false;
           udevSupport = false;
           libdecorSupport = false;
