@@ -38,6 +38,20 @@ int playback_callback(snd_pcm_sframes_t nframes)
 }
 #endif
 
+
+static void reset() {
+    fsemu_audio_log("----- reset -----\n");
+    fsemu_audio_log_buffer_stats();
+    fsemu_audio_log("-----------------\n");
+    // int want = fsemu_audio_frequency() * 50 / 1000 * 4;
+    int want = 8192;
+    // int want = 0;
+    fsemu_audiobuffer.read = fsemu_audiobuffer.write - want;
+    if (fsemu_audiobuffer.read < fsemu_audiobuffer.data) {
+            fsemu_audiobuffer.read += fsemu_audiobuffer.size;
+    }
+}
+
 static void fsemu_alsaaudio_handle_underrun(void)
 {
     // fsemu_audio_log_inflight_estimate();
@@ -55,6 +69,9 @@ static void fsemu_alsaaudio_handle_underrun(void)
     // FIXME: Race condition (with emulation thread) on updating the write
     // buffer
     // fsemu_audiobuffer_write_silence_ms(1);
+
+    reset();
+
 }
 
 static int fsemu_alsaaudio_write(void *buffer, int bytes)
@@ -100,18 +117,9 @@ static void fsemu_alsaaudio_callback(snd_pcm_sframes_t want_frames)
 #endif
 
     // Temp hack
-    if (fsemu_audiobuffer_fill_ms() > 100) {
-        fsemu_audio_log("----- reset -----\n");
-        fsemu_audio_log_buffer_stats();
-        fsemu_audio_log("-----------------\n");
-        // int want = fsemu_audio_frequency() * 50 / 1000 * 4;
-        int want = 8192;
-        // int want = 0;
-        fsemu_audiobuffer.read = fsemu_audiobuffer.write - want;
-        if (fsemu_audiobuffer.read < fsemu_audiobuffer.data) {
-            fsemu_audiobuffer.read += fsemu_audiobuffer.size;
-        }
-    }
+    if (fsemu_audiobuffer_fill_ms() > 100)
+	    reset();
+
     // -----------------------------------------------------------------------
 
     int err;
@@ -285,8 +293,8 @@ void fsemu_alsaaudio_init(void)
         return;
     }
 
-    snd_pcm_uframes_t buffer_size = 256;
-    snd_pcm_uframes_t period_size = 64;
+    snd_pcm_uframes_t period_size = 80;
+    snd_pcm_uframes_t buffer_size = period_size*4;
 
     if ((err = snd_pcm_hw_params_set_buffer_size_near(
              playback_handle, hw_params, &buffer_size)) < 0) {
