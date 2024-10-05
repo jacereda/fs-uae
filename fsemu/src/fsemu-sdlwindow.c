@@ -647,6 +647,12 @@ SDL_Window *fsemu_sdlwindow_create(void)
     return window;
 }
 
+static void size_changed(int w, int h) {
+    fsemu_window_set_size_2(w, h);
+    fsemu_video_set_size_2(w, h);
+    fsemu_layout_set_size_2(w, h);
+}
+
 void fsemu_sdlwindow_show(void)
 {
     static bool first = true;
@@ -667,6 +673,7 @@ void fsemu_sdlwindow_show(void)
                            fsemu_sdlwindow.rect.w,
                            fsemu_sdlwindow.rect.h);
 
+    size_changed(fsemu_sdlwindow.rect.w, fsemu_sdlwindow.rect.h);
 #if 0
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -1275,9 +1282,7 @@ bool fsemu_sdlwindow_handle_window_event(SDL_Event *event)
                 // glOrtho(0, w, h, 0, 0.0, 1.0);
                 glMatrixMode(GL_MODELVIEW);
 #endif
-                fsemu_window_set_size_2(w, h);
-                fsemu_video_set_size_2(w, h);
-                fsemu_layout_set_size_2(w, h);
+                size_changed(w, h);
 
                 /*
                 if (fsemu_sdlwindow.was_fullscreen_initially) {
