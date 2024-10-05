@@ -402,8 +402,15 @@ void fsemu_window_init(void)
     fsemu_return_if_already_initialized();
 
     fsemu_video_decide_driver();
-    if (fsemu_video_driver() == FSEMU_VIDEO_DRIVER_SDL) {
-        fsemu_window.driver = FSEMU_WINDOW_DRIVER_SDL;
+    switch (fsemu_video_driver()) {
+    case FSEMU_VIDEO_DRIVER_SDL:
+	fsemu_window.driver = FSEMU_WINDOW_DRIVER_SDL;
+	break;
+    case FSEMU_VIDEO_DRIVER_GLCV:
+	fsemu_window.driver = FSEMU_WINDOW_DRIVER_GLCV;
+	break;
+    default:
+	fsemu_window.driver = FSEMU_WINDOW_DRIVER_NULL;
     }
 
     fsemu_layout_init();
