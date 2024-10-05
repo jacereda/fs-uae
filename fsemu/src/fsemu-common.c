@@ -43,9 +43,14 @@ void fsemu_error_2(const char *msg, ...)
 
 // ----------------------------------------------------------------------------
 
-void fsemu_warning(const char *message)
+void fsemu_warning(const char *fmt, ...)
 {
-    fsemu_warning_2(message, NULL);
+    char buf[1000];
+    va_list ap;
+    va_start(ap, fmt);
+    snprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    fsemu_warning_2(buf, NULL);
 }
 
 void fsemu_warning_2(const char *message, const char *sub)

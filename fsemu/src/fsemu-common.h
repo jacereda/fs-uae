@@ -24,7 +24,7 @@ void fsemu_error_2(const char *msg, ...);
 
 // const char *fsemu_emulator_name(void);
 
-void fsemu_warning(const char *message);
+void fsemu_warning(const char *message, ...) UAE_PRINTF_FORMAT(1, 2);
 void fsemu_warning_2(const char *message, const char *sub);
 
 #ifdef __cplusplus
