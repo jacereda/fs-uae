@@ -784,27 +784,14 @@ void fsemu_video_decide_driver(void)
         fsemu_video_log("Want video driver: %s\n", driver);
     }
     if (0) {
-#ifdef FSEMU_OPENAL
-    } else if (!driver || strcmp(driver, "openal") == 0) {
-        fse_init_openal_audio();
-#endif
-#ifdef FSEMU_ALSA
-    } else if (!driver || strcmp(driver, "alsa") == 0) {
-        fsemu_audio_alsa_init();
-#endif
-#ifdef FSEMU_PULSE
-    } else if (!driver || strcmp(driver, "pulse") == 0) {
-        fsemu_audio_pulse_init();
-#endif
 #ifdef FSEMU_SDL
     } else if (!driver || strcmp(driver, "sdl") == 0) {
         fsemu_video.driver = FSEMU_VIDEO_DRIVER_SDL;
-        // fsemu_sdlaudio_init();
 #endif
+    } else if (!driver || strcmp(driver, "glcv") == 0) {
+        fsemu_video.driver = FSEMU_VIDEO_DRIVER_GLCV;
     } else {
         fsemu_video.driver = FSEMU_VIDEO_DRIVER_NULL;
-        // fsemu_nullaudio_init();
-        // fse_init_dummy_audio();
     }
 
     const char *chosen_driver_name;

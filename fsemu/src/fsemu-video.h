@@ -47,7 +47,8 @@ typedef struct fsemu_video_frame_t {
 
 typedef enum {
     FSEMU_VIDEO_DRIVER_NULL,
-    FSEMU_VIDEO_DRIVER_SDL
+    FSEMU_VIDEO_DRIVER_SDL,
+    FSEMU_VIDEO_DRIVER_GLCV,
 } fsemu_video_driver_t;
 
 typedef enum {
