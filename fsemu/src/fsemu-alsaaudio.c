@@ -15,9 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static struct {
+static struct fsemu_alsaaudio {
     int buffer_bytes;
-} fsemu_alsaaudio;
+} fsemu_audio_alsa;
 
 snd_pcm_t *playback_handle;
 
@@ -167,7 +167,7 @@ static void fsemu_alsaaudio_callback(snd_pcm_sframes_t want_frames)
     int buffered_bytes =
         fsemu_audio_alsa.buffer_bytes - wanted_bytes + bytes_written;
     fsemu_audio_register_data_sent(
-        buffered_bytes, now, (void *) read, (void *) write);
+        buffered_bytes, now, (uintptr_t) read, (uintptr_t) write);
 
     last_time = now;
     fsemu_audiobuffer.read = read;
@@ -200,7 +200,7 @@ static void *fsemu_alsaaudio_thread(void *data)
         if ((frames_to_deliver = snd_pcm_avail_update(playback_handle)) < 0) {
             err = -frames_to_deliver;
             if (err == EPIPE) {
-                fprintf(stderr, "an xrun occured\n");
+		    fprintf(stderr, "an xrun occured\n");
             } else {
                 fsemu_warning(
                     "Unknown ALSA error from snd_pcm_avail_update (%d)", err);
@@ -251,8 +251,7 @@ void fsemu_alsaaudio_init(void)
     int err;
     struct pollfd *pfds;
 
-    // const char *device_name = "default";
-    const char *device_name = "hw:0,0";
+    const char *device_name = "default";
 
     if ((err = snd_pcm_open(
              &playback_handle, device_name, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {

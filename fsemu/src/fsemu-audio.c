@@ -88,10 +88,6 @@ static void fsemu_audio_init_driver(void)
     } else if (!driver || strcmp(driver, "openal") == 0) {
         fse_init_openal_audio();
 #endif
-#ifdef FSEMU_ALSA
-    } else if (!driver || strcmp(driver, "alsa") == 0) {
-        fsemu_audio_alsa_init();
-#endif
 #ifdef FSEMU_PULSE
     } else if (!driver || strcmp(driver, "pulse") == 0) {
         fsemu_audio_pulse_init();
@@ -99,6 +95,10 @@ static void fsemu_audio_init_driver(void)
 #ifdef FSEMU_SDL
     } else if (!driver || strcmp(driver, "sdl") == 0) {
         fsemu_sdlaudio_init();
+#endif
+#ifdef FSEMU_ALSA
+    } else if (!driver || strcmp(driver, "alsa") == 0) {
+	fsemu_alsaaudio_init();
 #endif
     } else {
         // fsemu_nullaudio_init();

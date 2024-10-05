@@ -1,6 +1,9 @@
 #ifndef FSEMU_CONFIG_H_
 #define FSEMU_CONFIG_H_
 
+#include "config.h"
+#include "uae/attributes.h"
+
 // ----------------------------------------------------------------------------
 // Diagnostics
 // ----------------------------------------------------------------------------
@@ -11,9 +14,7 @@
 #ifdef FSEMU_INTERNAL
 #pragma GCC diagnostic warning "-Wall"
 // #pragma GCC diagnostic warning "-Wconversion"
-#ifdef __APPLE__
-// Not supported?
-#else
+#if !defined __clang__
 #pragma GCC diagnostic warning "-Wdiscarded-qualifiers"
 #endif
 #pragma GCC diagnostic warning "-Wformat"
@@ -24,12 +25,6 @@
 //#define FSEMU_DEBUG_ALL_WARNINGS_ARE_ERRORS 1
 // #ifdef FSEMU_INTERNAL
 // #endif
-#pragma GCC diagnostic error "-Wall"
-// #pragma GCC diagnostic error "-Wconversion"
-#pragma GCC diagnostic error "-Wdiscarded-qualifiers"
-#pragma GCC diagnostic error "-Wformat"
-#pragma GCC diagnostic error "-Wincompatible-pointer-types"
-#pragma GCC diagnostic error "-Wnarrowing"
 
 #pragma GCC diagnostic warning "-Wunused-function"
 #pragma GCC diagnostic warning "-Wunused-variable"
@@ -119,13 +114,10 @@
 #define FSEMU_SAMPLERATE 1
 #endif
 
-/*
-#ifdef FSEMU_OS_LINUX
-#ifndef FSEMU_ALSA
-#define FSEMU_ALSA
+
+#if defined WITH_ALSA
+#define FSEMU_ALSA 1
 #endif
-#endif
-*/
 
 // ----------------------------------------------------------------------------
 // Other

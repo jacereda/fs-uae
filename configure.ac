@@ -198,14 +198,6 @@ AS_CASE([$host_os],
 	CARBON_LIBS="-framework Carbon -framework Cocoa"
 ])
 
-AC_ARG_WITH(alsa, AS_HELP_STRING(
-    [--with-alsa], [use ALSA library]))
-AS_IF([test "x$with_alsa" = xyes], [
-    PKG_CHECK_MODULES([ALSA], [alsa])
-    AC_DEFINE([WITH_ALSA], [1], [Define to 1 to use ALSA])
-    AC_DEFINE([FSEMU_ALSA], [1], [Define to 1 to use ALSA])
-])
-
 AC_ARG_WITH(cef, AS_HELP_STRING(
     [--with-cef], [use Chromium Embedded Framework (experimental)]))
 AM_CONDITIONAL([BUILTIN_CEF], [test x$with_cef = xyes])
@@ -220,6 +212,9 @@ AC_CHECK_LIB([dl], [dlopen])
 PKG_CHECK_MODULES([FLAC], [flac], [HAVE_FLAC=1], [HAVE_FLAC=0])
 AM_CONDITIONAL([WITH_FLAC], [test "x$HAVE_FLAC" = x1])
 
+AC_DEFINE([WITH_ALSA], [1], [Define to 1 to use ALSA])
+PKG_CHECK_MODULES([ALSA], [alsa], [HAVE_ALSA=1], [HAVE_ALSA=0])
+AM_CONDITIONAL([WITH_ALSA], [test "x$HAVE_ALSA" = x1])
 
 AC_DEFINE([WITH_OGG], [1], [Define to 1 to use OGG])
 PKG_CHECK_MODULES([OGG], [ogg])
