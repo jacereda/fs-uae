@@ -25,7 +25,9 @@ void fs_emu_input_action_execute(fs_emu_action_id action, int state);
 
 #ifdef FSEMU_INTERNAL
 
+#ifdef WITH_SDL2
 #include <SDL.h>
+#endif
 
 void fse_init_input(void);
 

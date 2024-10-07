@@ -271,6 +271,7 @@ void fsemu_startupinfo_init(void)
 
     item = &fsemu_startupinfo.menu_shortcut_text_item;
     image = fsemu_font_render_text_to_image(font_3, "MENU KEY:", white_3);
+    if (image) {
     fsemu_gui_image(item,
                     x,
                     1080 - 60 + (60 - image->height) / 2,
@@ -281,7 +282,7 @@ void fsemu_startupinfo_init(void)
     item->z_index = 5001;
     fsemu_gui_add_item(item);
     x += image->width;
-
+    }
     x += 15;
 
     item = &fsemu_startupinfo.menu_shortcut_key_item;

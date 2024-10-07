@@ -146,6 +146,8 @@ void fsemu_frame_toggle_sleep_busywait(void)
 
 void fsemu_frame_wait_until(int64_t until_us)
 {
+    TracyCZone(z, true);
+
     int64_t now_us = fsemu_time_us();
     if (fsemu_frame.busy_wait) {
         while (now_us < until_us) {
@@ -155,6 +157,8 @@ void fsemu_frame_wait_until(int64_t until_us)
     } else {
         fsemu_time_sleep_until_us_2(until_us, now_us);
     }
+
+    TracyCZoneEnd(z);
 }
 
 void fsemu_frame_wait_until_frame_end(void)
@@ -164,6 +168,8 @@ void fsemu_frame_wait_until_frame_end(void)
 
 void fsemu_frame_end(void)
 {
+    TracyCZone(z, true);
+
     fsemu_frame_log_trace("%s\n", __func__);
     fsemu_thread_assert_emu();
     fsemu_frame_log_epoch("Frame end\n");
@@ -294,6 +300,9 @@ void fsemu_frame_end(void)
     // Reset duration timer so we can begin calling the add_*_timer functions
     // without having to call reset timer after calling fsemu_frame_end.
     fsemu_frame.timer = fsemu_time_us();
+
+    TracyCZoneEnd(z);
+    TracyCFrameMarkNamed("emulation");
 }
 
 void fsemu_frame_reset_timer(int64_t t)

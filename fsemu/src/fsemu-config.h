@@ -1,6 +1,8 @@
 #ifndef FSEMU_CONFIG_H_
 #define FSEMU_CONFIG_H_
 
+#include <Tracy/tracy/TracyC.h>
+
 #include "config.h"
 #include "uae/attributes.h"
 
@@ -101,12 +103,15 @@
 // Feature defines
 // ----------------------------------------------------------------------------
 
-// #define FSEMU_GLAD 1
+#define FSEMU_GLAD 1
 #define FSEMU_GLIB 1
 #define FSEMU_MANYMOUSE 1
 #define FSEMU_OPENGL 1
 #define FSEMU_PNG 1
+#ifdef WITH_SDL2
 #define FSEMU_SDL 1
+#endif
+#define FSEMU_PTHREADS 1
 
 #ifdef FSUAE
 // FS-UAE adjusts audio frequency internally
@@ -154,5 +159,6 @@
 // ----------------------------------------------------------------------------
 
 #include "fsemu-common.h"
+
 
 #endif  // FSEMU_CONFIG_H_

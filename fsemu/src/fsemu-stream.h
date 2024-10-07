@@ -2,6 +2,7 @@
 #define FSEMU_STREAM_H_
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "fsemu-common.h"
 #include "fsemu-refable.h"
@@ -15,7 +16,11 @@ extern "C" {
 
 typedef struct fsemu_stream {
     FSEMU_REFABLE;
+#if defined FSEMU_SDL
     SDL_RWops *rwops;
+#else
+    void * rwops;
+#endif
 } fsemu_stream_t;
 
 fsemu_stream_t *fsemu_stream_null(void);
@@ -26,7 +31,7 @@ void fsemu_stream_unref(fsemu_stream_t *stream);
 
 fsemu_stream_t *fsemu_stream_from_const_data(const void *mem, int size);
 
-fsemu_stream_t *fsemu_stream_from_file(FILE *fp, SDL_bool autoclose);
+fsemu_stream_t *fsemu_stream_from_file(FILE *fp, bool autoclose);
 
 fsemu_stream_t *fsemu_stream_from_path(const char *file, const char *mode);
 

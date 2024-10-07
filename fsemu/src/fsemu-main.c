@@ -45,14 +45,20 @@ void fsemu_main_update(void)
 
 void fsemu_main_update_and_snapshot_gui(void)
 {
+    TracyCZone(z, true);
+
     fsemu_main_update();
 
     fsemu_gui_item_t *snapshot = fsemu_gui_snapshot();
     fsemu_video_set_gui_snapshot_mt(snapshot);
+
+    TracyCZoneEnd(z);
 }
 
 static void fsemu_main_handle_events_until_next_frame_in_main(void)
 {
+    TracyCZone(z, true);
+
     fsemu_gui_item_t *snapshot = fsemu_video_get_gui_snapshot_vt();
     fsemu_video_render_gui_early(snapshot);
 
@@ -68,16 +74,18 @@ static void fsemu_main_handle_events_until_next_frame_in_main(void)
         fsemu_video_work(1000);
         if (fsemu_video_ready()) {
             fsemu_video_render();
-            fsemu_video_render_gui(snapshot);
+	    fsemu_video_render_gui(snapshot);
             fsemu_gui_free_snapshot(snapshot);
             snapshot = NULL;
-
             fsemu_video_display();
 
             // new_host_frame = true;
             break;
-        }
+        } else
+		fsemu_time_sleep_ms(1);
     }
+
+    TracyCZoneEnd(z);
 }
 
 static void fsemu_main_handle_events_until_next_frame_threaded(void)
@@ -112,11 +120,13 @@ static void fsemu_main_handle_events_until_next_frame_threaded(void)
 
 void fsemu_main_handle_events_until_next_frame(void)
 {
+    TracyCZone(z, true);
     if (fsemu_video_is_threaded()) {
         fsemu_main_handle_events_until_next_frame_threaded();
     } else {
         fsemu_main_handle_events_until_next_frame_in_main();
     }
+    TracyCZoneEnd(z);
 }
 
 // ----------------------------------------------------------------------------

@@ -29,17 +29,6 @@ void fsemu_opengl_forget_unpack_row_length(void);
 
 void fsemu_opengl_unpack_row_length(int row_length);
 
-void fsemu_opengl_log_error(void);
-
-extern bool fsemu_opengl_error_checking;
-
-static inline void fsemu_opengl_log_error_maybe(void)
-{
-    if (fsemu_opengl_error_checking) {
-        fsemu_opengl_log_error();
-    }
-}
-
 #ifdef FSEMU_INTERNAL
 
 #define fsemu_opengl_log(format, ...) \

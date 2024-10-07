@@ -55,33 +55,10 @@ extern int fsemu_mouse_log_level;
         fsemu_log("[FSE] [MOU] " format, ##__VA_ARGS__);                  \
     }
 
-#if 0
 
-void fsemu_mouse_handle_position(int window_x, int window_y);
-void fsemu_mouse_handle_click(int button,
-                              int state,
-                              int window_x,
-                              int window_y);
-#endif
+#endif  // FSEMU_INTERNAL
 
-typedef struct fsemu_mouse_event {
-    int pressed;
-    int released;
-    bool moved;
-    int x;
-    int y;
-    int rel_x;
-    int rel_y;
-
-    // bool buttons[4];
-    // deprecated:
-    int button;
-    int state;
-} fsemu_mouse_event_t;
-
-bool fsemu_mouse_handle_mouse(fsemu_mouse_event_t *event);
-
-enum {
+enum mousebutton {
     // Make sure to keep these in the same order as in fsemu-inputdevice.
     FSEMU_MOUSE_BEFORE_FIRST_BUTTON,
     FSEMU_MOUSE_LEFT,
@@ -95,7 +72,21 @@ enum {
     FSEMU_MOUSE_YPOS,
 };
 
-#endif  // FSEMU_INTERNAL
+typedef struct fsemu_mouse_event {
+    int pressed;
+    int released;
+    bool moved;
+    int x;
+    int y;
+    int rel_x;
+    int rel_y;
+
+    enum mousebutton button;
+    int state;
+} fsemu_mouse_event_t;
+
+bool fsemu_mouse_handle_mouse(fsemu_mouse_event_t *event);
+
 
 #ifdef __cplusplus
 }

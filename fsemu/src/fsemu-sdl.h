@@ -15,8 +15,10 @@
 #include "fsemu-opengl.h"
 #endif
 
+#if defined FSEMU_SDL
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
+#endif
 
 #if !SDL_VERSION_ATLEAST(2, 0, 5)
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN

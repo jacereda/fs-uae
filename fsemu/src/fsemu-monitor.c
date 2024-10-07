@@ -156,9 +156,12 @@ void fsemu_monitor_init(void)
 #endif
     fsemu_monitor.list = g_array_new(false, true, sizeof(fsemu_monitor_t));
 
+
+    int num_displays = 1;
+#if defined FSEMU_SDL
     // FIXME: Move SDL-specific code to sdlwindow module (later)
 
-    int num_displays = SDL_GetNumVideoDisplays();
+    num_displays = SDL_GetNumVideoDisplays();
     for (int i = 0; i < num_displays; i++) {
         SDL_DisplayMode mode;
         int error = SDL_GetDesktopDisplayMode(i, &mode);
@@ -223,6 +226,17 @@ void fsemu_monitor_init(void)
                           monitor.scale);
         g_array_append_val(fsemu_monitor.list, monitor);
     }
+
+#else
+    fsemu_monitor_t monitor;
+    monitor.index = 0;
+    monitor.rect.x = 0;
+    monitor.rect.y = 0;
+    monitor.rect.w = 1920;
+    monitor.rect.h = 1080;
+    monitor.refresh_rate = 60;
+    g_array_append_val(fsemu_monitor.list, monitor);
+#endif
     fsemu_monitor.count = num_displays;
 
     g_array_sort(fsemu_monitor.list, fsemu_monitor_compare);
@@ -259,7 +273,7 @@ bool fsemu_monitor_get_by_index(int index, fsemu_monitor_t *monitor)
         monitor->refresh_rate = 1;
         return false;
     }
-    SDL_assert(monitor != NULL);
+    fsemu_assert(monitor != NULL);
     memcpy(monitor,
            &g_array_index(fsemu_monitor.list, fsemu_monitor_t, index),
            sizeof(fsemu_monitor_t));

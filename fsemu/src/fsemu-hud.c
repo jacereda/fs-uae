@@ -138,6 +138,7 @@ static void fsemu_hud_update_notice(fsemu_hud_notice_t *notice)
             fsemu_font_render_text_to_image(fsemu_hud.notice_title_font,
                                             notice->title,
                                             fsemu_hud.notice_title_color);
+	if (notice->title_image)
         fsemu_gui_image(item,
                         20,
                         0,
@@ -152,6 +153,7 @@ static void fsemu_hud_update_notice(fsemu_hud_notice_t *notice)
             fsemu_font_render_text_to_image(fsemu_hud.notice_subtitle_font,
                                             notice->subtitle,
                                             fsemu_hud.notice_subtitle_color);
+	if (notice->subtitle_image)
         fsemu_gui_image(item,
                         20,
                         0,

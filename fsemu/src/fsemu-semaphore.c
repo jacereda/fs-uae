@@ -86,7 +86,11 @@ int fsemu_semaphore_wait_timeout_ms(fsemu_semaphore_t *semaphore,
                                     int timeout_ms)
 {
 #if defined(FSEMU_PSEM)
-#error not implemented
+    struct timespec ts = {
+	    .tv_sec = timeout_ms/1000,
+	    .tv_nsec= timeout_ms*1000000,
+    };
+    return sem_timedwait(&semaphore->semaphore, &ts);
 #elif defined(FSEMU_SDL)
     int result = SDL_SemWaitTimeout(semaphore->semaphore, timeout_ms);
     if (result == 0) {

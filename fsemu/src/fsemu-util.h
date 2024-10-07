@@ -3,8 +3,11 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "fsemu-common.h"
+#include "fsemu-log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +18,10 @@ extern "C" {
 #include "fsemu-sdl.h"
 #define fsemu_assert SDL_assert
 #define fsemu_assert_release SDL_assert_release
+#else
+#include <assert.h>
+#define fsemu_assert assert
+#define fsemu_assert_release assert
 #endif
 
 #define FSEMU_UTIL_MALLOC(t) (t *) malloc(sizeof(t));

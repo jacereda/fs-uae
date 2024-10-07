@@ -1,6 +1,11 @@
 #ifndef FSEMU_COMMON_H_
 #define FSEMU_COMMON_H_
 
+#ifdef __cplusplus
+#include <Tracy/tracy/Tracy.hpp>
+#endif
+
+
 #include <stdbool.h>
 
 #include "fsemu-config.h"

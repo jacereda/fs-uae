@@ -71,9 +71,11 @@ void fsemu_helper_init_emulator(const char *emulator_name,
         fsemu_window_set_title(emulator_name);
     }
 
+#if defined FESUM_SDL
     if (external_events) {
         fsemu_sdlwindow_set_no_event_polling(true);
     }
+#endif
     fsemu_video_set_renderer(renderer);
     fsemu_startupinfo_set_emulator_name(emulator_name);
     // fsemu_startupinfo_set_emulator_fork_info("Mednafen");
@@ -155,7 +157,7 @@ static void fsemu_helper_startup_update(void)
 static void fsemu_helper_poll_and_sleep(void)
 {
     fsemu_window_work(0);
-
+#if defined FSEMU_SDL
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (fsemu_sdlwindow_handle_event(&event)) {
@@ -163,6 +165,7 @@ static void fsemu_helper_poll_and_sleep(void)
             continue;
         }
     }
+#endif
     fsemu_sleep_us(1 * 1000);
     // fsemu_sleep_us(1000 * 1000);
 }

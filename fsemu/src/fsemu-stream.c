@@ -1,14 +1,17 @@
 #define FSEMU_INTERNAL
 #include "fsemu-stream.h"
+#include <stdlib.h>
 
 // typedef SDL_RWops fsemu_stream_t;
 
 static void fsemu_stream_free(fsemu_stream_t *stream)
 {
     printf("fsemu_stream_free stream=%p\n", stream);
+#if defined FSEMU_SDL
     if (stream->rwops) {
         SDL_FreeRW(stream->rwops);
     }
+#endif
     free(stream);
 }
 
@@ -17,6 +20,7 @@ static void fsemu_stream_cleanup(void *stream)
     fsemu_stream_free((fsemu_stream_t *) stream);
 }
 
+#if defined FSEMU_SDL
 static fsemu_stream_t *fsemu_stream_new_with_rwops(SDL_RWops *rwops)
 {
     fsemu_stream_t *stream = malloc(sizeof(fsemu_stream_t));
@@ -25,10 +29,11 @@ static fsemu_stream_t *fsemu_stream_new_with_rwops(SDL_RWops *rwops)
     fsemu_refable_set_cleanup_handler(stream, fsemu_stream_cleanup);
     return stream;
 }
+#endif
 
 fsemu_stream_t *fsemu_stream_null(void)
 {
-#if 1
+#if defined FSEMU_SDL
     return fsemu_stream_new_with_rwops(NULL);
 
     // We should probably not need any actual data since size is 0, but
@@ -48,7 +53,11 @@ fsemu_stream_t *fsemu_stream_null(void)
 
 fsemu_stream_t *fsemu_stream_new(void)
 {
+#if defined FSEMU_SDL
     return fsemu_stream_new_with_rwops(SDL_AllocRW());
+#else
+    return fsemu_stream_null();
+#endif
 }
 
 void fsemu_stream_unref(fsemu_stream_t *stream)
@@ -59,22 +68,38 @@ void fsemu_stream_unref(fsemu_stream_t *stream)
 
 fsemu_stream_t *fsemu_stream_from_const_data(const void *mem, int size)
 {
+#if defined FSEMU_SDL
     return fsemu_stream_new_with_rwops(SDL_RWFromConstMem(mem, size));
+#else
+    return fsemu_stream_null();
+#endif
 }
 
-fsemu_stream_t *fsemu_stream_from_file(FILE *fp, SDL_bool autoclose)
+fsemu_stream_t *fsemu_stream_from_file(FILE *fp, bool autoclose)
 {
+#if defined FSEMU_SDL
     return fsemu_stream_new_with_rwops(SDL_RWFromFP(fp, autoclose));
+#else
+    return fsemu_stream_null();
+#endif
 }
 
 fsemu_stream_t *fsemu_stream_from_path(const char *file, const char *mode)
 {
+#if defined FSEMU_SDL
     return fsemu_stream_new_with_rwops(SDL_RWFromFile(file, mode));
+#else
+    return fsemu_stream_null();
+#endif
 }
 
 fsemu_stream_t *fsemu_stream_from_data(void *mem, int size)
 {
+#if defined FSEMU_SDL
     return fsemu_stream_new_with_rwops(SDL_RWFromMem(mem, size));
+#else
+    return fsemu_stream_null();
+#endif
 }
 
 // #define fsemu_stream_from_const_data SDL_RWFromConstMem
@@ -87,7 +112,11 @@ int fsemu_stream_close(fsemu_stream_t *stream)
     if (stream->rwops == NULL) {
         return 0;
     }
+#if defined FSEMU_SDL
     return SDL_RWclose(stream->rwops);
+#else
+    return 0;
+#endif
 }
 
 int64_t fsemu_stream_size(fsemu_stream_t *stream)
@@ -95,7 +124,11 @@ int64_t fsemu_stream_size(fsemu_stream_t *stream)
     if (stream->rwops == NULL) {
         return 0;
     }
+#if defined FSEMU_SDL
     return SDL_RWsize(stream->rwops);
+#else
+    return 0;
+#endif
 }
 
 size_t fsemu_stream_read(fsemu_stream_t *stream,
@@ -106,7 +139,11 @@ size_t fsemu_stream_read(fsemu_stream_t *stream,
     if (stream->rwops == NULL) {
         return 0;
     }
+#if defined FSEMU_SDL
     return SDL_RWread(stream->rwops, ptr, size, maxnum);
+#else
+    return 0;
+#endif
 }
 
 /*

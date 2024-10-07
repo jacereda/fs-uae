@@ -7214,7 +7214,7 @@ void compute_framesync(void)
 		hblank_hz,
 		maxhpos, maxvpos, lof_store ? 1 : 0,
 		cr ? cr->index : -1,
-		cr != NULL && cr->label != NULL ? cr->label : _T("<?>"),
+		cr != NULL? cr->label : _T("<?>"),
 		currprefs.gfx_apmode[ad->picasso_on ? 1 : 0].gfx_display, ad->picasso_on, ad->picasso_requested_on
 	);
 
@@ -12629,6 +12629,8 @@ static bool vsync_display_rendered;
 
 static void vsync_display_render(void)
 {
+	ZoneScoped;
+
 	if (!vsync_display_rendered) {
 		vsyncmintimepre = read_processor_time();
 		vsync_handler_render();
@@ -15214,6 +15216,7 @@ static bool vsync_line;
 // executed at start of scanline
 static void hsync_handler(void)
 {
+	ZoneScoped;
 #ifdef FSUAE_FRAME_DEBUG
 	printf("hsync_handler  cycles = %ld                vpos %d\n", get_cycles(), vpos);
 #endif

@@ -118,7 +118,8 @@ AS_IF([test "x$enable_static" = xyes],
 
 AX_CHECK_COMPILE_FLAG(-fno-strict-overflow,
 [f_no_strict_overflow=yes],
-[f_no_strict_overflow=no])
+[f_no_strict_overflow=no],
+["-Werror"])
 AM_CONDITIONAL([F_NO_STRICT_OVERFLOW],
 [test x$f_no_strict_overflow = xyes])
 
@@ -208,6 +209,12 @@ AS_IF([test "x$with_cef" = xyes], [
 AC_CHECK_LIB([compat], [ftime])
 
 AC_CHECK_LIB([dl], [dlopen])
+
+
+dnl AC_DEFINE([WITH_SDL2], [1], [Define to 1 to use SDL2])
+PKG_CHECK_MODULES([SDL2], [sdl2], [HAVE_SDL2=1], [HAVE_SDL2=0])
+AS_IF([test "x$HAVE_SDL2" = x1], [AC_DEFINE([WITH_SDL2], [1], [Define to 1 to use SDL2])])
+AM_CONDITIONAL([WITH_SDL2], [test "x$HAVE_SDL2" = x1])
 
 PKG_CHECK_MODULES([FLAC], [flac], [HAVE_FLAC=1], [HAVE_FLAC=0])
 AM_CONDITIONAL([WITH_FLAC], [test "x$HAVE_FLAC" = x1])
@@ -342,11 +349,6 @@ AS_IF([test "x$with_qt" = xyes], [
     AC_DEFINE([WITH_QT], [1], [Define to 1 to use QT])
     PKG_CHECK_MODULES([QT], [Qt5Gui])
 ])
-
-AC_DEFINE([USE_SDL2], [1], [Define to 1 to use SDL 2.0])
-PKG_CHECK_MODULES([SDL2], [sdl2])
-AC_DEFINE([USE_SDL_VIDEO], [1], [Define to 1 to use SDL for video])
-AC_DEFINE([USE_SDL_INPUT], [1], [Define to 1 to use SDL for input])
 
 PKG_CHECK_MODULES([SDL2_TTF], [SDL2_ttf], [HAVE_SDL2_TTF=1], [HAVE_SDL2_TTF=0])
 AM_CONDITIONAL([WITH_SDL2_TTF], [test "x$HAVE_SDL2_TTF" = x1])
@@ -944,6 +946,8 @@ echo "  OPENGL_CFLAGS:     $OPENGL_CFLAGS"
 echo "  OPENGL_LIBS:       $OPENGL_LIBS"
 echo "  OS_CPPFLAGS:       $OS_CPPFLAGS"
 echo "  OS_LDFLAGS:        $OS_LDFLAGS"
+echo "  SDL_CFLAGS:        $SDL_CFLAGS"
+echo "  SDL_LIBS:          $SDL_LIBS"
 echo "  SDL2_CFLAGS:       $SDL2_CFLAGS"
 echo "  SDL2_LIBS:         $SDL2_LIBS"
 echo ""

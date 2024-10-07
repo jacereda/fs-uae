@@ -15,6 +15,8 @@
 #include "fsemu-widget.h"
 #include "fsemu-window.h"
 
+#include <assert.h>
+
 enum {
     FSEMU_TITLEBAR_NONE,
     FSEMU_TITLEBAR_MENU,
@@ -158,6 +160,7 @@ void fsemu_titlebar_update(void)
             y = 20;
         }
 #endif
+	if (fsemu_titlebar.title_image)
         fsemu_gui_image(
             item,
             // 20 * ui_scale
@@ -409,7 +412,10 @@ static void fsemu_titlebar_capture_mouse(bool capture)
     fsemu_titlebar.mouse_trapped = capture;
     // Breaking the abstraction here, but might be important to do
     // this synchronously/now.
+#if defined FSEMU_SDL
     SDL_CaptureMouse(capture ? SDL_TRUE : SDL_FALSE);
+#else
+#endif
     fsemu_titlebar.mouse_trapped = capture;
 }
 
@@ -422,11 +428,16 @@ static void fsemu_titlebar_on_menu_button(void)
 static void fsemu_titlebar_on_minimize_button(void)
 {
     // FIXME: Do not use SDL directly here
+#if defined FSEMU_SDL
     SDL_MinimizeWindow(fsemu_sdlwindow_window());
+#else
+    assert(0);
+#endif
 }
 
 static void fsemu_titlebar_on_maximize_button(void)
 {
+#if defined FSEMU_SDL
     // FIXME: Do not use SDL directly here
     SDL_Window *window = fsemu_sdlwindow_window();
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
@@ -438,6 +449,9 @@ static void fsemu_titlebar_on_maximize_button(void)
     } else {
         SDL_MaximizeWindow(window);
     }
+#else
+    assert(0);
+#endif
 }
 
 static void fsemu_titlebar_on_close_button(void)

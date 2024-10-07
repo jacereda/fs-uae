@@ -1,10 +1,6 @@
 #define FSUAE_INTERNAL
 #include "fsuae-main.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #define _GNU_SOURCE 1
 #include "uae/uae.h"
 #ifdef USE_SDL
@@ -1537,6 +1533,7 @@ int fs_emu_run(fs_emu_main_function function)
 
 static void handle_events_from_uae(void)
 {
+    TracyCZone(z, true);
     int event;
     void *data;
     int intdata;
@@ -1563,10 +1560,12 @@ static void handle_events_from_uae(void)
         }
         uae_main_free_event(event, data);
     }
+    TracyCZoneEnd(z);
 }
 
 static void handle_clipboard_integration(void)
 {
+#if defined WITH_SDL2
     char *clipboard_uae = uae_clipboard_get_text();
     if (clipboard_uae) {
         SDL_SetClipboardText(clipboard_uae);
@@ -1578,11 +1577,13 @@ static void handle_clipboard_integration(void)
         uae_clipboard_put_text(clipboard_host);
         SDL_free(clipboard_host);
     }
+#endif
 }
 
 static void main_loop(void)
 {
     while (fsemu_main_is_running()) {
+
         // FIXME: Events from UAE could also be injected into the SDL
         // event system via custom events...
         handle_events_from_uae();
@@ -1590,6 +1591,7 @@ static void main_loop(void)
         fsemu_main_update_and_snapshot_gui();
         handle_clipboard_integration();
         fsemu_main_handle_events_until_next_frame();
+	TracyCFrameMark;
     }
     // fsemu_main_quit();
 #if 0

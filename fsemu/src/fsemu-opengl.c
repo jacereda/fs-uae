@@ -18,21 +18,13 @@ struct {
     int unpack_row_length;
 } fsemu_opengl;
 
-bool fsemu_opengl_error_checking = false;
+static const bool fsemu_opengl_error_checking = true;
 
 void fsemu_opengl_unpack_row_length(int row_length)
 {
     if (fsemu_opengl.unpack_row_length != row_length) {
         glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length);
         fsemu_opengl.unpack_row_length = row_length;
-    }
-}
-
-void fsemu_opengl_log_error(void)
-{
-    int error = glGetError();
-    if (error) {
-        fsemu_log_error("glGetError() = %d\n\n", error);
     }
 }
 
@@ -52,12 +44,12 @@ void fsemu_opengl_blend(bool blend)
     // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     static bool blend_func_set;
     // fsemu_opengl.blend = -1;
-    if (fsemu_opengl.blend != blend) {
+    if (fsemu_opengl.blend != blend || true) {
         // printf("fsemu_opengl_blend %d\n", blend);
         fsemu_opengl_enable(GL_BLEND, blend);
         fsemu_opengl.blend = blend;
         // FIXME...
-        if (!blend_func_set || true) {
+        if (blend && (!blend_func_set || true)) {
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             blend_func_set = true;
         }
@@ -136,11 +128,30 @@ void fsemu_opengl_forget_state(void)
     fsemu_opengl.unpack_row_length = -1;
 }
 
+static void errcb(GLenum source,
+			     GLenum type,
+			     GLuint id,
+			     GLenum severity,
+			     GLsizei length,
+			     const GLchar* message,
+			     const void* userParam)
+{
+    fsemu_log_error("GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+		    ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+		    type, severity, message);
+}
+
 void fsemu_opengl_init(void)
 {
     // FIXME: Not called yet
     fsemu_return_if_already_initialized();
     fsemu_opengl_log("Init\n");
+
+
+    if (fsemu_opengl_error_checking) {
+	    glEnable(GL_DEBUG_OUTPUT);
+	    glDebugMessageCallback(errcb, 0 );
+    }
 
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);

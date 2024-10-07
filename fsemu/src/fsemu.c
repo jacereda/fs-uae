@@ -73,7 +73,7 @@ void fsemu_set_config_file_extension(const char *extension)
 
 void fsemu_init(void)
 {
-    fsemu_boot_log("fsemu_init_with_args");
+    fsemu_boot_log("fsemu_init");
     fsemu_helper_init_emulator(
         fsemu_emulator_name(), false, FSEMU_VIDEO_RENDERER_GL, false, false);
 }
@@ -146,5 +146,7 @@ void fsemu_end(void)
         // FIXME
         // fsemu_thread_wait(fsemu_emulation_thread);
     }
+#if defined FSEMU_SDL
     SDL_Quit();
+#endif
 }

@@ -73,6 +73,7 @@
 #include "fs/emu.h"
 #include "fs/emu/hacks.h"
 
+#include "fsemu-log.h"
 #include "fsemu-frame.h"
 
 #undef _WIN32

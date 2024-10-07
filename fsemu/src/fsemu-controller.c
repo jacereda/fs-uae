@@ -5,6 +5,8 @@
 #include "fsemu-input.h"
 #include "fsemu-sdl.h"
 
+ #if defined FSEMU_SDL
+
 // back
 // dpdown
 // dpleft
@@ -93,3 +95,5 @@ void fsemu_controller_update(void)
 
     fsemu_controller_manual_update();
 }
+
+#endif

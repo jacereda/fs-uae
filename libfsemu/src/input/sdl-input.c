@@ -2,6 +2,9 @@
 #include "config.h"
 #endif
 
+#ifdef WITH_SDL2
+
+
 #define FSEMU_INTERNAL
 #include "fs/emu/input.h"
 #include "fs/log.h"
@@ -35,3 +38,5 @@ void fs_emu_input_sdl_init(void)
     fs_log("fs_emu_input_sdl_init\n");
     register_functions();
 }
+
+#endif

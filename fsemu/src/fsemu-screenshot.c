@@ -208,6 +208,8 @@ const char *fsemu_screenshot_path_for_type(const char *type)
     return buffer;
 }
 
+#if defined FSEMU_SDL
+
 // FIXME: Move to fsemu-video
 static SDL_Surface *fsemu_video_surface_from_frame(fsemu_video_frame_t *frame)
 {
@@ -291,6 +293,8 @@ void fsemu_screenshot_capture_video_frame(fsemu_video_frame_t *frame)
     fsemu_screenshot.time_str = NULL;
     fsemu_screenshot_unlock();
 }
+
+#endif
 
 // ----------------------------------------------------------------------
 

@@ -8,11 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef USE_SDL2
-#define USE_SDL
-#endif
-
-#ifdef USE_SDL
+#if defined WITH_SDL2
 // we must include SDL first before emu.h, so libfsemu's #definition of main
 // is the current one (on Windows) when main is encountered further down
 #include <SDL.h>
@@ -205,7 +201,7 @@ static int list_joysticks(void)
     printf("   SDLName: \"Fake Test Joystick %c%c\"\n", 0xc2, 0xae);
     flush_stdout();
 #endif
-#ifdef USE_SDL
+#if defined WITH_SDL2
     error = initialize_sdl2();
     if (error) {
         return error;
@@ -626,3 +622,4 @@ int main(int argc, char *argv[])
     flush_stdout();
     return 0;
 }
+

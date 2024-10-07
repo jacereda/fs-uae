@@ -19,6 +19,12 @@ typedef struct fsemu_point {
     int x;
     int y;
 } fsemu_point_t;
+typedef struct fsemu_rect {
+    int x;
+    int y;
+    int w;
+    int h;
+} fsemu_rect_t;
 
 #endif
 

@@ -55,9 +55,6 @@
 
 #define USE_MATCH 0
 
-/* kludge for Brian, so he can compile under MSVC++ */
-#define USE_NORMAL_CALLING_CONVENTION 0
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 

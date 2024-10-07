@@ -1,9 +1,11 @@
 #define FSEMU_INTERNAL
+
 #include "fsemu-led.h"
 
 #include <stddef.h>
 #include <string.h>
 
+#include "fsemu-log.h"
 #include "fsemu-util.h"
 
 // FIXME: DEBUG -> INFO;

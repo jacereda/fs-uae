@@ -38,6 +38,8 @@ static inline unsigned int uaerand (void) {
 }
 */
 
+#define USE_PTHREADS 1
+
 #define DEBUG_SYNC
 //#define DEBUG_SYNC_MEMORY
 #ifdef DEBUG_SYNC

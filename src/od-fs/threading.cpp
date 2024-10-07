@@ -49,6 +49,7 @@ void uae_end_thread (uae_thread_id *thread)
     }
 }
 
+#if defined WITH_SDL2 && !defined USE_PTHREADS
 #include <SDL.h>
 
 static SDL_threadID g_main_thread_id;
@@ -88,3 +89,47 @@ bool uae_is_emulation_thread(void)
 {
     return SDL_ThreadID() == g_emulation_thread_id;
 }
+#endif
+
+
+#if USE_PTHREADS
+#include <pthread.h>
+
+static pthread_t g_main_thread_id;
+static pthread_t g_emulation_thread_id;
+
+void uae_register_main_thread(void)
+{
+    g_main_thread_id = pthread_self();
+}
+
+bool uae_is_main_thread(void)
+{
+    return pthread_self() == g_main_thread_id;
+}
+
+bool is_mainthread(void)
+{
+    // Was a bit of misunderstanding here, is_mainthread should return true
+    // if it is the *main emulation thread*. Fixed now. FIXME: Doublecheck
+    // that "mainthread" in WinUAE is infact the emulation thread.
+    return uae_is_emulation_thread();
+}
+
+uae_thread_id uae_thread_get_id(void)
+{
+    // Casting a long to a pointer isn't very nice,
+    // but should work at least
+    return (uae_thread_id) pthread_self();
+}
+
+void uae_register_emulation_thread(void)
+{
+    g_emulation_thread_id = pthread_self();
+}
+
+bool uae_is_emulation_thread(void)
+{
+    return pthread_self() == g_emulation_thread_id;
+}
+#endif

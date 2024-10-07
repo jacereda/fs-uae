@@ -64,7 +64,8 @@ AM_CXXFLAGS += $(CM_CFLAGS)
 
 AM_CPPFLAGS =
 AM_CPPFLAGS += @OS_CPPFLAGS@
-AM_CPPFLAGS += -DUAE -DFSUAE
+AM_CPPFLAGS += -DUAE -DFSUAE -DFSEMU_PSEM -DUSE_PSEM
+
 
 LIBS += @ALSA_LIBS@
 LIBS += @CARBON_LIBS@
@@ -82,6 +83,11 @@ LIBS += @MIDI_LIBS@
 LIBS += @SDL2_LIBS@
 LIBS += @X11_LIBS@
 LIBS += @ZLIB_LIBS@
+
+AM_CPPFLAGS += -DTRACY_ENABLE -DTRACY_ON_DEMAND
+LIBS += -ltracy
+
+LIBS += -lXcursor -lXrender -lX11 -lGL -lxcb -lXau # -lXdmcp -lXfixes
 
 AM_LDFLAGS =
 # AM_LDFLAGS += -rdynamic
@@ -120,7 +126,7 @@ b = $(builddir)
 
 bin_PROGRAMS = fs-uae
 
-libexec_PROGRAMS = fs-uae-device-helper
+libexec_PROGRAMS =
 
 dist_doc_DATA = README COPYING
 
@@ -135,6 +141,13 @@ noinst_LIBRARIES =
 
 BUILT_SOURCES = \
 	gen/linetoscr.cpp
+
+
+noinst_LIBRARIES += libkludge.a
+libkludge_a_SOURCES = \
+	src/kludge.cpp
+BUILT_SOURCES += $(libkludge_a_SOURCES)
+
 
 nodist_fs_uae_SOURCES =
 
@@ -200,10 +213,10 @@ fs_uae_device_helper_SOURCES = \
 	src/fsuae/device-helper.c
 
 fs_uae_device_helper_LDADD =
+fs_uae_device_helper_LDADD += libkludge.a
 
 noinst_LIBRARIES += libuae.a
 AM_CPPFLAGS += -iquote$(s)/src/include/uae
-AM_CPPFLAGS += -iquote$(s)/flac/include
 AM_CPPFLAGS += -iquote$(b)/gen
 AM_CPPFLAGS += -iquote$(s)/src
 AM_CPPFLAGS += -iquote$(s)/src/jit
@@ -818,16 +831,23 @@ libfsemu_a_SOURCES = \
 	libfsemu/src/video/legacy-video.c \
 	libfsemu/src/video/opengl-render.c \
 	libfsemu/src/video/render.c \
-	libfsemu/src/video/sdl-video.c \
-	libfsemu/src/video/sdl-video-common.c \
-	libfsemu/src/video/sdl-video-software.c \
 	libfsemu/src/video/video.c \
 	libfsemu/src/video/video-buffer.c
+
+if WITH_SDL2
+libexec_PROGRAMS += fs-uae-device-helper
+
+libfsemu_a_SOURCES += \
+	libfsemu/src/video/sdl-video.c \
+	libfsemu/src/video/sdl-video-common.c \
+	libfsemu/src/video/sdl-video-software.c
+endif
+
 
 if FSEMU
 
 noinst_LIBRARIES += libfsemu2.a
- AM_CPPFLAGS += -iquote$(s)/fsemu/src
+AM_CPPFLAGS += -iquote$(s)/fsemu/src
 fs_uae_LDADD += libfsemu2.a
 fs_uae_device_helper_LDADD += libfsemu2.a
 libfsemu2_a_SOURCES = \
@@ -866,6 +886,7 @@ libfsemu2_a_SOURCES = \
 	fsemu/src/fsemu-control.c \
 	fsemu/src/fsemu-control.h \
 	fsemu/src/fsemu-controller.c \
+	fsemu/src/fsemu-glcv.c \
 	fsemu/src/fsemu-controller.h \
 	fsemu/src/fsemu-data.c \
 	fsemu/src/fsemu-data.h \
@@ -1088,7 +1109,7 @@ endif
 
 if WITH_GLAD
 noinst_LIBRARIES += libglad.a
-AM_CPPFLAGS += -iquote$(s)/glad/include
+AM_CPPFLAGS += -iquote$(s)/glad/include -DFSEMU_GLAD
 fs_uae_LDADD += libglad.a
 fs_uae_device_helper_LDADD += libglad.a
 libglad_a_SOURCES = \
@@ -1619,6 +1640,15 @@ CM_CFLAGS += @LIBMPEG2_CFLAGS@
 LIBS += @LIBMPEG2_LIBS@
 endif
 
+if WITH_FLAC
+CM_CFLAGS += @FLAC_CFLAGS@ @OGG_CFLAGS@
+LIBS += @FLAC_LIBS@ @OGG_LIBS@
+endif
+
+# LIBS += libkludge.a
+
+
+
 # if BUILTIN_LIBMPEG2
 # SUBDIRS += slirp
 # fs_uae_LDADD += slirp/libslirp.a
@@ -1718,15 +1748,6 @@ EXTRA_DIST = $(TESTS) $(EXTRA_TESTS) \
 	docs/vsync.md \
 	docs/windows.md \
 	docs/x-arcade.md \
-	flac/include/FLAC/all.h \
-	flac/include/FLAC/assert.h \
-	flac/include/FLAC/callback.h \
-	flac/include/FLAC/export.h \
-	flac/include/FLAC/format.h \
-	flac/include/FLAC/metadata.h \
-	flac/include/FLAC/ordinals.h \
-	flac/include/FLAC/stream_decoder.h \
-	flac/include/FLAC/stream_encoder.h \
 	fsemu/gamemode/LICENSE.txt \
 	fsemu/gamemode/README.md \
 	fsemu/libinih/ini.c \

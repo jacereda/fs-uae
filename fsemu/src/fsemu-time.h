@@ -35,11 +35,15 @@ void fsemu_time_init(void);
 
 static inline int64_t fsemu_time_us(void)
 {
+    /* TracyCZone(z, true); */
+    int64_t r;
 #ifdef FSEMU_GLIB
-    return g_get_monotonic_time();
+    r = g_get_monotonic_time();
 #else
 #error Missing implementation of fsemu_time_us
 #endif
+    /* TracyCZoneEnd(z); */
+    return r;
 }
 
 static inline int64_t fsemu_time_ms(void)
@@ -50,6 +54,8 @@ static inline int64_t fsemu_time_ms(void)
 // FIXME: Rename fsemu_time_sleep_us
 static inline void fsemu_sleep_us(int64_t sleep_us)
 {
+    TracyCZone(z, true);
+
     fsemu_assert(sleep_us > 0);
     // FIXME: Consider using nanosleep (or check if g_usleep is good enough).
     // Or even better: clock_nanosleep with CLOCK_MONOTONIC
@@ -58,11 +64,13 @@ static inline void fsemu_sleep_us(int64_t sleep_us)
 #else
 #error Missing implementation of fsemu_sleep_us
 #endif
+
+    TracyCZoneEnd(z);
 }
 
 static inline void fsemu_time_sleep_ms(int sleep_ms)
 {
-    return fsemu_sleep_us(sleep_ms * 1000);
+    fsemu_sleep_us(sleep_ms * 1000);
 }
 
 FSEMU_DEPRECATED

@@ -253,11 +253,22 @@ void fsemu_video_background_color_rgb(int *r, int *g, int *b)
 
 void fsemu_video_work(int timeout_us)
 {
-    if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_SDL) {
+    TracyCZone(z, true);
+
+    switch (fsemu_video.renderer) {
+#if defined FSEMU_SDL
+    case FSEMU_VIDEO_RENDERER_SDL:
         fsemu_sdlvideo_work(timeout_us);
-    } else if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_GL) {
+	break;
+#endif
+    case FSEMU_VIDEO_RENDERER_GL:
         fsemu_glvideo_work(timeout_us);
+	break;
+    default:
+	fsemu_assert(0);
     }
+
+    TracyCZoneEnd(z);
 }
 
 void fsemu_video_render(void)
@@ -273,10 +284,15 @@ void fsemu_video_render(void)
         fsemu_video.did_render_frame = false;
     } else {
         fsemu_frame_log_epoch("Render\n");
-        if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_SDL) {
+	switch (fsemu_video.renderer) {
+#if defined FSEMU_SDL
+	case FSEMU_VIDEO_RENDERER_SDL:
             fsemu_sdlvideo_render();
-        } else if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_GL) {
-            fsemu_glvideo_render();
+	    break;
+#endif
+	case FSEMU_VIDEO_RENDERER_GL:
+	    fsemu_glvideo_render();
+	    break;
         }
         fsemu_video.did_render_frame = true;
     }
@@ -319,10 +335,17 @@ void fsemu_video_display(void)
     }
 
     fsemu_frame_log_epoch("Display\n");
-    if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_SDL) {
-        fsemu_sdlvideo_display();
-    } else if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_GL) {
-        fsemu_glvideo_display();
+    switch (fsemu_video.renderer) {
+#if defined FSEMU_SDL
+    case FSEMU_VIDEO_RENDERER_SDL:
+	fsemu_sdlvideo_display();
+	break;
+#endif
+    case FSEMU_VIDEO_RENDERER_GL:
+	fsemu_glvideo_display();
+	break;
+    default:
+	fsemu_assert(0);
     }
 
     // fsemu_assert(fsemu_frame_number_displayed == fsemu_frame_number_posted -
@@ -508,10 +531,17 @@ void fsemu_video_render_gui_early(fsemu_gui_item_t *items)
         return;
     }
     // fsemu_video_log_debug("render_gui_early\n");
-    if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_SDL) {
-        fsemu_sdlvideo_render_gui_early(items);
-    } else if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_GL) {
+    switch (fsemu_video.renderer) {
+#if defined FSEMU_SDL
+    case FSEMU_VIDEO_RENDERER_SDL:
+	fsemu_sdlvideo_render_gui_early(items);
+	break;
+#endif
+    case FSEMU_VIDEO_RENDERER_GL:
         fsemu_glvideo_render_gui_early(items);
+	break;
+    default:
+	fsemu_assert(0);
     }
 }
 
@@ -526,10 +556,17 @@ void fsemu_video_render_gui(fsemu_gui_item_t *items)
     // fsemu_video_log_debug("render_gui\n");
     printf("fsemu_video_render_gui %p\n", items);
 #endif
-    if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_SDL) {
+    switch (fsemu_video.renderer) {
+#if defined FSEMU_SDL
+    case FSEMU_VIDEO_RENDERER_SDL:
         fsemu_sdlvideo_render_gui(items);
-    } else if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_GL) {
+	break;
+#endif
+    case FSEMU_VIDEO_RENDERER_GL:
         fsemu_glvideo_render_gui(items);
+	break;
+    default:
+	fsemu_assert(0);
     }
 }
 
@@ -784,7 +821,7 @@ void fsemu_video_decide_driver(void)
         fsemu_video_log("Want video driver: %s\n", driver);
     }
     if (0) {
-#ifdef FSEMU_SDL
+#if defined FSEMU_SDL
     } else if (!driver || strcmp(driver, "sdl") == 0) {
         fsemu_video.driver = FSEMU_VIDEO_DRIVER_SDL;
 #endif
@@ -795,9 +832,13 @@ void fsemu_video_decide_driver(void)
     }
 
     const char *chosen_driver_name;
-    if (fsemu_video.driver == FSEMU_VIDEO_DRIVER_SDL) {
+    switch (fsemu_video.driver) {
+    case FSEMU_VIDEO_DRIVER_SDL:
         chosen_driver_name = "SDL";
-    } else {
+	break;
+    case FSEMU_VIDEO_DRIVER_GLCV:
+        chosen_driver_name = "GLCV";
+    default:
         chosen_driver_name = "Null";
     }
 
@@ -888,17 +929,24 @@ void fsemu_video_init(void)
         }
     }
 
-    if (fsemu_video.driver == FSEMU_VIDEO_DRIVER_NULL) {
-        fsemu_video.renderer = FSEMU_VIDEO_RENDERER_NULL;
-    }
+    /* if (fsemu_video.driver == FSEMU_VIDEO_DRIVER_NULL) { */
+    /*     fsemu_video.renderer = FSEMU_VIDEO_RENDERER_NULL; */
+    /* } */
 
-    if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_SDL) {
-        fsemu_sdlvideo_init();
-    } else if (fsemu_video.renderer == FSEMU_VIDEO_RENDERER_GL) {
+    switch (fsemu_video.renderer) {
+#if defined FSEMU_SDL
+    case FSEMU_VIDEO_RENDERER_SDL:
+	fsemu_sdlvideo_init();
+	break;
+#endif
+    case FSEMU_VIDEO_RENDERER_GL:
         if (fsemu_option_enabled(FSEMU_OPTION_VIDEO_THREAD)) {
             fsemu_video.threaded = true;
         }
         fsemu_glvideo_init();
+	break;
+    default:
+	fsemu_assert(0);
     }
 
     if (fsemu_option_enabled(FSEMU_OPTION_VSYNC)) {
@@ -911,7 +959,10 @@ void fsemu_video_init(void)
 
     // Calling update to ensure v-sync mode is synchronized.
     // FIXME: Should go via fsemu_window
-    fsemu_sdlwindow_update();
+#if defined FSEMU_SDL
+    if (fsemu_window_get_driver() == FSEMU_WINDOW_DRIVER_SDL)
+	    fsemu_sdlwindow_update();
+#endif
 
     // FIXME: Move to here from sdlwindow?
     // if (fsemu_sdlwindow_kmsdrm()) {

@@ -35,7 +35,7 @@ const char *fsemu_application_name(void)
 
 void fsemu_application_set_base_dir(const char *dir_path)
 {
-    fsemu_assert(dir_path == NULL);
+	//    fsemu_assert(dir_path == NULL);
     fsemu_assert(fsemu_application.base_dir == NULL);
     fsemu_application.base_dir = strdup(dir_path);
 }

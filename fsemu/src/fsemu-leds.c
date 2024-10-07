@@ -187,9 +187,10 @@ void fsemu_leds_update(void)
 
     fsemu_led_set_state(fsemu_leds.mlock_led, fsemu_mouse_captured());
     // FIXME: Replace fsemu_sdlwindow_full_keyboard_emulation()
+#if defined FSEMU_SDL
     fsemu_led_set_state(fsemu_leds.klock_led,
                         fsemu_sdlwindow_full_keyboard_emulation());
-
+#endif
     // double left = 1920 - 200;
     // FIXME: There is some bug with calculating image position relative to
     // "screen"; try with top = 0 and see.

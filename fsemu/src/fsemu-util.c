@@ -3,6 +3,7 @@
 
 #include "fsemu-glib.h"
 #include "fsemu-time.h"
+#include <math.h>
 
 // ----------------------------------------------------------------------------
 // File functions

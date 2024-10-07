@@ -281,4 +281,5 @@
 
 #include "defines.h"
 
+
 #endif /* FSUAE_SYSCONFIG_H */

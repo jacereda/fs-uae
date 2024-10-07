@@ -1,3 +1,4 @@
+//#include "SDL_opengl.h"
 #define FSEMU_INTERNAL
 #include "fsemu-glvideo.h"
 
@@ -81,8 +82,11 @@ void fsemu_glvideo_set_size_2(int width, int height)
     // FIXME: Make sure this is called initially on Window creation?
 
     fsemu_video_log_debug("Got resize callback from window subsystem\n");
-    int draw_w, draw_h;
-    SDL_GL_GetDrawableSize(fsemu_sdlwindow_window(), &draw_w, &draw_h);
+    int draw_w = width, draw_h = height;
+#if defined FSEMU_SDL
+    if (fsemu_window_get_driver() == FSEMU_WINDOW_DRIVER_SDL)
+	    SDL_GL_GetDrawableSize(fsemu_sdlwindow_window(), &draw_w, &draw_h);
+#endif
     fsemu_video_log_info("Window size %dx%d : drawable size %dx%d\n",
                           width,
                           height,
@@ -141,7 +145,7 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
     frame->width = frame->limits.w;
     frame->height = frame->limits.h;
 
-    SDL_Rect rect;
+    fsemu_rect_t rect;
     rect.x = 0;
     rect.y = 0;
     rect.w = frame->width;
@@ -194,7 +198,6 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
 
     // fsemu_opengl_texture_2d(true);
     glBindTexture(GL_TEXTURE_2D, fsemu_glvideo.textures[n]);
-    fsemu_opengl_log_error_maybe();
 
     // SDL_UpdateTexture(fsemu_glvideo.textures[fsemu_glvideo.current_texture],
     //                   &rect,
@@ -233,8 +236,6 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
                     fsemu_glvideo.format,
                     fsemu_glvideo.type,
                     pixels);
-    // FIXME: fsemu_opengl_log_error_maybe();
-    fsemu_opengl_log_error_maybe();
 
     // Duplicate right (and later, bottom) edge to remove bleed effect from
     // unused pixels in the texture when doing bilinear filtering.
@@ -252,10 +253,6 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
                         fsemu_glvideo.type,
                         // pixels + (rect.w * 4 * rect.y) + (rect.w - 1) * 4);
                         pixels + (rect.w - 1) * fsemu_glvideo.bpp);
-        fsemu_opengl_log_error_maybe();
-        // FIXME: Remove
-        // fsemu_opengl_unpack_row_length(0);
-        // fsemu_opengl_log_error_maybe();
     }
 
     if (fsemu_perfgui_mode() == 2) {
@@ -271,7 +268,6 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
                         fsemu_glvideo.format,
                         fsemu_glvideo.type,
                         slice_line);
-        fsemu_opengl_log_error_maybe();
     }
 
     if (frame->partial > 0 && frame->partial != frame->height) {
@@ -293,7 +289,6 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
                         fsemu_glvideo.format,
                         fsemu_glvideo.type,
                         pixels + (rect.w * fsemu_glvideo.bpp * (rect.h - 1)));
-        fsemu_opengl_log_error_maybe();
         // Draw corner pixel if room for it
         if (rect.w < tw) {
             glTexSubImage2D(
@@ -306,7 +301,6 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
                 fsemu_glvideo.format,
                 fsemu_glvideo.type,
                 pixels + (rect.w * rect.h - 1) * fsemu_glvideo.bpp);
-            fsemu_opengl_log_error_maybe();
         }
     }
 
@@ -481,7 +475,6 @@ static void fsemu_glvideo_upload_perfgui(void)
     // FIXME: fsemu_opengl_bind_texture_2d() ?
     int n = fsemu_frame_number_rendering % FSEMU_GLVIDEO_N_TEXTURES;
     glBindTexture(GL_TEXTURE_2D, fsemu_glvideo.perfgui_textures[n]);
-    fsemu_opengl_log_error_maybe();
 
     fsemu_image_t *image = fsemu_perfgui_image();
 
@@ -508,7 +501,6 @@ static void fsemu_glvideo_render_perfgui(void)
 
     int n = fsemu_frame_number_rendering % FSEMU_GLVIDEO_N_TEXTURES;
     glBindTexture(GL_TEXTURE_2D, fsemu_glvideo.perfgui_textures[n]);
-    fsemu_opengl_log_error_maybe();
 
     // FIXME: This is the inner edge, not w(idth)
     double w = 0.75;
@@ -538,7 +530,15 @@ static void fsemu_glvideo_render_perfgui(void)
 
 void fsemu_glvideo_render(void)
 {
+    TracyCZone(z, true);
+
     fsemu_video_log_debug("--- render --- [draw]\n");
+    int r, g, b;
+    fsemu_video_background_color_rgb(&r, &g, &b);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    //    glClearColor(r / 255.0, g / 255.0, b / 255.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
     if (fsemu_perfgui_mode() != FSEMU_PERFGUI_MODE_OFF) {
         fsemu_perfgui_update_image();
@@ -546,7 +546,8 @@ void fsemu_glvideo_render(void)
         fsemu_glvideo_render_perfgui();
     }
 
-    SDL_Rect src;
+
+    fsemu_rect_t src;
     src.x = 0;
     src.y = 0;
     src.w = fsemu_glvideo.rect.w;
@@ -572,7 +573,7 @@ void fsemu_glvideo_render(void)
     fsemu_layout_set_video_size(src.w, src.h);
     fsemu_layout_set_pixel_aspect(((double) src.w / src.h) / (4.0 / 3.0));
 
-    SDL_Rect dst;
+    fsemu_rect_t dst;
     fsemu_layout_video_rect(&dst);
 
     // dst.x = 0;
@@ -616,12 +617,8 @@ void fsemu_glvideo_render(void)
     fsemu_opengl_depth_test(false);
     fsemu_opengl_texture_2d(true);
 
-    // glDisable(GL_BLEND);
-    // glEnable(GL_TEXTURE_2D);
-
     int n = fsemu_frame_number_rendering % FSEMU_GLVIDEO_N_TEXTURES;
     glBindTexture(GL_TEXTURE_2D, fsemu_glvideo.textures[n]);
-    fsemu_opengl_log_error_maybe();
 
     // dr.x = 0.5;
     // dr.w = 0.5;
@@ -638,7 +635,6 @@ void fsemu_glvideo_render(void)
     glTexCoord2f(tx1, ty2);
     glVertex3f(dr.x, dr.y + dr.h, 0);
     glEnd();
-    fsemu_opengl_log_error_maybe();
 
     // FIXME: REMOVE
     fsemu_glvideo_rect_temp.left = dr.x;
@@ -664,6 +660,8 @@ void fsemu_glvideo_render(void)
     // fsemu_video_set_frame_rendered_at(fsemu_frame_number_rendering,
     //                                   fsemu_time_us());
     fsemu_glvideo.frame_count += 1;
+
+    TracyCZoneEnd(z);
 }
 
 void fsemu_glvideo_set_frame_rendered_externally(void)
@@ -687,14 +685,14 @@ void fsemu_glvideo_set_frame_rendered_externally(void)
                                       fsemu_time_us());
     fsemu_glvideo.frame_count += 1;
     // fsemu_opengl_forget_state();
+
 }
 
 static int64_t fsemu_glvideo_wait_for_swap(void)
 {
     // printf("wait for swap\n");
     // FIXME: IMPROVE!
-    glFinish();
-    fsemu_opengl_log_error_maybe();
+	//    glFinish();
 
     int64_t vsync_time = fsemu_time_us();
     return vsync_time;
@@ -730,7 +728,7 @@ void fsemu_glvideo_display(void)
         SDL_GL_SwapWindow(window);
     }
 #endif
-    glFinish();
+//    glFinish();
     // glFlush();
     fsemu_video_set_frame_rendered_at(fsemu_frame_number_rendered,
                                       fsemu_time_us());
@@ -738,9 +736,10 @@ void fsemu_glvideo_display(void)
     // FIXME...
     // FIXME: frameinfo->swap_at_or_after
     // fsemu_sleep_us(3000);
-
+#if defined FSEMU_SDL
     SDL_Window *window = fsemu_sdlwindow_window();
     SDL_GL_SwapWindow(window);
+#endif
     fsemu_video_set_frame_swapped_at(fsemu_frame_number_rendered,
                                      fsemu_time_us());
 
@@ -830,7 +829,6 @@ void fsemu_glvideo_display(void)
                    0,
                    fsemu_glvideo.drawable_size.w,
                    fsemu_glvideo.drawable_size.h);
-        fsemu_opengl_log_error_maybe();
     } else {
         // FIXME: log_warning
         fsemu_video_log("Not a valid drawable size for glViewport\n");
@@ -838,9 +836,6 @@ void fsemu_glvideo_display(void)
 
 #endif
 
-    // glClearColor(0.0, 0.0, 1.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    fsemu_opengl_log_error_maybe();
 #ifdef FSEMU_OS_WINDOWS_XXX
     fsemu_opengl_blend(false);
     fsemu_opengl_texture_2d(false);
@@ -1076,9 +1071,7 @@ static void fsemu_glvideo_render_text(fsemu_gui_item_t *widget)
     // FIXME: Inefficient
     GLuint texture;
     glGenTextures(1, &texture);
-    fsemu_opengl_log_error_maybe();
     glBindTexture(GL_TEXTURE_2D, texture);
-    fsemu_opengl_log_error_maybe();
 
     fsemu_image_t *image = widget->textimage;
     // image->depth,
@@ -1098,15 +1091,10 @@ static void fsemu_glvideo_render_text(fsemu_gui_item_t *widget)
                  GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  image->data);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    fsemu_opengl_log_error_maybe();
 
     float tx1 = 0.0f, tx2 = 1.0f;
     float ty1 = 1.0f, ty2 = 0.0f;
@@ -1142,12 +1130,10 @@ static void fsemu_glvideo_render_text(fsemu_gui_item_t *widget)
     glTexCoord2f(tx1, ty2);
     glVertex3f(dr.x, dr.y + dr.h, 0);
     glEnd();
-    fsemu_opengl_log_error_maybe();
 
     // fsemu_video_log_debug("Render image to %0.2f,%0.2f %0.2fx%0.2f\n",
     //                 dr.x, dr.y, dr.w, dr.h);
     glDeleteTextures(1, &texture);
-    fsemu_opengl_log_error_maybe();
 }
 
 static void fsemu_glvideo_render_image(fsemu_gui_item_t *widget)
@@ -1173,9 +1159,7 @@ static void fsemu_glvideo_render_image(fsemu_gui_item_t *widget)
     // FIXME: Inefficient
     GLuint texture;
     glGenTextures(1, &texture);
-    fsemu_opengl_log_error_maybe();
     glBindTexture(GL_TEXTURE_2D, texture);
-    fsemu_opengl_log_error_maybe();
 
     fsemu_image_t *image = widget->image;
     // image->depth,
@@ -1196,15 +1180,10 @@ static void fsemu_glvideo_render_image(fsemu_gui_item_t *widget)
                  GL_RGBA,
                  GL_UNSIGNED_BYTE,
                  image->data);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    fsemu_opengl_log_error_maybe();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    fsemu_opengl_log_error_maybe();
 
     float tx1 = 0.0f, tx2 = 1.0f;
     float ty1 = 1.0f, ty2 = 0.0f;
@@ -1230,12 +1209,10 @@ static void fsemu_glvideo_render_image(fsemu_gui_item_t *widget)
     glTexCoord2f(tx1, ty2);
     glVertex3f(dr.x, dr.y + dr.h, 0);
     glEnd();
-    fsemu_opengl_log_error_maybe();
 
     // fsemu_video_log_debug("Render image to %0.2f,%0.2f %0.2fx%0.2f\n",
     //                 dr.x, dr.y, dr.w, dr.h);
     glDeleteTextures(1, &texture);
-    fsemu_opengl_log_error_maybe();
 }
 
 static void fsemu_glvideo_render_rectangle(fsemu_gui_item_t *widget)
@@ -1264,7 +1241,6 @@ static void fsemu_glvideo_render_rectangle(fsemu_gui_item_t *widget)
     glVertex3f(dr.x + dr.w, dr.y + dr.h, 0);
     glVertex3f(dr.x, dr.y + dr.h, 0);
     glEnd();
-    fsemu_opengl_log_error_maybe();
 }
 
 // void fsemu_glvideo_render_item(fsemu_gui_item_t *item);
@@ -1363,35 +1339,19 @@ void fsemu_glvideo_init_gl_state(void)
     fsemu_video_background_color_rgb(&r, &g, &b);
 
     glClearColor(r / 255.0, g / 255.0, b / 255.0, 1.0);
-    fsemu_opengl_log_error_maybe();
-
-#if 0
-    glClearColor(1.0, 0.0, 0.0, 1.0);
-    fsemu_opengl_log_error_maybe();
-#endif
 
     glGenTextures(2, fsemu_glvideo.textures);
     fsemu_video_log_debug("fsemu_glvideo.textures[0] = %d\n",
                           fsemu_glvideo.textures[0]);
     fsemu_video_log_debug("fsemu_glvideo.textures[1] = %d\n",
                           fsemu_glvideo.textures[1]);
-    fsemu_opengl_log_error_maybe();
 
     uint8_t *data = (uint8_t *) malloc(1024 * 1024 * fsemu_glvideo.bpp);
-#if 0
-    memset(data, 0x00, 1024 * 1024 * fsemu_glvideo.bpp);
-#else
 
     // Setting color to 0xff here to debug "bleed issues" with linear filtering
     // FIXME: Only works with RGBA / BGRA. Write for for bpp = 2 as well
     memset(data, 0xff, 1024 * 1024 * fsemu_glvideo.bpp);
-#if 0
-    for (int i = 0; i < 1024 * 1024 * fsemu_glvideo.bpp; i+=4) {
-        data[i] = 0xff;
-    }
-#endif
 
-#endif
     // FIXME: Shouldn't be necessary.
     // FIXME: Make sure to synch opengl state instead?
     // glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -1400,7 +1360,6 @@ void fsemu_glvideo_init_gl_state(void)
 
     for (int i = 0; i < 2; i++) {
         glBindTexture(GL_TEXTURE_2D, fsemu_glvideo.textures[i]);
-        fsemu_opengl_log_error_maybe();
         glTexImage2D(GL_TEXTURE_2D,
                      0,
                      fsemu_glvideo.iformat,
@@ -1410,22 +1369,16 @@ void fsemu_glvideo_init_gl_state(void)
                      fsemu_glvideo.format,
                      fsemu_glvideo.type,
                      data);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        fsemu_opengl_log_error_maybe();
     }
 
     glGenTextures(2, fsemu_glvideo.perfgui_textures);
 
     for (int i = 0; i < 2; i++) {
         glBindTexture(GL_TEXTURE_2D, fsemu_glvideo.perfgui_textures[i]);
-        fsemu_opengl_log_error_maybe();
         glTexImage2D(GL_TEXTURE_2D,
                      0,
                      GL_RGBA,
@@ -1435,15 +1388,10 @@ void fsemu_glvideo_init_gl_state(void)
                      GL_RGBA,
                      GL_UNSIGNED_BYTE,
                      data);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        fsemu_opengl_log_error_maybe();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        fsemu_opengl_log_error_maybe();
     }
 
     free(data);
@@ -1473,7 +1421,7 @@ static void *fsemu_vsyncthread_entry(void *data)
 void fsemu_glvideo_init(void)
 {
     fsemu_return_if_already_initialized();
-    // fsemu_opengl_init();
+    fsemu_opengl_init();
     fsemu_video_log("Initializing OpenGL video renderer\n");
     fsemu_shader_module_init();
 

@@ -66,41 +66,6 @@ void fsemu_mouse_toggle_captured(void)
 }
 
 // ----------------------------------------------------------------------------
-#if 0
-void fsemu_mouse_handle_position(int window_x, int window_y)
-{
-    fsemu_thread_assert_main();
-
-    fsemu_mouse_log("%d,%d\n", window_x, window_y);
-}
-
-// ----------------------------------------------------------------------------
-
-void fsemu_mouse_handle_click(int button,
-                              int state,
-                              int window_x,
-                              int window_y)
-{
-    fsemu_thread_assert_main();
-
-    fsemu_mouse_log("Button %d clicked (%d) at %d,%d\n",
-                    button,
-                    state,
-                    window_x,
-                    window_y);
-
-    if (state) {
-        if (button == 2) {
-            fsemu_mouse_set_captured(!fsemu_mouse_captured());
-        } else {
-            if (fsemu_mouse.automatic_grab && !fsemu_mouse_captured()) {
-                fsemu_mouse_set_captured(true);
-            }
-        }
-    }
-}
-#endif
-// ----------------------------------------------------------------------------
 
 static int g_fs_emu_mouse_speed = 100;
 

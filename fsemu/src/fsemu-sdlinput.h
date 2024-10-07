@@ -8,10 +8,12 @@
 extern "C" {
 #endif
 
+#if defined FSEMU_SDL
 void fsemu_sdlinput_init(void);
 void fsemu_sdlinput_work(void);
 
 bool fsemu_sdlinput_handle_event(SDL_Event *event);
+#endif
 
 #ifdef __cplusplus
 }

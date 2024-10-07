@@ -5,6 +5,7 @@
 #include "fsemu-mouse.h"
 #include "fsemu-option.h"
 #include "fsemu-sdlwindow.h"
+#include "fsemu-glcv.h"
 #include "fsemu-thread.h"
 #include "fsemu-titlebar.h"
 #include "fsemu-types.h"
@@ -224,7 +225,11 @@ static void fsemu_window_sync_data_to_video_thread(void)
 
 void fsemu_window_work(int timeout)
 {
-    if (fsemu_window.driver == FSEMU_WINDOW_DRIVER_SDL) {
+    TracyCZone(z, true);
+
+    switch (fsemu_window.driver) {
+#if defined FSEMU_SDL
+    case FSEMU_WINDOW_DRIVER_SDL:
         fsemu_sdlwindow_work(timeout);
         // Perform periodic updates, check if fullscreen should be toggled,
         // etc.
@@ -232,12 +237,20 @@ void fsemu_window_work(int timeout)
         // FIXME: Move to main_update via window_update? Should be sufficient
         // to update once every frame.
         fsemu_sdlwindow_update();
+	break;
+#endif
+#if defined FSEMU_GLCV
+    case FSEMU_WINDOW_DRIVER_GLCV:
+	fsemu_glcv_work();
+	break;
+#endif
     }
-
     // printf("fsemu_window_work\n");
 
     // FIXME: Move/refactor
     fsemu_window_sync_data_to_video_thread();
+
+    TracyCZoneEnd(z);
 }
 
 // ----------------------------------------------------------------------------
@@ -245,13 +258,21 @@ void fsemu_window_work(int timeout)
 void fsemu_window_notify_frame_rendered_vt(void)
 {
     fsemu_thread_assert_video();
+#if defined FSEMU_SDL
     fsemu_sdlwindow_notify_frame_rendered_vt();
+#else
+    //    assert(0);
+#endif
 }
 
 void fsemu_window_notify_quit(void)
 {
     // fsemu_thread_assert_main();
+#if defined FSEMU_SDL
     fsemu_sdlwindow_notify_quit();
+#else
+    assert(0);
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -403,9 +424,11 @@ void fsemu_window_init(void)
 
     fsemu_video_decide_driver();
     switch (fsemu_video_driver()) {
+#if defined FSEMU_SDL
     case FSEMU_VIDEO_DRIVER_SDL:
 	fsemu_window.driver = FSEMU_WINDOW_DRIVER_SDL;
 	break;
+#endif
     case FSEMU_VIDEO_DRIVER_GLCV:
 	fsemu_window.driver = FSEMU_WINDOW_DRIVER_GLCV;
 	break;
@@ -425,14 +448,30 @@ void fsemu_window_init(void)
     // fsemu_sdlwindow_create is called.
     fsemu_window.ui_scale = 1.0;
 
-    if (fsemu_window.driver == FSEMU_WINDOW_DRIVER_SDL) {
-        fsemu_sdlwindow_init();
-        fsemu_sdlwindow_create();
-        fsemu_sdlwindow_show();
+    switch (fsemu_window.driver) {
+#if defined FSEMU_SDL
+    case FSEMU_WINDOW_DRIVER_SDL:
+	fsemu_sdlwindow_init();
+	fsemu_sdlwindow_create();
+	fsemu_sdlwindow_show();
+	break;
+#endif
+#if defined FSEMU_GLCV
+    case FSEMU_WINDOW_DRIVER_GLCV:
+        fsemu_glcv_init();
+	break;
+#endif
+    default:
+	fsemu_assert(0);
     }
 
     // Assume window is active upon startup, to avoid a single frame of
     // flickering on the titlebar due to inactive frame being rendered before
     // window activation event occurs.
     fsemu_window.active = true;
+}
+
+
+fsemu_window_driver_t fsemu_window_get_driver(void) {
+    return fsemu_window.driver;
 }

@@ -40,7 +40,7 @@
 #define FLAC__NO_DLL
 #endif
 
-#include "FLAC/stream_decoder.h"
+#include <FLAC/stream_decoder.h>
 
 #ifdef WITH_CHD
 #include "archivers/chd/chdtypes.h"

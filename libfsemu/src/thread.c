@@ -65,7 +65,9 @@ struct fs_semaphore {
 fs_thread_id_t fs_thread_id(void)
 {
     fs_thread_id_t thread_id = 0;
-#if defined(USE_GLIB)
+#if defined USE_PTHREADS
+    return (uintptr_t)pthread_self();
+#elif defined(USE_GLIB)
     thread_id = (uintptr_t) g_thread_self();
 #else
 #error no thread support
@@ -335,7 +337,11 @@ int fs_semaphore_try_wait(fs_semaphore *semaphore)
 int fs_semaphore_wait_timeout_ms(fs_semaphore *semaphore, int timeout)
 {
 #if defined(USE_PSEM)
-#error not implemented
+    struct timespec ts = {
+	    .tv_sec = timeout/1000,
+	    .tv_nsec= timeout*1000000,
+    };
+    return sem_timedwait(&semaphore->semaphore, &ts);
 #elif defined(USE_SDL)
 	int result = SDL_SemWaitTimeout(semaphore->semaphore, timeout);
 	if (result == 0) {

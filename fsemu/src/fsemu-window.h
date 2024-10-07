@@ -11,9 +11,13 @@ extern "C" {
 
 typedef enum {
     FSEMU_WINDOW_DRIVER_NULL,
+#if defined FSEMU_SDL
     FSEMU_WINDOW_DRIVER_SDL,
+#endif
     FSEMU_WINDOW_DRIVER_GLCV,
 } fsemu_window_driver_t;
+
+fsemu_window_driver_t fsemu_window_get_driver(void);
 
 /** This can be called before fsemu_window_init. */
 void fsemu_window_set_title(const char *title);

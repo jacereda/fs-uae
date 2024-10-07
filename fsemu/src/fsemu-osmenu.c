@@ -15,6 +15,8 @@
 #include "fsemu-util.h"
 #include "fsemu-widget.h"
 
+#include <math.h>
+
 // FIXME: Make sure indivual menus are rendered in reverse order. The top-most
 // menu should be rendred first, so OpenGL can avoid rendering many of the
 // items of the menus (mostly) hidden below.

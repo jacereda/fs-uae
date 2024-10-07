@@ -24,16 +24,24 @@
 
         SDL2_ttf = null;
 
-        SDL2 = (super.SDL2.override {
-          alsaSupport = true;
-          dbusSupport = false;
-          udevSupport = false;
-          libdecorSupport = false;
-          pipewireSupport = false;
-          pulseaudioSupport = false;
-        }).overrideAttrs (p: {
-          postFixup = "";
-        });
+
+        SDL2 = opkgs.SDL2;
+        # SDL2 = (super.SDL2.override {
+        #   x11Support = true;
+        #   withStatic = true;
+        #   openglSupport = true;
+        #   waylandSupport = true;
+        #   alsaSupport = true;
+        #   dbusSupport = false;
+        #   udevSupport = false;
+        #   libdecorSupport = false;
+        #   pipewireSupport = false;
+        #   pulseaudioSupport = false;
+        # }).overrideAttrs (p: {
+        #   postFixup = "";
+        #   # configureFlags = p.configureFlags ++ [ "--enable-x11" "--enable-wayland" ];
+        # });
+        # SDL2 = null;
 
       });
       # xpkgs = (import nixpkgs {
@@ -64,6 +72,7 @@
           bear
           gdb
           git
+          tracy
         ]);
         buildInputs = packages.default.buildInputs;
       };
@@ -72,6 +81,7 @@
           bear
           gdb
           git
+          tracy
         ]);
         buildInputs = packages.static.buildInputs;
       };

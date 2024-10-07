@@ -9,6 +9,7 @@
 // FIXME: Maybe we want to remove this dependency and have the
 // window depend on/update the layout when it changes size?
 #include <math.h>
+#include <stdlib.h>
 
 #include "fsemu-window.h"
 

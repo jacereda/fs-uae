@@ -1,6 +1,9 @@
 #define FSEMU_INTERNAL
+#include <stdlib.h>
+#include <string.h>
 #include "fsemu-inputmode.h"
 
+#include "fsemu-log.h"
 #include "fsemu-input.h"
 #include "fsemu-util.h"
 

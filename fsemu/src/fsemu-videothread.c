@@ -7,6 +7,7 @@
 #include "fsemu-thread.h"
 #include "fsemu-time.h"
 #include "fsemu-video.h"
+#include "fsemu-opengl.h"
 
 struct fsemu_video_thread_data {
     fsemu_size_t window_size;
@@ -108,7 +109,9 @@ static void *fsemu_videothread_entry(void *data)
     fsemu_video_log("Creating OpenGL context for video thread\n");
     // FIXME: Move to fsemu-video / fsemu-glvideo
     // For example: fsemu_video_init_video_thread()
+#if defined FSEMU_SDL
     SDL_GL_CreateContext(fsemu_sdlwindow_window());
+#endif
 
     fsemu_glvideo_init_gl_state();
 

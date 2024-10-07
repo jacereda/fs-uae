@@ -1,3 +1,4 @@
+#include "fsemu-window.h"
 #define FSEMU_INTERNAL
 #include "fsemu-input.h"
 
@@ -222,7 +223,11 @@ void fsemu_input_remove_device_by_index(int device_index)
 
 void fsemu_input_work(int timeout)
 {
+#if defined FSEMU_SDL
     fsemu_sdlinput_work();
+#else
+    //    assert(0);
+#endif
 }
 
 void fsemu_input_configure_keyboard(fsemu_input_configure_keyboard_t mapping[])
@@ -717,8 +722,10 @@ void fsemu_input_init(void)
 
     fsemu_keyboard_add_devices();
     fsemu_mouse_add_devices();
-
-    fsemu_sdlinput_init();
+#if defined FSEMU_SDL
+    if (fsemu_window_get_driver() == FSEMU_WINDOW_DRIVER_SDL)
+	fsemu_sdlinput_init();
+#endif
 
     fsemu_input_log("Init\n");
     fsemu_input.mutex = fsemu_mutex_create();
