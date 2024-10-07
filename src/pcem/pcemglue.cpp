@@ -1,3 +1,4 @@
+#include "fsemu-mutex.h"
 
 #include "uae.h"
 #include "ibm.h"
@@ -20,7 +21,6 @@
 #include "plat-midi.h"
 #include "x87.h"
 #include "pci.h"
-#include "fsemu-mutex.h"
 
 #ifdef _WIN32
 #include <windows.h>
