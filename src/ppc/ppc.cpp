@@ -50,7 +50,7 @@ static CRITICAL_SECTION ppc_cs1, ppc_cs2;
 static bool ppc_cs_initialized;
 #else
 #include <glib.h>
-static GMutex mutex, mutex2;
+static GMutex g_mutex, mutex2;
 #endif
 
 void uae_ppc_spinlock_get(void)
@@ -64,7 +64,7 @@ void uae_ppc_spinlock_get(void)
 #else
 	g_mutex_lock(&mutex2);
 	ppc_spinlock_waiting = true;
-	g_mutex_lock(&mutex);
+	g_mutex_lock(&g_mutex);
 	ppc_spinlock_waiting = false;
 	g_mutex_unlock(&mutex2);
 #endif
@@ -85,7 +85,7 @@ void uae_ppc_spinlock_release(void)
 #ifdef WIN32_SPINLOCK
 	LeaveCriticalSection(&ppc_cs1);
 #else
-	g_mutex_unlock(&mutex);
+	g_mutex_unlock(&g_mutex);
 #endif
 }
 
