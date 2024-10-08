@@ -403,12 +403,14 @@ SDL_Window *fsemu_sdlwindow_create(void)
     // monitor 0 for determinining window size
     SDL_Rect display_bounds;
     double ui_scale = 1.0;
+    bool vsync = false;
     if (SDL_GetDisplayBounds(0, &display_bounds) == 0) {
         fsemu_monitor_t monitor;
         if (fsemu_monitor_get_by_rect(&display_bounds, &monitor)) {
             // rect.w *= monitor.scale;
             // rect.h *= monitor.scale;
             ui_scale = monitor.scale;
+	    vsync = monitor.refresh_rate == 50;
             // fsemu_window_log("Scale window size by %0.2f => %dx%d\n",
             //                  monitor.scale,
             //                  rect.w,
@@ -486,20 +488,20 @@ SDL_Window *fsemu_sdlwindow_create(void)
         // SDL_GetDisplayMode(0, 1, &mode);
         fsemu_sdlwindow_find_mode(0, &fullscreen_mode);
         // Also setting vsync. FIXME: Unconditionally?
-        if (fullscreen_mode.refresh_rate == 50) {
-            fsemu_video_set_vsync(true);
-        }
+        vsync = fullscreen_mode.refresh_rate == 50;
     }
 
     SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
     if (fullscreen_mode.refresh_rate == 50) {
-        fsemu_video_set_vsync(true);
+	vsync = true;
         rect.x = 0;
         rect.y = 0;
         rect.w = fullscreen_mode.w;
         rect.h = fullscreen_mode.h;
     }
+    if (vsync)
+        fsemu_video_set_vsync(true);
 
     // FIXME: There seems to be a bug (?) with SDL on X11. If you specify
     // fullscreen desktop window *without decorations*, the position seems to
