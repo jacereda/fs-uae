@@ -533,10 +533,7 @@ void fsemu_glvideo_render(void)
     TracyCZone(z, true);
 
     fsemu_video_log_debug("--- render --- [draw]\n");
-    int r, g, b;
-    fsemu_video_background_color_rgb(&r, &g, &b);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    //    glClearColor(r / 255.0, g / 255.0, b / 255.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
