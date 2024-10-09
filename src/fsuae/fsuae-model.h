@@ -81,6 +81,4 @@ extern amiga_config *g_fs_uae_config;
 
 void fs_uae_init_configs(void);
 
-#define NEW_ACCURACY_SYSTEM
-
 #endif  // FSUAE_MODEL_H_
