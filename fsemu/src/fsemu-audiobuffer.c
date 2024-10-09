@@ -350,8 +350,7 @@ static double pid_controller_step(int *error_out,
 
 #if 1
     if (stats.avg_latency_us != latency_avg_2) {
-        printf(
-            "WARNING: Adjust %d vs %d\n", stats.avg_latency_us, latency_avg_2);
+        fsemu_audio_log_warning("Adjust %d vs %d\n", stats.avg_latency_us, latency_avg_2);
     }
 #endif
 
