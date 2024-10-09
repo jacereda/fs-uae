@@ -12698,7 +12698,7 @@ static void check_display_mode_change(void)
 // emulated hardware vsync
 static void vsync_handler_post(void)
 {
-	ZoneScoped;
+	// ZoneScoped;
 
 #ifdef FSUAE
 #ifdef FSUAE_FRAME_DEBUG
@@ -12930,7 +12930,7 @@ static void vsync_handler_post(void)
 	uae_log("vblank_hz = %0.2f\n", vblank_hz);
 #endif
 	if (fsemu) {
-		ZoneScopedN("vsync_handler_post_fsemu");
+		// ZoneScopedN("vsync_handler_post_fsemu");
 		// fsemu_frame_update_timing(vblank_hz, currprefs.turbo_emulation);
 		// printf("vblank_hz = %0.2f\n", vblank_hz);
 		fsemu_frame_start(vblank_hz);
