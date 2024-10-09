@@ -410,12 +410,12 @@ SDL_Window *fsemu_sdlwindow_create(void)
             // rect.w *= monitor.scale;
             // rect.h *= monitor.scale;
             ui_scale = monitor.scale;
-	    vsync = monitor.refresh_rate == 50;
+        }
+	vsync = monitor.refresh_rate == 50;
             // fsemu_window_log("Scale window size by %0.2f => %dx%d\n",
             //                  monitor.scale,
             //                  rect.w,
             //                  rect.h);
-        }
     }
 
     if (fsemu_sdlwindow_kmsdrm()) {
