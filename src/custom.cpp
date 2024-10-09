@@ -7226,11 +7226,6 @@ void compute_framesync(void)
 	if (target_graphics_buffer_update(0, false)) {
 		reset_drawing();
 	}
-#ifdef FSUAE
-	if (fsemu) {
-		// set_custom_limits(100, 100, 100, 100);
-	}
-#endif
 }
 
 /* set PAL/NTSC or custom timing variables */
@@ -12462,6 +12457,8 @@ static void fpscounter(bool frameok)
 // it can line 0 or even later.
 static void vsync_handler_render(void)
 {
+	// ZoneScoped;
+
 #ifdef FSUAE_FRAME_DEBUG
 	uae_log("vsync_handler_pre [draw] [cycles]\n");
 #endif
@@ -12629,7 +12626,7 @@ static bool vsync_display_rendered;
 
 static void vsync_display_render(void)
 {
-	ZoneScoped;
+	// ZoneScoped;
 
 	if (!vsync_display_rendered) {
 		vsyncmintimepre = read_processor_time();
@@ -12701,6 +12698,8 @@ static void check_display_mode_change(void)
 // emulated hardware vsync
 static void vsync_handler_post(void)
 {
+	ZoneScoped;
+
 #ifdef FSUAE
 #ifdef FSUAE_FRAME_DEBUG
 	uae_log("[%6ld] vsync_handler_post [draw] [cycles] [gfx_vsync %d]\n",
@@ -12931,6 +12930,7 @@ static void vsync_handler_post(void)
 	uae_log("vblank_hz = %0.2f\n", vblank_hz);
 #endif
 	if (fsemu) {
+		ZoneScopedN("vsync_handler_post_fsemu");
 		// fsemu_frame_update_timing(vblank_hz, currprefs.turbo_emulation);
 		// printf("vblank_hz = %0.2f\n", vblank_hz);
 		fsemu_frame_start(vblank_hz);
@@ -15216,7 +15216,7 @@ static bool vsync_line;
 // executed at start of scanline
 static void hsync_handler(void)
 {
-	ZoneScoped;
+	// ZoneScoped;
 #ifdef FSUAE_FRAME_DEBUG
 	printf("hsync_handler  cycles = %ld                vpos %d\n", get_cycles(), vpos);
 #endif

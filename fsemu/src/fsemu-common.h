@@ -1,6 +1,7 @@
 #ifndef FSEMU_COMMON_H_
 #define FSEMU_COMMON_H_
 
+#include <Tracy/tracy/TracyC.h>
 #ifdef __cplusplus
 #include <Tracy/tracy/Tracy.hpp>
 #endif

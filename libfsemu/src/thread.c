@@ -233,7 +233,9 @@ int fs_condition_wait (fs_condition *condition, fs_mutex *mutex)
 int64_t fs_condition_get_wait_end_time(int period)
 {
 #if defined(USE_PTHREADS)
-#error FIXME: implement with clock_gettime(CLOCK_REALTIME, &ts);
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000 + period;
 #elif defined(USE_GLIB)
     return g_get_monotonic_time() + period;
 #else

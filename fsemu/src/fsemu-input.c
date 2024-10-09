@@ -223,11 +223,13 @@ void fsemu_input_remove_device_by_index(int device_index)
 
 void fsemu_input_work(int timeout)
 {
+    TracyCZone(z, true);
+
 #if defined FSEMU_SDL
     fsemu_sdlinput_work();
-#else
-    //    assert(0);
 #endif
+
+    TracyCZoneEnd(z);
 }
 
 void fsemu_input_configure_keyboard(fsemu_input_configure_keyboard_t mapping[])

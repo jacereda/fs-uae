@@ -231,6 +231,8 @@ static void fsemu_gui_free_recursive(fsemu_gui_item_t *item)
 
 void fsemu_gui_free_snapshot(fsemu_gui_item_t *snapshot)
 {
+    TracyCZone(z, true);
+
 #if 0
     printf("fsemu_gui_free_snapshot %p\n", snapshot);
 #endif
@@ -242,4 +244,6 @@ void fsemu_gui_free_snapshot(fsemu_gui_item_t *snapshot)
         item = next;
     }
     // fsemu_gui_unlock();
+
+    TracyCZoneEnd(z);
 }

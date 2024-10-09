@@ -58,11 +58,8 @@ void fsemu_log_with_level_and_flags(int level,
 
 #ifdef FSUAE
     va_start(ap, format);
-    char *buffer = g_strdup_vprintf(format, ap);
+    fs_logv(format, ap);
     va_end(ap);
-    // For now...
-    fs_log_string(buffer);
-    g_free(buffer);
 #endif
     if (level == FSEMU_LOG_LEVEL_WARNING) {
         if (!(flags & FSEMU_LOG_FLAG_NO_LAST_UPDATE)) {

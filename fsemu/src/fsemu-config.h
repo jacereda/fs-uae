@@ -1,8 +1,6 @@
 #ifndef FSEMU_CONFIG_H_
 #define FSEMU_CONFIG_H_
 
-#include <Tracy/tracy/TracyC.h>
-
 #include "config.h"
 #include "uae/attributes.h"
 

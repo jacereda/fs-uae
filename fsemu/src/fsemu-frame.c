@@ -170,6 +170,8 @@ void fsemu_frame_end(void)
 {
     TracyCZone(z, true);
 
+    TracyCFrameMarkEnd("emulation");
+
     fsemu_frame_log_trace("%s\n", __func__);
     fsemu_thread_assert_emu();
     fsemu_frame_log_epoch("Frame end\n");
@@ -302,7 +304,7 @@ void fsemu_frame_end(void)
     fsemu_frame.timer = fsemu_time_us();
 
     TracyCZoneEnd(z);
-    TracyCFrameMarkNamed("emulation");
+
 }
 
 void fsemu_frame_reset_timer(int64_t t)
@@ -1183,6 +1185,9 @@ static void fsemu_frame_start_2(double hz)
 // FIXME: Rename to fsemu_frame_begin?
 void fsemu_frame_start(double hz)
 {
+    TracyCZone(z, true);
+
+    TracyCFrameMarkStart("emulation");
     // printf("fsemu_frame_start hz=%f\n", hz);
     fsemu_frame_log_trace("%s hz=%f\n", __func__, hz);
     fsemu_thread_assert_emu();
@@ -1239,6 +1244,8 @@ void fsemu_frame_start(double hz)
 
     // fsemu_recording_begin_frame(fsemu_frame.counter);
     fsemu_recording_begin_frame();
+
+    TracyCZoneEnd(z);
 }
 
 double fsemu_frame_rate_hz(void)

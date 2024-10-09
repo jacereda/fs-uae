@@ -319,20 +319,19 @@ void fsemu_video_set_ready(bool ready)
 
 void fsemu_video_display(void)
 {
+    TracyCZone(z, true);
+
+    TracyCFrameMarkEnd(0);
+
     if (!fsemu_video.did_render_frame) {
         // Did not render frame, nothing to display
         printf("No frame rendered, skipping display\n");
         if (fsemu_video_vsync()) {
             printf("fsemu_video_display NOT (vsync)\n");
         }
-        return;
     }
 
     fsemu_frame_number_displaying = fsemu_frame_number_rendered;
-
-    if (fsemu_video_vsync()) {
-        // printf("fsemu_video_display (vsync)\n");
-    }
 
     fsemu_frame_log_epoch("Display\n");
     switch (fsemu_video.renderer) {
@@ -351,6 +350,11 @@ void fsemu_video_display(void)
     // fsemu_assert(fsemu_frame_number_displayed == fsemu_frame_number_posted -
     // 1);
     fsemu_frame_number_displayed = fsemu_frame_number_displaying;
+
+
+    TracyCFrameMarkStart(0);
+
+    TracyCZoneEnd(z);
 }
 
 void fsemu_video_post_frame(fsemu_video_frame_t *frame)
@@ -521,6 +525,8 @@ static void fsemu_video_convert_coordinates(SDL_Rect *out,
 
 void fsemu_video_render_gui_early(fsemu_gui_item_t *items)
 {
+    TracyCZone(z, true);
+
     fsemu_frame_log_epoch("Render GUI (early)\n");
 
     // FIXME: Consider moving this elsewhere.
@@ -528,10 +534,8 @@ void fsemu_video_render_gui_early(fsemu_gui_item_t *items)
 
     if (items == NULL) {
         printf("WARNING: fsemu_video_render_gui_early items=NULL\n");
-        return;
     }
-    // fsemu_video_log_debug("render_gui_early\n");
-    switch (fsemu_video.renderer) {
+    else switch (fsemu_video.renderer) {
 #if defined FSEMU_SDL
     case FSEMU_VIDEO_RENDERER_SDL:
 	fsemu_sdlvideo_render_gui_early(items);
@@ -543,20 +547,19 @@ void fsemu_video_render_gui_early(fsemu_gui_item_t *items)
     default:
 	fsemu_assert(0);
     }
+
+    TracyCZoneEnd(z);
 }
 
 void fsemu_video_render_gui(fsemu_gui_item_t *items)
 {
+    TracyCZone(z, true);
+
     fsemu_frame_log_epoch("Render GUI\n");
     if (items == NULL) {
-        printf("WARNING: fsemu_video_render_gui items=NULL\n");
-        return;
+        fsemu_video_log_warning("fsemu_video_render_gui items=NULL\n");
     }
-#if 0
-    // fsemu_video_log_debug("render_gui\n");
-    printf("fsemu_video_render_gui %p\n", items);
-#endif
-    switch (fsemu_video.renderer) {
+    else switch (fsemu_video.renderer) {
 #if defined FSEMU_SDL
     case FSEMU_VIDEO_RENDERER_SDL:
         fsemu_sdlvideo_render_gui(items);
@@ -568,6 +571,8 @@ void fsemu_video_render_gui(fsemu_gui_item_t *items)
     default:
 	fsemu_assert(0);
     }
+
+    TracyCZoneEnd(z);
 }
 
 static void fsemu_video_update_stats(void)

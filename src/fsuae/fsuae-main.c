@@ -1534,6 +1534,7 @@ int fs_emu_run(fs_emu_main_function function)
 static void handle_events_from_uae(void)
 {
     TracyCZone(z, true);
+
     int event;
     void *data;
     int intdata;
@@ -1560,6 +1561,7 @@ static void handle_events_from_uae(void)
         }
         uae_main_free_event(event, data);
     }
+
     TracyCZoneEnd(z);
 }
 
@@ -1591,7 +1593,6 @@ static void main_loop(void)
         fsemu_main_update_and_snapshot_gui();
         handle_clipboard_integration();
         fsemu_main_handle_events_until_next_frame();
-	TracyCFrameMark;
     }
     // fsemu_main_quit();
 #if 0

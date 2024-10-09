@@ -121,11 +121,13 @@ static void fsemu_main_handle_events_until_next_frame_threaded(void)
 void fsemu_main_handle_events_until_next_frame(void)
 {
     TracyCZone(z, true);
+
     if (fsemu_video_is_threaded()) {
         fsemu_main_handle_events_until_next_frame_threaded();
     } else {
         fsemu_main_handle_events_until_next_frame_in_main();
     }
+
     TracyCZoneEnd(z);
 }
 

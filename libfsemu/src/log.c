@@ -1,6 +1,4 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "fsemu-config.h"
 
 #include "fs/base.h"
 #include "fs/conf.h"
@@ -95,31 +93,37 @@ void fs_config_set_log_file(const char *path)
     }
 }
 
-void fs_log_string(const char *str)
-{
+void fs_logv(const char * fmt, va_list ap) {
     if (!log_data.initialized) {
         initialize_log();
     }
+    char buf[1024];
+    size_t sz = vsnprintf(buf, sizeof(buf), fmt, ap);
+    TracyCMessage(buf, sz);
     fs_mutex_lock(log_data.mutex);
     if (log_data.use_stdout) {
-        printf("%s", str);
+        printf("%s", buf);
         fflush(stdout);
     }
     if (log_data.file) {
-        fprintf(log_data.file, "%s", str);
+        fprintf(log_data.file, "%s", buf);
     }
     if (log_data.flush) {
         fflush(log_data.file);
     }
     fs_mutex_unlock(log_data.mutex);
+
+}
+
+void fs_log_string(const char *str)
+{
+    fs_log("%s", str);
 }
 
 void fs_log(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    char *buffer = g_strdup_vprintf(format, ap);
+    fs_logv(format, ap);
     va_end(ap);
-    fs_log_string(buffer);
-    g_free(buffer);
 }

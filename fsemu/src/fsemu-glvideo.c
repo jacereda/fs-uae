@@ -533,9 +533,6 @@ void fsemu_glvideo_render(void)
     TracyCZone(z, true);
 
     fsemu_video_log_debug("--- render --- [draw]\n");
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
     if (fsemu_perfgui_mode() != FSEMU_PERFGUI_MODE_OFF) {
         fsemu_perfgui_update_image();
@@ -689,7 +686,7 @@ static int64_t fsemu_glvideo_wait_for_swap(void)
 {
     // printf("wait for swap\n");
     // FIXME: IMPROVE!
-	//    glFinish();
+    glFinish();
 
     int64_t vsync_time = fsemu_time_us();
     return vsync_time;
@@ -1322,6 +1319,10 @@ static void fsemu_glvideo_render_gui_2(fsemu_gui_item_t *items, bool early)
 
 void fsemu_glvideo_render_gui_early(fsemu_gui_item_t *items)
 {
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+
     fsemu_glvideo_render_gui_2(items, true);
 }
 

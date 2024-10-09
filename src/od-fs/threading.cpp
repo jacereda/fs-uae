@@ -8,6 +8,7 @@
 int uae_start_thread_fast (void *(*f)(void *), void *arg,
         uae_thread_id *thread)
 {
+    ZoneScoped;
     // FIXME: what is the supposed difference between uae_start_thread and
     // uae_start_thread_fast?
     return uae_start_thread(NULL, f, arg, thread);
@@ -16,6 +17,7 @@ int uae_start_thread_fast (void *(*f)(void *), void *arg,
 int uae_start_thread (const char *name, uae_thread_function fn, void *arg,
         uae_thread_id *tid)
 {
+    ZoneScoped;
     int result = 1;
     if (name != NULL) {
         write_log("uae_start_tread \"%s\" function at %p arg %p\n", name,
