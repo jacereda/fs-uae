@@ -946,7 +946,7 @@ void gfx_unlock_picasso(int monid, bool dorender)
 
 	if (currprefs.gfx_api) {  // true // use something like uae_likely?
 		if (dorender) {
-			if (uae_fsvideo_renderframe(monid, true, false)) {
+			if (uae_fsvideo_renderframe(monid, 1, false)) {
 				gfx_unlock();
 				mon->render_ok = true;
 				show_screen_maybe(monid, true);
