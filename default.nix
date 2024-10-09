@@ -7,6 +7,7 @@
 , flac
 , freetype
 , glib
+, gnome-randr
 , libiconv
 , libGL
 , libX11
@@ -24,6 +25,7 @@
 , portmidi
 , stdenv
 , strip-nondeterminism
+, switchres
 , udis86
 , zip
 }:
@@ -54,6 +56,7 @@ stdenv.mkDerivation {
     flac
     freetype
     glib
+    gnome-randr
     libiconv
     libGL
     libX11
@@ -68,6 +71,7 @@ stdenv.mkDerivation {
     libpng
     pcre2
     portmidi
+    switchres
     udis86
   ];
 
