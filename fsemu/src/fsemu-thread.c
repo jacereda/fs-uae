@@ -126,7 +126,7 @@ fsemu_thread_id_t fsemu_thread_id(void)
 {
     fsemu_thread_id_t thread_id = 0;
 #if defined(USE_PTHREADS)
-#error pthreads support must be updated
+    thread_id = pthread_self();
 #elif defined(FSEMU_GLIB)
     thread_id = (uintptr_t)(void *) g_thread_self();
 #else
