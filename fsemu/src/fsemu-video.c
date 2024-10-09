@@ -274,6 +274,7 @@ void fsemu_video_work(int timeout_us)
 void fsemu_video_render(void)
 {
     fsemu_frame_number_rendering = fsemu_frame_number_posted;
+    TracyCPlotI("frame-rendering", fsemu_frame_number_rendering);
     fsemu_video_log_trace("fsemu_video_render frame_number_rendering=%d\n",
                           fsemu_frame_number_rendering);
 
@@ -293,6 +294,8 @@ void fsemu_video_render(void)
 	case FSEMU_VIDEO_RENDERER_GL:
 	    fsemu_glvideo_render();
 	    break;
+	default:
+	    fsemu_assert(0);
         }
         fsemu_video.did_render_frame = true;
     }
@@ -303,6 +306,7 @@ void fsemu_video_render(void)
     fsemu_video.must_render_frame = false;
 
     fsemu_frame_number_rendered = fsemu_frame_number_rendering;
+    TracyCPlotI("frame-rendered", fsemu_frame_number_rendered);
 
     fsemu_window_notify_frame_rendered_vt();
 }
@@ -332,6 +336,7 @@ void fsemu_video_display(void)
     }
 
     fsemu_frame_number_displaying = fsemu_frame_number_rendered;
+    TracyCPlotI("frame-displaying", fsemu_frame_number_displaying);
 
     fsemu_frame_log_epoch("Display\n");
     switch (fsemu_video.renderer) {
@@ -350,6 +355,7 @@ void fsemu_video_display(void)
     // fsemu_assert(fsemu_frame_number_displayed == fsemu_frame_number_posted -
     // 1);
     fsemu_frame_number_displayed = fsemu_frame_number_displaying;
+    TracyCPlotI("frame-displayed", fsemu_frame_number_displayed);
 
 
     TracyCFrameMarkStart(0);

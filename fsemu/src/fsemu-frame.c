@@ -1147,6 +1147,7 @@ static void fsemu_frame_start_2(double hz)
     }
 
     fsemu_frame_number_began = frame_number;
+    TracyCPlotI("frame-began", fsemu_frame_number_began);
 
     // FIXME: update timing depends on warp mode, so handle commands first?
     fsemu_frame_start_handle_commands();

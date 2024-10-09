@@ -104,6 +104,7 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
         // FIXME: Include in parameter to fsemu_video_set_ready?
         // FIXME: 
         fsemu_frame_number_posted = frame->number;
+	TracyCPlotI("frame-posted", fsemu_frame_number_posted);
         fsemu_video_set_ready(true);
         return;
     }
@@ -314,6 +315,7 @@ static void fsemu_glvideo_handle_frame(fsemu_video_frame_t *frame)
 
     // FIXME: Include in parameter to fsemu_video_set_ready?
     fsemu_frame_number_posted = frame->number;
+    TracyCPlotI("frame-posted", fsemu_frame_number_posted);
     fsemu_video_set_ready(true);
 
     // fsemu_glvideo.current_texture = (fsemu_glvideo.current_texture + 1) % 2;
