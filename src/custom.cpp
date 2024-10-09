@@ -12079,7 +12079,7 @@ static frame_time_t mavg(struct mavg_data *md, frame_time_t newval, int size)
 #ifdef DEBUGGER
 extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 
-#ifdef FSUAE // NL
+#ifdef FSUAE_DISABLED // NL
 static bool framewait_fsuae_old (void);
 #endif
 
@@ -12087,7 +12087,7 @@ static bool framewait_fsuae_old (void);
 static bool framewait(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 #ifdef FSUAE_FRAME_DEBUG
 	uae_log("framewait m68k_speed = %d vsynctimebase = %d\n",
 		currprefs.m68k_speed, vsynctimebase);
@@ -12312,7 +12312,7 @@ static bool framewait(void)
 	return status != 0;
 }
 
-#ifdef FSUAE // NL
+#ifdef FSUAE_DISABLED // NL
 
 static bool framewait_fsuae_old (void)
 {
@@ -12508,7 +12508,7 @@ static void vsync_handler_render(void)
 	if (!vsync_rendered) {
 		frame_time_t start, end;
 		start = read_processor_time();
-#ifdef FSUAE_JA
+#ifdef FSUAE_DISABLED
 		if (fsemu) {
 			// draw_lines(312, 999);
 			// draw_lines(max_ypos_thisframe, 999);
@@ -12539,7 +12539,7 @@ static void vsync_handler_render(void)
 	
 	if (!ad->picasso_on) {
 		if (!frame_rendered && vblank_hz_state) {
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 #ifdef DEBUG_SHOW_SCREEN
 			uae_log("vsync_handler_pre -> render_screen\n");
 #endif
@@ -12547,7 +12547,7 @@ static void vsync_handler_render(void)
 			frame_rendered = crender_screen(0, 1, false);
 		}
 		if (frame_rendered && !frame_shown) {
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 #ifdef DEBUG_SHOW_SCREEN
 			uae_log("vsync_handler_pre -> show_screen_maybe\n");
 #endif
@@ -13638,7 +13638,7 @@ static void hsync_handler_pre(bool onvsync)
 #endif
 }
 
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 #else
 // low latency vsync
 
@@ -13721,7 +13721,7 @@ static int display_slices;
 static bool display_rendered;
 static int vsyncnextstep;
 
-#ifdef FSUAE // NL
+#ifdef FSUAE_DISABLED // NL
 
 // FIXME: Put in fsuae / od-fs header
 int64_t is_syncline_end64;
@@ -14665,7 +14665,7 @@ static bool linesync_beam_vrr(void)
 // called when extra CPU wait is done
 void vsync_event_done(void)
 {
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 	if (fsemu) {
 		linesync_fsemu();
 	}
@@ -15024,7 +15024,7 @@ static void hsync_handler_post(bool onvsync)
 
 		maybe_process_pull_audio();
 
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 	} else if (fsemu) {
 		// input_read_done = linesync_fsemu();
 		linesync_fsemu();
@@ -15257,7 +15257,7 @@ static void hsync_handler(void)
 // executed at start of hsync
 static void hsync_handlerh(void)
 {
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 	if (fsemu) {
 		// printf("init_eventtab get_cycles() = %ld hsync at %ld\n", get_cycles(), get_cycles () + HSYNCTIME);
 	}

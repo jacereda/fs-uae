@@ -69,7 +69,7 @@ void events_schedule(void)
 
 extern int vsync_activeheight;
 
-#ifdef FSUAE
+#ifdef FSUAE_DISABLED
 #include "fsemu-frame.h"
 #include "fsemu-time.h"
 extern int64_t is_syncline_end64;
@@ -235,7 +235,7 @@ static bool event_check_vsync(void)
 		}
 		events_reset_syncline();
 
-#ifdef FSUAE // NL
+#ifdef FSUAE_DISABLED // NL
 	} else if (is_syncline == -99) {
 		// int64_t now = fsemu_time_us();
 
